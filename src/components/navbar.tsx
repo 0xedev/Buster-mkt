@@ -1,12 +1,13 @@
 // src/components/navbar.tsx
-import React from "react"; // Removed unused `useEffect`
-import { ConnectButton, lightTheme } from "thirdweb/react"; // Removed `useActiveAccount`
+import React, { useState } from "react";
+import { ConnectButton, lightTheme } from "thirdweb/react";
 import { client } from "@/app/client";
 import { base } from "wagmi/chains";
 import { createWallet } from "thirdweb/wallets";
 import { ClaimTokensButton } from "./ClaimTokensButton";
 import { WagmiConfig, createConfig, http } from "wagmi";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
+import { Menu } from "lucide-react";
 
 const wagmiConfig = createConfig({
   chains: [base],
@@ -38,11 +39,14 @@ const customBase = {
 };
 
 export function Navbar() {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <WagmiConfig config={wagmiConfig}>
-      <div className="flex justify-between items-center mb-6">
+      {/* Desktop View */}
+      <div className="hidden md:flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Forecast</h1>
-        <div className="items-center flex gap-2">
+        <div className="items-center flex gap-3">
           <ClaimTokensButton />
           <ConnectButton
             client={client}
@@ -61,6 +65,42 @@ export function Navbar() {
             }}
           />
         </div>
+      </div>
+
+      {/* Mobile View */}
+      <div className="md:hidden mb-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-xl font-bold">Forecast</h1>
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="p-2 text-gray-500 hover:text-gray-700 focus:outline-none"
+          >
+            <Menu size={24} />
+          </button>
+        </div>
+        
+        {menuOpen && (
+          <div className="mt-4 flex flex-col gap-3">
+            <ClaimTokensButton />
+            <ConnectButton
+              client={client}
+              theme={lightTheme()}
+              chain={customBase}
+              wallets={wallets}
+              connectModal={{ size: "compact" }}
+              connectButton={{
+                style: { width: "100%" },
+                label: "Sign In",
+              }}
+              detailsButton={{
+                displayBalanceToken: {
+                  [base.id]: "0x55b04F15A1878fa5091D5E35ebceBC06A5EC2F31",
+                },
+                style: { width: "100%" }
+              }}
+            />
+          </div>
+        )}
       </div>
     </WagmiConfig>
   );
