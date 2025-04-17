@@ -35,7 +35,7 @@ export function MarketResolved({
     return (
         <div className="flex flex-col gap-2">
             <div className="mb-2 bg-green-200 p-2 rounded-md text-center text-xs">
-                Resolved: {outcome === 0 ? optionA : optionB}
+                Resolved: {outcome === 1 ? optionA : optionB}
             </div>
             <Button 
                 variant="outline" 
