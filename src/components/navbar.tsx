@@ -7,7 +7,7 @@ import { createWallet } from "thirdweb/wallets";
 import { ClaimTokensButton } from "./ClaimTokensButton";
 import { WagmiConfig, createConfig, http } from "wagmi";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
-import { Menu } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 const wagmiConfig = createConfig({
   chains: [base],
@@ -68,37 +68,40 @@ export function Navbar() {
       </div>
 
       {/* Mobile View */}
-      <div className="md:hidden mb-6">
+      <div className="md:hidden relative mb-6">
         <div className="flex justify-between items-center">
           <h1 className="text-xl font-bold">Forecast</h1>
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="p-2 text-gray-500 hover:text-gray-700 focus:outline-none"
           >
-            <Menu size={24} />
+            {menuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
         
+        {/* Overlay Menu */}
         {menuOpen && (
-          <div className="mt-4 flex flex-col gap-3">
-            <ClaimTokensButton />
-            <ConnectButton
-              client={client}
-              theme={lightTheme()}
-              chain={customBase}
-              wallets={wallets}
-              connectModal={{ size: "compact" }}
-              connectButton={{
-                style: { width: "100%" },
-                label: "Sign In",
-              }}
-              detailsButton={{
-                displayBalanceToken: {
-                  [base.id]: "0x55b04F15A1878fa5091D5E35ebceBC06A5EC2F31",
-                },
-                style: { width: "100%" }
-              }}
-            />
+          <div className="absolute right-0 top-12 mt-2 bg-white shadow-lg rounded-lg p-4 z-50 w-full md:w-64">
+            <div className="flex flex-col gap-3">
+              <ClaimTokensButton />
+              <ConnectButton
+                client={client}
+                theme={lightTheme()}
+                chain={customBase}
+                wallets={wallets}
+                connectModal={{ size: "compact" }}
+                connectButton={{
+                  style: { width: "100%" },
+                  label: "Sign In",
+                }}
+                detailsButton={{
+                  displayBalanceToken: {
+                    [base.id]: "0x55b04F15A1878fa5091D5E35ebceBC06A5EC2F31",
+                  },
+                  style: { width: "100%" }
+                }}
+              />
+            </div>
           </div>
         )}
       </div>
