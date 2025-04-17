@@ -41,7 +41,7 @@ export async function GET() {
     const events = await getContractEvents({
       contract,
       events: [CLAIMED_EVENT],
-      fromBlock: 28965072n, // Adjust for pre-ES2020 if needed
+      fromBlock: BigInt(28965072), // Adjust for pre-ES2020 if needed
       toBlock: "latest",
     });
 
