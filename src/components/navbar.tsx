@@ -7,7 +7,7 @@ import { createWallet } from "thirdweb/wallets";
 import { ClaimTokensButton } from "./ClaimTokensButton";
 import { WagmiConfig, createConfig, http } from "wagmi";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Info } from "lucide-react";
 
 const wagmiConfig = createConfig({
   chains: [base],
@@ -40,6 +40,7 @@ const customBase = {
 
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
 
   return (
     <WagmiConfig config={wagmiConfig}>
@@ -81,8 +82,33 @@ export function Navbar() {
         
         {/* Overlay Menu */}
         {menuOpen && (
-          <div className="absolute right-0 top-12 mt-2 bg-white shadow-lg rounded-lg p-4 z-50 w-full md:w-64">
+          <div className="absolute right-0 top-12 mt-2 bg-white shadow-lg rounded-lg p-4 z-50 w-full md:w-72">
             <div className="flex flex-col gap-3">
+              {/* Get Started Button */}
+              <button 
+                onClick={() => setShowInfo(!showInfo)} 
+                className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg w-full transition-colors"
+              >
+                <Info size={18} />
+                Get Started
+              </button>
+              
+              {/* Game Info Panel */}
+              {showInfo && (
+                <div className="bg-gray-50 p-3 rounded-lg text-sm">
+                  <h3 className="font-bold mb-1">Welcome to Forecast!</h3>
+                  <p className="mb-2">Forecast is a prediction game where users can predict outcomes of various events.</p>
+                  <p className="mb-2">To start playing:</p>
+                  <ol className="list-decimal pl-5 mb-2">
+                    <li>Sign in with your wallet</li>
+                    <li>Claim 5,000 BSTR shares</li>
+                    <li>Browse available predictions</li>
+                    <li>Place your bets!</li>
+                  </ol>
+                  <p className="text-blue-600 font-semibold">Claim your tokens now to begin!</p>
+                </div>
+              )}
+              
               <ClaimTokensButton />
               <ConnectButton
                 client={client}
