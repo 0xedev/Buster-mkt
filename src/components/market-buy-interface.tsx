@@ -23,6 +23,9 @@ interface MarketBuyInterfaceProps {
 type BuyingStep = "initial" | "allowance" | "confirm";
 type Option = "A" | "B" | null;
 
+// Define maximum bet size constant
+const MAX_BET = 500;
+
 export function MarketBuyInterface({
   marketId,
   market,
@@ -40,7 +43,7 @@ export function MarketBuyInterface({
 
   // Transaction state
   const [selectedOption, setSelectedOption] = useState<Option>(null);
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState<string>("");
   const [buyingStep, setBuyingStep] = useState<BuyingStep>("initial");
   const [isApproving, setIsApproving] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -73,7 +76,7 @@ export function MarketBuyInterface({
       setIsBuying(false);
       setBuyingStep("initial");
       setSelectedOption(null);
-      setAmount(0);
+      setAmount("");
       setError(null);
       setIsVisible(true);
     }, 200);
@@ -81,10 +84,22 @@ export function MarketBuyInterface({
 
   // Check if user needs to approve token spending
   const checkApproval = async () => {
-    if (amount <= 0) {
+    const numAmount = Number(amount);
+    
+    if (!amount || numAmount <= 0) {
       setError("Amount must be greater than 0");
       return;
     }
+    
+    if (numAmount > MAX_BET) {
+      toast({
+        title: "Maximum Bet Exceeded",
+        description: `Max shares you can buy is ${MAX_BET}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setError(null);
 
     try {
@@ -96,7 +111,7 @@ export function MarketBuyInterface({
       });
 
       setBuyingStep(
-        userAllowance < BigInt(toWei(amount.toString()))
+        userAllowance < BigInt(toWei(amount))
           ? "allowance"
           : "confirm"
       );
@@ -112,7 +127,7 @@ export function MarketBuyInterface({
       const tx = await approve({
         contract: tokenContract,
         spender: contract.address,
-        amount: amount,
+        amount: Number(amount),
       });
       await mutateTransaction(tx);
       setBuyingStep("confirm");
@@ -125,8 +140,18 @@ export function MarketBuyInterface({
 
   // Handle share purchase transaction
   const handleConfirm = async () => {
-    if (!selectedOption || amount <= 0) {
+    if (!selectedOption || !amount || Number(amount) <= 0) {
       setError("Must select an option and enter an amount greater than 0");
+      return;
+    }
+
+    const numAmount = Number(amount);
+    if (numAmount > MAX_BET) {
+      toast({
+        title: "Maximum Bet Exceeded",
+        description: `Max shares you can buy is ${MAX_BET}`,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -139,7 +164,7 @@ export function MarketBuyInterface({
         params: [
           BigInt(marketId),
           selectedOption === "A",
-          BigInt(toWei(amount.toString())),
+          BigInt(toWei(amount)),
         ],
       });
       await mutateTransaction(tx);
@@ -165,6 +190,21 @@ export function MarketBuyInterface({
     } finally {
       setIsConfirming(false);
     }
+  };
+
+  // Handle amount input to remove leading zeros
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Get value from input
+    const inputValue = e.target.value;
+    
+    // Only accept digits
+    if (/^\d*$/.test(inputValue)) {
+      // Remove leading zeros
+      const cleanedValue = inputValue.replace(/^0+/, '');
+      setAmount(cleanedValue);
+    }
+    
+    setError(null);
   };
 
   // Render the component
@@ -278,24 +318,18 @@ export function MarketBuyInterface({
                 <span className="text-xs text-gray-500 mb-1">
                   {`1 ${
                     selectedOption === "A" ? market.optionA : market.optionB
-                  } = 1 BUSTER`}
+                  } = 1 BUSTER (Max: ${MAX_BET})`}
                 </span>
                 <div className="flex flex-col gap-1 mb-4">
                   <div className="flex items-center gap-2 overflow-visible">
                     <div className="flex-grow relative">
                       <Input
-                        type="number"
-                        min="0"
-                        step="1"
+                        type="text"
                         placeholder="Enter amount"
                         value={amount}
-                        onChange={(e) => {
-                          const value = Math.max(0, Number(e.target.value));
-                          setAmount(value);
-                          setError(null);
-                        }}
+                        onChange={handleAmountChange}
                         onKeyDown={(e) => {
-                          if (e.key === "-" || e.key === "e") {
+                          if (e.key === "-" || e.key === "e" || e.key === "+") {
                             e.preventDefault();
                           }
                         }}
