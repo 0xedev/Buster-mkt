@@ -172,34 +172,106 @@ export function VoteHistory() {
 
   if (!account) {
     return (
-      <p className="text-center text-gray-500">
-        Connect wallet to view vote history.
-      </p>
+      <div className="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-lg shadow-sm border border-gray-200">
+        <div className="text-gray-500 font-medium">
+          Connect wallet to view vote history
+        </div>
+        <div className="mt-2">
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+            Connect Wallet
+          </button>
+        </div>
+      </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="animate-pulse space-y-2">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-6 bg-gray-200 rounded"></div>
-        ))}
+      <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+        <div className="bg-gray-50 p-3 border-b border-gray-200">
+          <div className="h-6 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+        </div>
+        <div className="divide-y divide-gray-200">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="p-4 animate-pulse">
+              <div className="flex justify-between">
+                <div className="h-5 bg-gray-200 rounded w-2/3"></div>
+                <div className="h-5 bg-gray-200 rounded w-1/5"></div>
+              </div>
+              <div className="mt-2 h-4 bg-gray-100 rounded w-1/2"></div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
-  return votes.length > 0 ? (
-    <ul className="space-y-2">
-      {votes.map((vote, idx) => (
-        <li key={idx} className="flex justify-between text-sm">
-          <span>
-            {vote.marketName} ({vote.option})
-          </span>
-          <span>{Number(vote.amount) / 1e18} $BSTR</span>
-        </li>
-      ))}
-    </ul>
-  ) : (
-    <p className="text-center text-gray-500">No votes submitted yet.</p>
+  return (
+    <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
+      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+        <h3 className="text-sm font-medium text-gray-700">Your Vote History</h3>
+      </div>
+
+      {votes.length > 0 ? (
+        <div className="divide-y divide-gray-200">
+          {votes.map((vote, idx) => (
+            <div
+              key={idx}
+              className="px-4 py-3 hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div className="w-2/3">
+                  <div
+                    className="text-sm font-medium text-gray-900 truncate"
+                    title={vote.marketName}
+                  >
+                    {vote.marketName}
+                  </div>
+                  <div className="mt-1 flex items-center">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {vote.option}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-medium text-gray-900">
+                    {(Number(vote.amount) / 1e18).toLocaleString(undefined, {
+                      maximumFractionDigits: 4,
+                    })}{" "}
+                    $BSTR
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Market #{vote.marketId}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center p-6 text-center">
+          <svg
+            className="w-12 h-12 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            ></path>
+          </svg>
+          <p className="mt-2 text-sm font-medium text-gray-500">
+            No votes submitted yet
+          </p>
+          <p className="mt-1 text-xs text-gray-400">
+            Your voting history will appear here
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
