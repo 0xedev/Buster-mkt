@@ -39,7 +39,7 @@ export default function MarketTime({ endTime, className }: MarketTimeProps) {
     return (
       <div
         className={cn(
-          "text-xs px-2 py-1 rounded-md bg-gradient-to-r from-red-100 to-red-200 text-red-800 border border-red-300 flex items-center shadow-sm",
+          "text-xs px-2 py-1 rounded-md bg-gradient-to-r from-red-100 to-red-200 text-red-800 border border-red-300 flex items-center shadow-sm w-fit",
           className
         )}
       >
@@ -52,12 +52,12 @@ export default function MarketTime({ endTime, className }: MarketTimeProps) {
   return (
     <div
       className={cn(
-        "text-xs px-2 py-1 rounded-md bg-gradient-to-r from-blue-50 to-indigo-100 border border-indigo-200 flex items-center shadow-sm",
+        "text-xs px-2 py-1 rounded-md bg-gradient-to-r from-green-50 to-green-100 border border-green-200 flex items-center shadow-sm w-fit",
         className
       )}
     >
-      <span className="text-indigo-500 font-medium mr-1.5">⏱</span>
-      <span className="text-indigo-600 font-medium mr-1.5">Ends:</span>
+      <span className="text-green-500 font-medium mr-1.5">⏱</span>
+      <span className="text-green-600 font-medium mr-1.5">Ends:</span>
       {timeLeft.days > 0 && <TimeUnit value={timeLeft.days} unit="d" />}
       <TimeUnit value={timeLeft.hours} unit="h" />
       <TimeUnit value={timeLeft.minutes} unit="m" />
@@ -76,9 +76,9 @@ const TimeUnit = ({
   isLast?: boolean;
 }) => (
   <span className={cn("flex items-center", !isLast && "mr-1")}>
-    <span className="font-bold text-indigo-800">
+    <span className="font-bold text-green-800">
       {String(value).padStart(2, "0")}
     </span>
-    <span className="text-indigo-500">{unit}</span>
+    <span className="text-green-500">{unit}</span>
   </span>
 );
