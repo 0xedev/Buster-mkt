@@ -64,7 +64,7 @@ export async function GET() {
 
     // Fetch Claimed events with pagination
     console.log("Fetching Claimed events...");
-    const DEPLOYMENT_BLOCK = 28965072n; // Confirmed deployment block
+    const DEPLOYMENT_BLOCK = BigInt(28965072); // Confirmed deployment block
 
     const test = await neynar.fetchBulkUsersByEthOrSolAddress({
       addresses: ["0x209296518BFFe5F06cB7131D85764D0339b21f1a"],
