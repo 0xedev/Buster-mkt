@@ -76,9 +76,9 @@ const TimeUnit = ({
   isLast?: boolean;
 }) => (
   <span className={cn("flex items-center", !isLast && "mr-1")}>
-    <span className="font-bold text-green-800">
+    <span className="font-bold text-grey-800">
       {String(value).padStart(2, "0")}
     </span>
-    <span className="text-green-500">{unit}</span>
+    <span className="text-grey-500">{unit}</span>
   </span>
 );
