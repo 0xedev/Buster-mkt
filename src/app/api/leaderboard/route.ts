@@ -6,6 +6,10 @@ import { getContract, getContractEvents, prepareEvent } from "thirdweb";
 import { eth_blockNumber } from "thirdweb/rpc";
 import { getRpcClient } from "thirdweb/rpc";
 
+export enum BulkUserAddressType {
+  CustodyAddress = "custody_address",
+  VerifiedAddress = "verified_address",
+}
 // Define the contract ABI
 const CONTRACT_ABI = [
   {
@@ -78,7 +82,10 @@ export async function GET() {
       console.log(`🧪 Running test Neynar call for address: ${testAddress}`);
       const testResponse = await neynar.fetchBulkUsersByEthOrSolAddress({
         addresses: [testAddress],
-        addressTypes: ['custody_address', 'verified_address'], 
+        addressTypes: [
+          BulkUserAddressType.CustodyAddress,
+          BulkUserAddressType.VerifiedAddress,
+        ], // Use Enum
       });
       console.log(
         "🧪 Test Neynar Response Structure:",
@@ -123,7 +130,7 @@ export async function GET() {
         });
         console.log(`✅ Fetched ${events.length} events in this batch.`);
         allEvents.push(...events);
-        fromBlock = toBlock + 1n;
+        fromBlock = toBlock + BigInt(1);
       } catch (eventError) {
         console.error(
           `❌ Error fetching events from ${fromBlock} to ${toBlock}:`,
@@ -134,7 +141,7 @@ export async function GET() {
         console.warn(
           `⚠️ Skipping block range ${fromBlock}-${toBlock} due to error.`
         );
-        fromBlock = toBlock + 1n;
+        fromBlock = toBlock + BigInt(1);
       }
     }
 
@@ -206,7 +213,10 @@ export async function GET() {
         addressToUsersMap = await neynar.fetchBulkUsersByEthOrSolAddress({
           addresses: addressesToFetch,
           // Use Enum for safety if available and imported
-          addressTypes: [ 'custody_address','verified_address'],
+          addressTypes: [
+            BulkUserAddressType.CustodyAddress,
+            BulkUserAddressType.VerifiedAddress,
+          ],
         });
         console.log(
           `✅ Neynar responded. Found users for ${
