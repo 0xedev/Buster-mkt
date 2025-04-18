@@ -75,7 +75,7 @@ export async function GET() {
     const rpcClient = getRpcClient({ client, chain: base });
     const latestBlock = await eth_blockNumber(rpcClient);
 
-    const blockRange = 10000n; // Max 10,000 blocks per request
+    const blockRange = BigInt(10000); // Max 10,000 blocks per request
     let fromBlock = DEPLOYMENT_BLOCK;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const allEvents: any[] = [];
