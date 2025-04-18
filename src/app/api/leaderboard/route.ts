@@ -93,7 +93,7 @@ export async function GET() {
         toBlock,
       });
       allEvents.push(...events);
-      fromBlock = toBlock + 1n;
+      fromBlock = toBlock + BigInt(1);
     }
 
     console.log(
