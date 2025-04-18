@@ -62,6 +62,7 @@ export async function GET() {
       // Based on the provided SDK structure, it seems to expect a Configuration object.
       // Let's assume your previous initialization was correct for your SDK version.
       // If not, adjust according to the actual SDK constructor.
+       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       neynar = new NeynarAPIClient({ apiKey: neynarApiKey } as any); // Use 'as any' if type mismatch, or fix config
       console.log("✅ Neynar client initialized.");
     } catch (error) {
