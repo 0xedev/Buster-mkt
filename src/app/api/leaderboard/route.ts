@@ -6,10 +6,6 @@ import { getContract, getContractEvents, prepareEvent } from "thirdweb";
 import { eth_blockNumber } from "thirdweb/rpc";
 import { getRpcClient } from "thirdweb/rpc";
 
-export enum BulkUserAddressType {
-  CustodyAddress = "custody_address",
-  VerifiedAddress = "verified_address",
-}
 // Define the contract ABI
 const CONTRACT_ABI = [
   {
@@ -82,10 +78,7 @@ export async function GET() {
       console.log(`🧪 Running test Neynar call for address: ${testAddress}`);
       const testResponse = await neynar.fetchBulkUsersByEthOrSolAddress({
         addresses: [testAddress],
-        addressTypes: [
-          BulkUserAddressType.CustodyAddress,
-          BulkUserAddressType.VerifiedAddress,
-        ], // Use Enum
+        addressTypes: ['custody_address', 'verified_address'], 
       });
       console.log(
         "🧪 Test Neynar Response Structure:",
@@ -213,10 +206,7 @@ export async function GET() {
         addressToUsersMap = await neynar.fetchBulkUsersByEthOrSolAddress({
           addresses: addressesToFetch,
           // Use Enum for safety if available and imported
-          addressTypes: [
-            BulkUserAddressType.CustodyAddress,
-            BulkUserAddressType.VerifiedAddress,
-          ],
+          addressTypes: [ 'custody_address','verified_address'],
         });
         console.log(
           `✅ Neynar responded. Found users for ${
