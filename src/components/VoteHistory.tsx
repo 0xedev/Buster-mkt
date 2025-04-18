@@ -44,7 +44,7 @@ export function VoteHistory() {
         });
         const latestBlock = await eth_blockNumber(rpcClient);
         const DEPLOYMENT_BLOCK = BigInt(28965072);
-        const blockRange = 10000n;
+        const blockRange = BigInt(10000);
         let fromBlock = DEPLOYMENT_BLOCK;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const allEvents: any[] = [];
@@ -63,7 +63,7 @@ export function VoteHistory() {
             events: [preparedEvent],
           });
           allEvents.push(...events);
-          fromBlock = toBlock + 1n;
+          fromBlock = toBlock + BigInt(1);
         }
 
         console.log(
