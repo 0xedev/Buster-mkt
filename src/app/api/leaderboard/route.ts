@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server";
-import { NeynarAPIClient } from "@neynar/nodejs-sdk"; 
+import { NeynarAPIClient } from "@neynar/nodejs-sdk";
 import { client } from "@/app/client";
 import { base } from "thirdweb/chains";
 import { getContract, getContractEvents, prepareEvent } from "thirdweb";
 import { eth_blockNumber } from "thirdweb/rpc";
 import { getRpcClient } from "thirdweb/rpc";
 
-export enum BulkUserAddressType {
-  CustodyAddress = "custody_address",
-  VerifiedAddress = "verified_address",
-}
 // Define the contract ABI
 const CONTRACT_ABI = [
   {
@@ -62,7 +58,7 @@ export async function GET() {
       // Based on the provided SDK structure, it seems to expect a Configuration object.
       // Let's assume your previous initialization was correct for your SDK version.
       // If not, adjust according to the actual SDK constructor.
-       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       neynar = new NeynarAPIClient({ apiKey: neynarApiKey } as any); // Use 'as any' if type mismatch, or fix config
       console.log("✅ Neynar client initialized.");
     } catch (error) {
@@ -82,10 +78,7 @@ export async function GET() {
       console.log(`🧪 Running test Neynar call for address: ${testAddress}`);
       const testResponse = await neynar.fetchBulkUsersByEthOrSolAddress({
         addresses: [testAddress],
-        addressTypes: [
-          BulkUserAddressType.CustodyAddress,
-          BulkUserAddressType.VerifiedAddress,
-        ], // Use Enum
+        addressTypes: ["custody_address", "verified_address"], 
       });
       console.log(
         "🧪 Test Neynar Response Structure:",
@@ -213,10 +206,7 @@ export async function GET() {
         addressToUsersMap = await neynar.fetchBulkUsersByEthOrSolAddress({
           addresses: addressesToFetch,
           // Use Enum for safety if available and imported
-          addressTypes: [
-            BulkUserAddressType.CustodyAddress,
-            BulkUserAddressType.VerifiedAddress,
-          ],
+          addressTypes: ["custody_address", "verified_address"],
         });
         console.log(
           `✅ Neynar responded. Found users for ${
