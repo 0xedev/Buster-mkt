@@ -243,7 +243,7 @@ export async function GET() {
           user ? { fid: user.fid, username: user.username } : undefined
         );
         return {
-          username: user?.username || "winner.address", // Use optional chaining
+          username: user?.username || winner.address, // Use optional chaining
           fid: user?.fid || 0, // Use optional chaining
           pfp_url: user?.pfp_url || null, // Add profile picture URL
           winnings: winner.winnings,
