@@ -54,6 +54,7 @@ export function Navbar() {
             theme={lightTheme()}
             chain={customBase}
             wallets={wallets}
+            autoconnect={true}
             connectModal={{ size: "compact" }}
             connectButton={{
               style: { fontSize: "0.75rem", height: "2.5rem" },
@@ -115,6 +116,7 @@ export function Navbar() {
                 theme={lightTheme()}
                 chain={customBase}
                 wallets={wallets}
+                autoconnect={true}
                 connectModal={{ size: "compact" }}
                 connectButton={{
                   style: { width: "100%" },
