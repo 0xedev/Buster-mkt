@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { NextPage } from "next";
 import { getContract, readContract } from "thirdweb";
 import { base } from "thirdweb/chains";
 import { client } from "@/app/client";
@@ -36,13 +37,9 @@ type MarketInfo = readonly [
   boolean
 ];
 
-interface Props {
-  params: { marketId: string };
-}
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+// Fetch market data
+async function fetchMarketData(marketId: string): Promise<Market> {
   try {
-    const marketId = params.marketId;
     const marketData = (await readContract({
       contract,
       method:
@@ -50,7 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       params: [BigInt(marketId)],
     })) as MarketInfo;
 
-    const market: Market = {
+    return {
       question: marketData[0],
       totalOptionAShares: marketData[1],
       totalOptionBShares: marketData[2],
@@ -60,7 +57,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       outcome: marketData[6],
       resolved: marketData[7],
     };
+  } catch (error) {
+    console.error(`Failed to fetch market ${marketId}:`, error);
+    throw error;
+  }
+}
 
+interface Props {
+  params: { marketId: string };
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  try {
+    const market = await fetchMarketData(params.marketId);
     const total = market.totalOptionAShares + market.totalOptionBShares;
     const yesPercent =
       total > 0
@@ -72,18 +81,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: `Bet on ${market.question} - ${market.optionA}: ${yesPercent}%`,
       other: {
         "fc:frame": "next",
-        "fc:frame:image": `https://buster-mkt.vercel.app/api/market-image?marketId=${marketId}`,
+        "fc:frame:image": `https://buster-mkt.vercel.app/api/market-image?marketId=${params.marketId}`,
         "fc:frame:button:1": `Bet on ${market.question.slice(0, 20)}...`,
         "fc:frame:button:1:action": "launch_frame",
-        "fc:frame:button:1:url": `https://buster-mkt.vercel.app/market/${marketId}`,
+        "fc:frame:button:1:url": `https://buster-mkt.vercel.app/market/${params.marketId}`,
         "fc:frame:button:1:name": "Buster Market",
       },
     };
-  } catch (error) {
-    console.error(
-      `Metadata generation failed for market ${params.marketId}:`,
-      error
-    );
+  } catch {
     return {
       title: "Market Not Found",
       description: "Unable to load market data",
@@ -91,31 +96,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function MarketPage({ params }: Props) {
-  const marketId = params.marketId;
+const MarketPage: NextPage<Props> = async ({ params }) => {
   try {
-    const marketData = (await readContract({
-      contract,
-      method:
-        "function getMarketInfo(uint256 marketId) view returns (string question, uint256 totalOptionAShares, uint256 totalOptionBShares, string optionA, string optionB, uint256 endTime, uint8 outcome, bool resolved)",
-      params: [BigInt(marketId)],
-    })) as MarketInfo;
-
-    const market: Market = {
-      question: marketData[0],
-      totalOptionAShares: marketData[1],
-      totalOptionBShares: marketData[2],
-      optionA: marketData[3],
-      optionB: marketData[4],
-      endTime: marketData[5],
-      outcome: marketData[6],
-      resolved: marketData[7],
-    };
-
+    const market = await fetchMarketData(params.marketId);
     return (
       <div className="container mx-auto p-4">
         <MarketCard
-          index={Number(marketId)}
+          index={Number(params.marketId)}
           market={market}
           filter={
             market.resolved
@@ -127,8 +114,7 @@ export default async function MarketPage({ params }: Props) {
         />
       </div>
     );
-  } catch (error) {
-    console.error(`Failed to load market ${marketId}:`, error);
+  } catch {
     return (
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold">Market Not Found</h1>
@@ -136,4 +122,6 @@ export default async function MarketPage({ params }: Props) {
       </div>
     );
   }
-}
+};
+
+export default MarketPage;
