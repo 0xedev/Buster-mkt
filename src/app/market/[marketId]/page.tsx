@@ -1,4 +1,4 @@
-import { Metadata, NextPage } from "next";
+import { Metadata } from "next";
 import { getContract, readContract } from "thirdweb";
 import { base } from "thirdweb/chains";
 import { client } from "@/app/client";
@@ -63,11 +63,11 @@ async function fetchMarketData(marketId: string): Promise<Market> {
   }
 }
 
-interface Props {
+export async function generateMetadata({
+  params,
+}: {
   params: { marketId: string };
-}
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+}): Promise<Metadata> {
   try {
     const market = await fetchMarketData(params.marketId);
     const total = market.totalOptionAShares + market.totalOptionBShares;
@@ -75,7 +75,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       total > 0
         ? ((Number(market.totalOptionAShares) / Number(total)) * 100).toFixed(1)
         : "0";
-
     const frameEmbed = JSON.stringify({
       version: "next",
       imageUrl: `https://buster-mkt.vercel.app/api/market-image?marketId=${params.marketId}`,
@@ -97,6 +96,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       other: {
         "fc:frame": frameEmbed,
       },
+      openGraph: {
+        title: market.question,
+        description: `Bet on ${market.question} - ${market.optionA}: ${yesPercent}%`,
+        images: [
+          {
+            url: `https://buster-mkt.vercel.app/api/market-image?marketId=${params.marketId}`,
+            width: 1200,
+            height: 630,
+          },
+        ],
+      },
     };
   } catch {
     return {
@@ -106,7 +116,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-const MarketPage: NextPage<Props> = async ({ params }) => {
+const MarketPage = async ({ params }: { params: { marketId: string } }) => {
   try {
     const market = await fetchMarketData(params.marketId);
     return (
