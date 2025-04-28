@@ -116,7 +116,13 @@ export async function generateMetadata({
   }
 }
 
-const MarketPage = async ({ params }: { params: { marketId: string } }) => {
+// Define the correct type for Next.js App Router page component
+interface PageProps {
+  params: { marketId: string };
+  searchParams?: { [key: string]: string | string[] };
+}
+
+const MarketPage = async ({ params }: PageProps) => {
   try {
     const market = await fetchMarketData(params.marketId);
     return (
