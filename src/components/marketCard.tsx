@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Card,
   CardContent,
@@ -5,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
+import { Button } from "./ui/button";
 import { useActiveAccount, useReadContract } from "thirdweb/react";
 import { contract } from "@/constants/contract";
 import { MarketProgress } from "./market-progress";
@@ -51,15 +54,14 @@ export function MarketCard({
 }: MarketCardProps) {
   const account = useActiveAccount();
 
-  // Use cached market data if available, otherwise fallback to prop
   const marketData = market || cachedMarkets?.get(index);
 
-  // Fetch shares balance
   const { data: sharesBalanceData } = useReadContract({
     contract,
     method:
       "function getShareBalance(uint256 _marketId, address _user) view returns (uint256 optionAShares, uint256 optionBShares)",
     params: [BigInt(index), account?.address as string],
+    queryOptions: { enabled: !!account?.address },
   });
 
   const sharesBalance: SharesBalance | undefined = sharesBalanceData
@@ -69,12 +71,20 @@ export function MarketCard({
       }
     : undefined;
 
-  // Check if market is expired
   const isExpired =
     marketData && new Date(Number(marketData.endTime) * 1000) < new Date();
   const isResolved = marketData?.resolved;
 
-  // Determine if market should be shown
+  // Construct Warpcast share URL
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app";
+  const marketPageUrl = `${appUrl}/market/${index}`;
+  const warpcastShareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(
+    `Check out this market on Buster Market: ${
+      marketData?.question || `Market ${index}`
+    }`
+  )}&embeds[]=${encodeURIComponent(marketPageUrl)}`;
+
   const shouldShow = () => {
     if (!marketData) return false;
     switch (filter) {
@@ -89,52 +99,54 @@ export function MarketCard({
     }
   };
 
-  if (!shouldShow()) {
-    return null;
-  }
+  if (isLoading) return <MarketCardSkeleton />;
+  if (!marketData || !shouldShow()) return null;
 
   return (
     <Card key={index} className="flex flex-col">
-      {isLoading || !marketData ? (
-        <MarketCardSkeleton />
-      ) : (
-        <>
-          <CardHeader>
-            <MarketTime endTime={marketData.endTime} />
-            <CardTitle>{marketData.question}</CardTitle>
-          </CardHeader>
-          <CardContent className="pb-0">
-            <MarketProgress
+      <CardHeader>
+        <MarketTime endTime={marketData.endTime} />
+        <CardTitle>{marketData.question}</CardTitle>
+      </CardHeader>
+      <CardContent className="pb-0">
+        <MarketProgress
+          optionA={marketData.optionA}
+          optionB={marketData.optionB}
+          totalOptionAShares={marketData.totalOptionAShares}
+          totalOptionBShares={marketData.totalOptionBShares}
+        />
+        {isExpired ? (
+          isResolved ? (
+            <MarketResolved
+              marketId={index}
+              outcome={marketData.outcome}
               optionA={marketData.optionA}
               optionB={marketData.optionB}
-              totalOptionAShares={marketData.totalOptionAShares}
-              totalOptionBShares={marketData.totalOptionBShares}
             />
-            {isExpired ? (
-              isResolved ? (
-                <MarketResolved
-                  marketId={index}
-                  outcome={marketData.outcome}
-                  optionA={marketData.optionA}
-                  optionB={marketData.optionB}
-                />
-              ) : (
-                <MarketPending />
-              )
-            ) : (
-              <MarketBuyInterface marketId={index} market={marketData} />
-            )}
-          </CardContent>
-          <CardFooter>
-            {sharesBalance && (
-              <MarketSharesDisplay
-                market={marketData}
-                sharesBalance={sharesBalance}
-              />
-            )}
-          </CardFooter>
-        </>
-      )}
+          ) : (
+            <MarketPending />
+          )
+        ) : (
+          <MarketBuyInterface marketId={index} market={marketData} />
+        )}
+      </CardContent>
+      <CardFooter className="flex justify-between items-center pt-4">
+        {sharesBalance &&
+        (sharesBalance.optionAShares > 0n ||
+          sharesBalance.optionBShares > 0n) ? (
+          <MarketSharesDisplay
+            market={marketData}
+            sharesBalance={sharesBalance}
+          />
+        ) : (
+          <div />
+        )}
+        <Button asChild variant="outline" size="sm">
+          <a href={warpcastShareUrl} target="_blank" rel="noopener noreferrer">
+            Share
+          </a>
+        </Button>
+      </CardFooter>
     </Card>
   );
 }
