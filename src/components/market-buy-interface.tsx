@@ -171,12 +171,15 @@ export function MarketBuyInterface({
         userAllowance < toUnits(amount, tokenDecimals) ? "allowance" : "confirm"
       );
       setError(null);
-    } catch (err) {
+    } catch (_err) {
+      // Prefix with underscore
       toast({
-        title: "Error",
-        description: "Failed to check token allowance",
+        title: "Approval Failed",
+        description: "Failed to approve token spending",
         variant: "destructive",
       });
+    } finally {
+      setIsApproving(false);
     }
   };
 
@@ -238,12 +241,22 @@ export function MarketBuyInterface({
         duration: 5000,
       });
       handleCancel();
-    } catch (err: any) {
-      const errorMessage = err.message.includes(
-        "Market trading period has ended"
-      )
-        ? "Market trading period has ended"
-        : "Failed to process purchase";
+    } catch (error: unknown) {
+      // Catch as unknown
+      // Default message
+      let errorMessage = "Failed to process purchase";
+      // Type check before accessing .message
+      if (
+        error instanceof Error &&
+        error.message.includes("Market trading period has ended")
+      ) {
+        errorMessage = "Market trading period has ended";
+      } else if (error instanceof Error) {
+        // You could potentially use error.message here for other errors if desired
+        console.error("Purchase Error:", error.message); // Log other errors
+      } else {
+        console.error("Unknown Purchase Error:", error); // Log non-Error types
+      }
       toast({
         title: "Purchase Failed",
         description: errorMessage,

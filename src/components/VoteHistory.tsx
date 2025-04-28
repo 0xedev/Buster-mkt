@@ -8,10 +8,24 @@ import { getRpcClient } from "thirdweb/rpc";
 import { contract } from "@/constants/contract";
 import { base } from "thirdweb/chains";
 import { debounce } from "lodash";
+import { useToast } from "@/components/ui/use-toast";
+import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { ArrowUpDown } from "lucide-react";
 
 // Cache keys for local storage
 const CACHE_KEY = "vote_history_cache";
 const LAST_BLOCK_KEY = "last_fetched_block";
+
+interface SharesPurchasedEvent {
+  args: {
+    marketId: bigint;
+    buyer: string;
+    isOptionA: boolean;
+    amount: bigint;
+  };
+  blockNumber: bigint;
+}
 
 interface Vote {
   marketId: number;
@@ -38,10 +52,53 @@ const preparedEvent = prepareEvent({
     "event SharesPurchased(uint256 indexed marketId, address indexed buyer, bool isOptionA, uint256 amount)",
 });
 
+type SortKey = "marketId" | "marketName" | "option" | "amount";
+type SortDirection = "asc" | "desc";
+
 export function VoteHistory() {
   const account = useActiveAccount();
+  const { toast } = useToast();
   const [votes, setVotes] = useState<Vote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [tokenSymbol, setTokenSymbol] = useState<string>("BSTR");
+  const [tokenDecimals, setTokenDecimals] = useState<number>(18);
+  const [search, setSearch] = useState<string>("");
+  const [sortKey, setSortKey] = useState<SortKey>("marketId");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  // Fetch token metadata
+  useEffect(() => {
+    const fetchTokenMetadata = async () => {
+      try {
+        const bettingTokenAddress = await readContract({
+          contract,
+          method: "function bettingToken() view returns (address)",
+          params: [],
+        });
+        const tokenContract = {
+          ...contract,
+          address: bettingTokenAddress,
+        };
+        const [symbol, decimals] = await Promise.all([
+          readContract({
+            contract: tokenContract,
+            method: "function symbol() view returns (string)",
+            params: [],
+          }),
+          readContract({
+            contract: tokenContract,
+            method: "function decimals() view returns (uint8)",
+            params: [],
+          }),
+        ]);
+        setTokenSymbol(symbol);
+        setTokenDecimals(decimals);
+      } catch (err) {
+        console.error("Failed to fetch token metadata:", err);
+      }
+    };
+    fetchTokenMetadata();
+  }, []);
 
   // Load cache from local storage
   const loadCache = useCallback((): CacheData => {
@@ -64,124 +121,173 @@ export function VoteHistory() {
     }
   }, []);
 
-  // Debounced fetch function
+  // Fetch votes
   const fetchVotes = useCallback(
-    debounce(async (accountAddress: string) => {
-      if (!accountAddress) {
-        setVotes([]);
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        // Load cache
-        const cache = loadCache();
-        let newVotes = [...cache.votes];
-        let marketInfoCache = { ...cache.marketInfo };
-        let fromBlock = BigInt(cache[LAST_BLOCK_KEY] || "28965072"); // Deployment block fallback
-
-        // Fetch latest block number
-        const rpcClient = getRpcClient({
-          client: contract.client,
-          chain: base,
-        });
-        const latestBlock = await eth_blockNumber(rpcClient);
-
-        // Fetch events incrementally
-        const blockRange = BigInt(1000);
-        let allEvents: any[] = [];
-        while (fromBlock <= latestBlock) {
-          const toBlock =
-            fromBlock + blockRange > latestBlock
-              ? latestBlock
-              : fromBlock + blockRange;
-          const events = await getContractEvents({
-            contract,
-            fromBlock,
-            toBlock,
-            events: [preparedEvent],
-          });
-          allEvents.push(...events);
-          fromBlock = toBlock + BigInt(1);
+    (accountAddress: string) => {
+      const debouncedFetch = debounce(async () => {
+        if (!accountAddress) {
+          setVotes([]);
+          setIsLoading(false);
+          return;
         }
 
-        // Filter user events
-        const userEvents = allEvents.filter(
-          (e) => e.args.buyer.toLowerCase() === accountAddress.toLowerCase()
-        );
+        setIsLoading(true);
+        try {
+          // Load cache
+          const cache = loadCache();
+          let newVotes = [...cache.votes];
+          const marketInfoCache = { ...cache.marketInfo };
+          let fromBlock = BigInt(cache[LAST_BLOCK_KEY] || "28965072"); // Deployment block
 
-        // Get unique market IDs
-        const marketIds = [
-          ...new Set(userEvents.map((e) => Number(e.args.marketId))),
-        ];
-        const uncachedMarketIds = marketIds.filter(
-          (id) => !marketInfoCache[id]
-        );
+          // Fetch latest block number
+          const rpcClient = getRpcClient({
+            client: contract.client,
+            chain: base,
+          });
+          const latestBlock = await eth_blockNumber(rpcClient);
 
-        // Fetch market info in batch
-        if (uncachedMarketIds.length > 0) {
-          const marketInfos = await readContract({
-            contract,
-            method:
-              "function getMarketInfoBatch(uint256[] _marketIds) view returns (string[] questions, string[] optionAs, string[] optionBs, uint256[] endTimes, uint8[] outcomes, uint256[] totalOptionASharesArray, uint256[] totalOptionBSharesArray, bool[] resolvedArray)",
-            params: [uncachedMarketIds.map(BigInt)],
+          // Fetch events incrementally
+          const blockRange = BigInt(1000);
+          const allEvents: SharesPurchasedEvent[] = [];
+          while (fromBlock <= latestBlock) {
+            const toBlock =
+              fromBlock + blockRange > latestBlock
+                ? latestBlock
+                : fromBlock + blockRange;
+            const events = await getContractEvents({
+              contract,
+              fromBlock,
+              toBlock,
+              events: [preparedEvent],
+            });
+            allEvents.push(...(events as SharesPurchasedEvent[]));
+            fromBlock = toBlock + BigInt(1);
+          }
+
+          // Filter user events
+          const userEvents = allEvents.filter(
+            (e) => e.args.buyer.toLowerCase() === accountAddress.toLowerCase()
+          );
+
+          // Get unique market IDs
+          const marketIds = [
+            ...new Set(userEvents.map((e) => Number(e.args.marketId))),
+          ];
+          const uncachedMarketIds = marketIds.filter(
+            (id) => !marketInfoCache[id]
+          );
+
+          // Fetch market info in batch
+          if (uncachedMarketIds.length > 0) {
+            const marketInfos = await readContract({
+              contract,
+              method:
+                "function getMarketInfoBatch(uint256[] _marketIds) view returns (string[] questions, string[] optionAs, string[] optionBs, uint256[] endTimes, uint8[] outcomes, uint256[] totalOptionASharesArray, uint256[] totalOptionBSharesArray, bool[] resolvedArray)",
+              params: [uncachedMarketIds.map(BigInt)],
+            });
+
+            // Update market info cache
+            uncachedMarketIds.forEach((marketId, i) => {
+              marketInfoCache[marketId] = {
+                marketId,
+                question: marketInfos[0][i],
+                optionA: marketInfos[1][i],
+                optionB: marketInfos[2][i],
+              };
+            });
+          }
+
+          // Map events to votes
+          const newUserVotes = userEvents
+            .map((e) => {
+              const market = marketInfoCache[Number(e.args.marketId)];
+              if (!market) return null;
+              return {
+                marketId: Number(e.args.marketId),
+                option: e.args.isOptionA ? market.optionA : market.optionB,
+                amount: e.args.amount,
+                marketName: market.question,
+              };
+            })
+            .filter((vote): vote is Vote => vote !== null);
+
+          // Merge new votes with cached votes, avoiding duplicates
+          const voteMap = new Map<number, Vote>();
+          [...cache.votes, ...newUserVotes].forEach((vote, i) => {
+            voteMap.set(i, vote);
+          });
+          newVotes = Array.from(voteMap.values());
+
+          // Update cache
+          saveCache({
+            votes: newVotes,
+            marketInfo: marketInfoCache,
+            [LAST_BLOCK_KEY]: latestBlock.toString(),
           });
 
-          // Update market info cache
-          uncachedMarketIds.forEach((marketId, i) => {
-            marketInfoCache[marketId] = {
-              marketId,
-              question: marketInfos[0][i],
-              optionA: marketInfos[1][i],
-              optionB: marketInfos[2][i],
-            };
+          setVotes(newVotes);
+        } catch (error) {
+          console.error("Vote history error:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load vote history. Please try again.",
+            variant: "destructive",
           });
+          setVotes([]);
+        } finally {
+          setIsLoading(false);
         }
+      }, 500);
 
-        // Map events to votes
-        const newUserVotes = userEvents
-          .map((e) => {
-            const market = marketInfoCache[Number(e.args.marketId)];
-            if (!market) return null;
-            return {
-              marketId: Number(e.args.marketId),
-              option: e.args.isOptionA ? market.optionA : market.optionB,
-              amount: e.args.amount,
-              marketName: market.question,
-            };
-          })
-          .filter((vote): vote is Vote => vote !== null);
-
-        // Merge new votes with cached votes, avoiding duplicates
-        const voteMap = new Map<number, Vote>();
-        [...cache.votes, ...newUserVotes].forEach((vote, i) => {
-          voteMap.set(i, vote);
-        });
-        newVotes = Array.from(voteMap.values());
-
-        // Update cache
-        saveCache({
-          votes: newVotes,
-          marketInfo: marketInfoCache,
-          [LAST_BLOCK_KEY]: latestBlock.toString(),
-        });
-
-        setVotes(newVotes);
-      } catch (error) {
-        console.error("Vote history error:", error);
-        setVotes([]);
-      } finally {
-        setIsLoading(false);
-      }
-    }, 500),
-    [loadCache, saveCache]
+      debouncedFetch();
+      return debouncedFetch.cancel;
+    },
+    [loadCache, saveCache, toast]
   );
 
   useEffect(() => {
-    fetchVotes(account?.address || "");
-    return () => fetchVotes.cancel();
+    const cancel = fetchVotes(account?.address || "");
+    return () => cancel();
   }, [account, fetchVotes]);
+
+  // Handle sorting
+  const handleSort = (key: SortKey) => {
+    if (key === sortKey) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDirection("asc");
+    }
+  };
+
+  // Map SortDirection to aria-sort values
+  const getAriaSort = (key: SortKey): "none" | "ascending" | "descending" => {
+    if (key !== sortKey) return "none";
+    return sortDirection === "asc" ? "ascending" : "descending";
+  };
+
+  // Sort and filter votes
+  const filteredVotes = votes
+    .filter(
+      (vote) =>
+        vote.marketName.toLowerCase().includes(search.toLowerCase()) ||
+        vote.option.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => {
+      const multiplier = sortDirection === "asc" ? 1 : -1;
+      switch (sortKey) {
+        case "marketId":
+          return (a.marketId - b.marketId) * multiplier;
+        case "marketName":
+          return a.marketName.localeCompare(b.marketName) * multiplier;
+        case "option":
+          return a.option.localeCompare(b.option) * multiplier;
+        case "amount":
+          return Number(a.amount - b.amount) * multiplier;
+        default:
+          return 0;
+      }
+    });
 
   if (!account) {
     return (
@@ -218,40 +324,94 @@ export function VoteHistory() {
     <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
       <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
         <h3 className="text-sm font-medium text-gray-700">Your Vote History</h3>
+        <Input
+          placeholder="Search by market or option"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="mt-2"
+          aria-label="Search vote history"
+        />
       </div>
 
-      {votes.length > 0 ? (
+      {filteredVotes.length > 0 ? (
         <div className="divide-y divide-gray-200">
-          {votes.map((vote, idx) => (
+          <div className="grid grid-cols-4 gap-4 px-4 py-2 bg-gray-100 text-xs font-medium text-gray-700">
+            <button
+              onClick={() => handleSort("marketId")}
+              className="flex items-center gap-1 hover:text-gray-900"
+              aria-sort={getAriaSort("marketId")}
+              aria-label="Sort by Market ID"
+            >
+              Market ID
+              <ArrowUpDown className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => handleSort("marketName")}
+              className="flex items-center gap-1 hover:text-gray-900"
+              aria-sort={getAriaSort("marketName")}
+              aria-label="Sort by Market Name"
+            >
+              Market Name
+              <ArrowUpDown className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => handleSort("option")}
+              className="flex items-center gap-1 hover:text-gray-900"
+              aria-sort={getAriaSort("option")}
+              aria-label="Sort by Option"
+            >
+              Option
+              <ArrowUpDown className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => handleSort("amount")}
+              className="flex items-center gap-1 hover:text-gray-900 text-right"
+              aria-sort={getAriaSort("amount")}
+              aria-label="Sort by Amount"
+            >
+              Amount
+              <ArrowUpDown className="h-4 w-4" />
+            </button>
+          </div>
+          {filteredVotes.map((vote, idx) => (
             <div
               key={idx}
-              className="px-4 py-3 hover:bg-gray-50 transition-colors"
+              className="grid grid-cols-4 gap-4 px-4 py-3 hover:bg-gray-50 transition-colors"
+              role="button"
+              tabIndex={0}
+              aria-label={`Vote on ${vote.marketName} for ${vote.option}`}
             >
-              <div className="flex items-center justify-between">
-                <div className="w-2/3">
-                  <div
-                    className="text-sm font-medium text-gray-900 truncate"
-                    title={vote.marketName}
-                  >
-                    {vote.marketName}
-                  </div>
-                  <div className="mt-1 flex items-center">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {vote.option}
-                    </span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-medium text-gray-900">
-                    {(Number(vote.amount) / 1e18).toLocaleString(undefined, {
-                      maximumFractionDigits: 4,
-                    })}{" "}
-                    $BSTR
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    Market #{vote.marketId}
-                  </div>
-                </div>
+              <div className="text-sm text-gray-900">
+                <Link
+                  href={`/market/${vote.marketId}`}
+                  className="hover:underline"
+                >
+                  #{vote.marketId}
+                </Link>
+              </div>
+              <div
+                className="text-sm text-gray-900 truncate"
+                title={vote.marketName}
+              >
+                <Link
+                  href={`/market/${vote.marketId}`}
+                  className="hover:underline"
+                >
+                  {vote.marketName}
+                </Link>
+              </div>
+              <div className="text-sm">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {vote.option}
+                </span>
+              </div>
+              <div className="text-sm font-medium text-gray-900 text-right">
+                {(
+                  Number(vote.amount) / Math.pow(10, tokenDecimals)
+                ).toLocaleString(undefined, {
+                  maximumFractionDigits: 2,
+                })}{" "}
+                {tokenSymbol}
               </div>
             </div>
           ))}
@@ -264,16 +424,17 @@ export function VoteHistory() {
             stroke="currentColor"
             viewBox="0 0 24 24"
             xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth="2"
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            ></path>
+            />
           </svg>
           <p className="mt-2 text-sm font-medium text-gray-500">
-            No votes submitted yet
+            {search ? "No matching votes found" : "No votes submitted yet"}
           </p>
           <p className="mt-1 text-xs text-gray-400">
             Your voting history will appear here

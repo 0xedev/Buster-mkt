@@ -2,18 +2,53 @@ import { NextResponse } from "next/server";
 import { NeynarAPIClient } from "@neynar/nodejs-sdk";
 import { client } from "@/app/client";
 import { base } from "thirdweb/chains";
-import { getContract, getContractEvents, prepareEvent } from "thirdweb";
-import { eth_blockNumber } from "thirdweb/rpc";
+import {
+  getContract,
+  getContractEvents,
+  prepareEvent,
+  readContract,
+} from "thirdweb";
+import { eth_blockNumber, eth_getBlockByNumber } from "thirdweb/rpc";
 import { getRpcClient } from "thirdweb/rpc";
 import NodeCache from "node-cache";
 
-// Initialize cache with 5-minute TTL
+// Initialize cache
 const cache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
 const CACHE_KEY = "leaderboard";
 const LAST_BLOCK_KEY = "last_fetched_block";
 const NEYNAR_CACHE_KEY = "neynar_users";
 
-// Define the contract ABI
+// Define types
+interface ClaimedEvent {
+  args: {
+    marketId: bigint;
+    user: string;
+    amount: bigint;
+  };
+  blockNumber: bigint;
+}
+
+interface NeynarRawUser {
+  username: string;
+  fid: number;
+  pfp_url?: string;
+}
+
+interface NeynarUser {
+  username: string;
+  fid: string;
+  pfp_url: string | null;
+}
+
+interface LeaderboardEntry {
+  username: string;
+  fid: string;
+  pfp_url: string | null;
+  winnings: number;
+  address: string;
+}
+
+// Contract ABI
 const CONTRACT_ABI = [
   {
     type: "event",
@@ -24,6 +59,13 @@ const CONTRACT_ABI = [
       { indexed: false, name: "amount", type: "uint256" },
     ],
     anonymous: false,
+  },
+  {
+    type: "function",
+    name: "bettingToken",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "view",
   },
 ] as const;
 
@@ -40,7 +82,7 @@ const CLAIMED_EVENT = prepareEvent({
     "event Claimed(uint256 indexed marketId, address indexed user, uint256 amount)",
 });
 
-// Retry utility for RPC calls
+// Retry utility
 async function withRetry<T>(
   fn: () => Promise<T>,
   retries = 3,
@@ -63,7 +105,7 @@ export async function GET() {
     console.log("🚀 Starting leaderboard fetch...");
 
     // Check cache
-    const cachedLeaderboard = cache.get(CACHE_KEY);
+    const cachedLeaderboard = cache.get<LeaderboardEntry[]>(CACHE_KEY);
     if (cachedLeaderboard) {
       console.log("✅ Serving from cache");
       return NextResponse.json(cachedLeaderboard);
@@ -80,34 +122,51 @@ export async function GET() {
     }
 
     // Initialize Neynar client
-    let neynar: NeynarAPIClient;
-    try {
-      neynar = new NeynarAPIClient({ apiKey: neynarApiKey } as any);
-      console.log("✅ Neynar client initialized.");
-    } catch (error) {
-      console.error("❌ Failed to initialize Neynar client:", error);
-      return NextResponse.json(
-        {
-          error: "Failed to initialize Neynar client",
-          details: (error as Error).message,
-        },
-        { status: 500 }
-      );
-    }
+    const neynar = new NeynarAPIClient({ apiKey: neynarApiKey });
+    console.log("✅ Neynar client initialized.");
 
-    // Fetch latest block number
+    // Fetch latest block number and timestamp
     console.log("🔗 Fetching latest block number...");
     const rpcClient = getRpcClient({ client, chain: base });
     const latestBlock = await withRetry(() => eth_blockNumber(rpcClient));
-    console.log(`🔢 Latest block: ${latestBlock}`);
+    const blockInfo = await withRetry(() =>
+      eth_getBlockByNumber(rpcClient, { blockNumber: latestBlock })
+    );
+    const lastUpdated = Number(blockInfo.timestamp) * 1000; // Convert to ms
+    console.log(`🔢 Latest block: ${latestBlock}, Timestamp: ${lastUpdated}`);
 
-    // Fetch Claimed events with pagination
+    // Fetch bettingToken metadata
+    const bettingTokenAddress = await readContract({
+      contract,
+      method: "bettingToken",
+      params: [],
+    });
+    const tokenContract = getContract({
+      client,
+      chain: base,
+      address: bettingTokenAddress,
+    });
+    const [tokenSymbol, tokenDecimals] = await Promise.all([
+      readContract({
+        contract: tokenContract,
+        method: "function symbol() view returns (string)",
+        params: [],
+      }),
+      readContract({
+        contract: tokenContract,
+        method: "function decimals() view returns (uint8)",
+        params: [],
+      }),
+    ]);
+    console.log(`💸 Token: ${tokenSymbol}, Decimals: ${tokenDecimals}`);
+
+    // Fetch Claimed events
     console.log("📦 Fetching Claimed events...");
     const DEPLOYMENT_BLOCK = BigInt(28965072);
     const cachedBlock = cache.get<string>(LAST_BLOCK_KEY);
     let fromBlock = cachedBlock ? BigInt(cachedBlock) : DEPLOYMENT_BLOCK;
     const blockRange = BigInt(1000);
-    let allEvents: any[] = [];
+    const allEvents: ClaimedEvent[] = [];
 
     while (fromBlock <= latestBlock) {
       const toBlock =
@@ -127,40 +186,33 @@ export async function GET() {
           toBlock,
         })
       );
+      allEvents.push(...(events as ClaimedEvent[]));
       console.log(`✅ Fetched ${events.length} events in this batch.`);
-      allEvents.push(...events);
       fromBlock = toBlock + BigInt(1);
     }
 
     console.log(`🧾 Total Claimed events fetched: ${allEvents.length}`);
 
-    // Aggregate winnings in parallel
+    // Aggregate winnings
     console.log("💰 Aggregating winnings...");
-    const TOKEN_DECIMALS = 18;
     const winnersMap = new Map<string, number>();
-    await Promise.all(
-      allEvents.map(async (event) => {
-        if (
-          !event.args ||
-          typeof event.args.user !== "string" ||
-          typeof event.args.amount === "undefined"
-        ) {
-          console.warn(
-            "⚠️ Invalid event args:",
-            JSON.stringify(event, null, 2)
-          );
-          return;
-        }
-        const user = event.args.user.toLowerCase();
-        const amountWei = BigInt(event.args.amount);
-        const amountDecimal = Number(amountWei) / Math.pow(10, TOKEN_DECIMALS);
-
-        winnersMap.set(user, (winnersMap.get(user) || 0) + amountDecimal);
-      })
-    );
+    for (const event of allEvents) {
+      if (
+        !event.args ||
+        typeof event.args.user !== "string" ||
+        typeof event.args.amount === "undefined"
+      ) {
+        console.warn("⚠️ Invalid event args:", JSON.stringify(event, null, 2));
+        continue;
+      }
+      const user = event.args.user.toLowerCase();
+      const amountWei = BigInt(event.args.amount);
+      const amountDecimal = Number(amountWei) / Math.pow(10, tokenDecimals);
+      winnersMap.set(user, (winnersMap.get(user) || 0) + amountDecimal);
+    }
     console.log("📊 Winners map:", Array.from(winnersMap.entries()));
 
-    // Convert to array of winners
+    // Convert to winners array
     const winners = Array.from(winnersMap.entries()).map(
       ([address, winnings]) => ({
         address,
@@ -172,11 +224,11 @@ export async function GET() {
     // Fetch Farcaster usernames
     console.log("📬 Fetching Farcaster users...");
     const neynarCache =
-      cache.get<Record<string, any[]>>(NEYNAR_CACHE_KEY) || {};
+      cache.get<Record<string, NeynarUser[]>>(NEYNAR_CACHE_KEY) || {};
     const addressesToFetch = winners
       .map((w) => w.address)
       .filter((addr) => !neynarCache[addr]);
-    let addressToUsersMap: Record<string, any[]> = { ...neynarCache };
+    let addressToUsersMap: Record<string, NeynarUser[]> = { ...neynarCache };
 
     if (addressesToFetch.length > 0) {
       console.log(
@@ -189,11 +241,20 @@ export async function GET() {
             addressTypes: ["custody_address", "verified_address"],
           })
         );
-        addressToUsersMap = { ...addressToUsersMap, ...newUsersMap };
+        // Transform raw users to NeynarUser
+        const transformedUsersMap: Record<string, NeynarUser[]> = {};
+        for (const [address, users] of Object.entries(newUsersMap)) {
+          transformedUsersMap[address] = users.map((user: NeynarRawUser) => ({
+            username: user.username,
+            fid: user.fid.toString(),
+            pfp_url: user.pfp_url || null,
+          }));
+        }
+        addressToUsersMap = { ...addressToUsersMap, ...transformedUsersMap };
         cache.set(NEYNAR_CACHE_KEY, addressToUsersMap);
         console.log(
           `✅ Neynar responded. Found users for ${
-            Object.keys(newUsersMap).length
+            Object.keys(transformedUsersMap).length
           } addresses.`
         );
       } catch (neynarError) {
@@ -205,7 +266,7 @@ export async function GET() {
 
     // Build leaderboard
     console.log("🧠 Building leaderboard...");
-    const leaderboard = winners
+    const leaderboard: LeaderboardEntry[] = winners
       .map((winner) => {
         const usersForAddress = addressToUsersMap[winner.address];
         const user =
@@ -232,7 +293,11 @@ export async function GET() {
     cache.set(LAST_BLOCK_KEY, latestBlock.toString());
     console.log("✅ Cached leaderboard and last block");
 
-    return NextResponse.json(leaderboard);
+    return NextResponse.json({
+      leaderboard,
+      tokenSymbol,
+      lastUpdated,
+    });
   } catch (error) {
     console.error("❌ Leaderboard fetch error:", error);
     console.error((error as Error).stack);
