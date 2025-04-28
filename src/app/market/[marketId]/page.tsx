@@ -59,74 +59,96 @@ async function fetchMarketData(marketId: string): Promise<Market> {
     };
   } catch (error) {
     console.error(`Failed to fetch market ${marketId}:`, error);
-    throw error;
+    throw error; // Re-throw to be caught by generateMetadata/Page
   }
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { marketId: string };
-}): Promise<Metadata> {
+// --- Updated generateMetadata for Next.js 15+ ---
+export async function generateMetadata(
+  // Accept the props object containing the Promise
+  props: { params: Promise<{ marketId: string }> }
+): Promise<Metadata> {
   try {
+    // Await the params Promise to get the actual params object
+    const params = await props.params;
     const market = await fetchMarketData(params.marketId);
+
+    // --- Frame Metadata Update (Using standard fc:frame tags) ---
+    const imageUrl = `${
+      process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app"
+    }/api/market-image?marketId=${params.marketId}`;
+    const postUrl = `${
+      process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app"
+    }/api/frame-action`; // You'll need an API route to handle frame actions if using 'post' buttons
+    const marketUrl = `${
+      process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app"
+    }/market/${params.marketId}`;
+
     const total = market.totalOptionAShares + market.totalOptionBShares;
     const yesPercent =
       total > 0
         ? ((Number(market.totalOptionAShares) / Number(total)) * 100).toFixed(1)
         : "0";
-    const frameEmbed = JSON.stringify({
-      version: "next",
-      imageUrl: `https://buster-mkt.vercel.app/api/market-image?marketId=${params.marketId}`,
-      button: {
-        title: "Bet Now",
-        action: {
-          type: "launch_frame",
-          name: "Buster Market",
-          url: `https://buster-mkt.vercel.app/market/${params.marketId}`,
-          splashImageUrl: "https://buster-mkt.vercel.app/logo.png",
-          splashBackgroundColor: "#ffffff",
-        },
-      },
-    });
 
     return {
       title: market.question,
       description: `Bet on ${market.question} - ${market.optionA}: ${yesPercent}%`,
+      // Use standard fc:frame tags directly
       other: {
-        "fc:frame": frameEmbed,
+        "fc:frame": "vNext",
+        "fc:frame:image": imageUrl,
+        "fc:frame:post_url": postUrl, // Needed if you have post buttons
+        "fc:frame:button:1": "View Market",
+        "fc:frame:button:1:action": "link",
+        "fc:frame:button:1:target": marketUrl,
+        // Add more buttons if needed
       },
+      // Open Graph metadata
+      metadataBase: new URL(
+        process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app"
+      ),
       openGraph: {
         title: market.question,
         description: `Bet on ${market.question} - ${market.optionA}: ${yesPercent}%`,
         images: [
           {
-            url: `https://buster-mkt.vercel.app/api/market-image?marketId=${params.marketId}`,
-            width: 1200,
-            height: 630,
+            url: imageUrl,
+            width: 1200, // Match your image dimensions (e.g., 1200x800)
+            height: 800, // Match your image dimensions
+            alt: market.question,
           },
         ],
+        url: marketUrl,
+        type: "website",
+      },
+      // Twitter card metadata
+      twitter: {
+        card: "summary_large_image",
+        title: market.question,
+        description: `Bet on ${market.question} - ${market.optionA}: ${yesPercent}%`,
+        images: [imageUrl],
       },
     };
-  } catch {
+  } catch (error) {
+    // Log the error for debugging on the server
+    console.error("Error generating metadata:", error);
     return {
       title: "Market Not Found",
-      description: "Unable to load market data",
+      description: "Unable to load market data for metadata",
     };
   }
 }
 
-// The way we export the page component is the key to fixing this issue
-// Instead of using a function declaration with an interface,
-// we'll use a direct export with a specific type format expected by Next.js
-
-export default async function Page({
-  params,
-}: {
-  params: { marketId: string };
-}) {
+// --- Updated Page Component for Next.js 15+ ---
+export default async function Page(
+  // Accept the props object containing the Promise
+  props: { params: Promise<{ marketId: string }> }
+) {
   try {
+    // Await the params Promise to get the actual params object
+    const params = await props.params;
     const market = await fetchMarketData(params.marketId);
+
     return (
       <div className="container mx-auto p-4">
         <MiniAppClient />
@@ -143,7 +165,9 @@ export default async function Page({
         />
       </div>
     );
-  } catch {
+  } catch (error) {
+    // Log the error for debugging on the server
+    console.error("Error rendering market page:", error);
     return (
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold">Market Not Found</h1>
