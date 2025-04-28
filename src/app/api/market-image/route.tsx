@@ -1,147 +1,127 @@
-import { ImageResponse } from "next/og";
-import { NextRequest } from "next/server";
+import { Metadata, NextPage } from "next";
 import { getContract, readContract } from "thirdweb";
 import { base } from "thirdweb/chains";
 import { client } from "@/app/client";
+import { MarketCard } from "@/components/marketCard";
 
-// Define contract using environment variable
+// Define contract
 const contractAddress =
   process.env.CONTRACT_ADDRESS || "0xc703856dc56576800F9bc7DfD6ac15e92Ac2d7D6";
-const predictionMarketContract = getContract({
+const contract = getContract({
   client,
   chain: base,
   address: contractAddress,
 });
 
-// Define market info type based on contract's getMarketInfo
+// Interface for market data
+interface Market {
+  question: string;
+  optionA: string;
+  optionB: string;
+  endTime: bigint;
+  outcome: number;
+  totalOptionAShares: bigint;
+  totalOptionBShares: bigint;
+  resolved: boolean;
+}
+
 type MarketInfo = readonly [
-  string, // question
-  string, // optionA
-  string, // optionB
-  bigint, // endTime
-  number, // outcome (enum MarketOutcome: 0=UNRESOLVED, 1=OPTION_A, 2=OPTION_B)
-  bigint, // totalOptionAShares
-  bigint, // totalOptionBShares
-  boolean // resolved
+  string,
+  bigint,
+  bigint,
+  string,
+  string,
+  bigint,
+  number,
+  boolean
 ];
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const marketId = searchParams.get("marketId");
-
-  if (!marketId) {
-    return new Response("Missing market ID", { status: 400 });
-  }
-
+// Fetch market data
+async function fetchMarketData(marketId: string): Promise<Market> {
   try {
-    const marketIdBigInt = BigInt(marketId);
-
-    // Fetch data
     const marketData = (await readContract({
-      contract: predictionMarketContract,
+      contract,
       method:
-        "function getMarketInfo(uint256 _marketId) view returns (string question, string optionA, string optionB, uint256 endTime, uint8 outcome, uint256 totalOptionAShares, uint256 totalOptionBShares, bool resolved)",
-      params: [marketIdBigInt],
+        "function getMarketInfo(uint256 marketId) view returns (string question, uint256 totalOptionAShares, uint256 totalOptionBShares, string optionA, string optionB, uint256 endTime, uint8 outcome, bool resolved)",
+      params: [BigInt(marketId)],
     })) as MarketInfo;
 
-    const [
-      question,
-      optionA,
-      optionB,
-      ,
-      ,
-      totalOptionAShares,
-      totalOptionBShares,
-    ] = marketData;
-
-    // Calculate percentages
-    const total = totalOptionAShares + totalOptionBShares;
-    const yesPercent =
-      total > 0n
-        ? (Number((totalOptionAShares * 1000n) / total) / 10).toFixed(1)
-        : "0.0";
-    const noPercent =
-      total > 0n
-        ? (Number((totalOptionBShares * 1000n) / total) / 10).toFixed(1)
-        : "0.0";
-
-    return new ImageResponse(
-      (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            width: "1200px",
-            height: "800px",
-            background: "#ffffff",
-            padding: "40px",
-            fontFamily: "Arial, sans-serif",
-            justifyContent: "center",
-            alignItems: "center",
-            textAlign: "center",
-          }}
-        >
-          <h1
-            style={{ fontSize: "48px", marginBottom: "40px", maxWidth: "90%" }}
-          >
-            {question}
-          </h1>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-around",
-              width: "80%",
-            }}
-          >
-            <p style={{ fontSize: "36px" }}>
-              {optionA}: {yesPercent}%
-            </p>
-            <p style={{ fontSize: "36px" }}>
-              {optionB}: {noPercent}%
-            </p>
-          </div>
-          <p
-            style={{
-              fontSize: "24px",
-              color: "#666",
-              position: "absolute",
-              bottom: "20px",
-              left: "50%",
-              transform: "translateX(-50%)",
-            }}
-          >
-            Bet on Buster Market - buster-mkt.vercel.app
-          </p>
-        </div>
-      ),
-      {
-        width: 1200,
-        height: 800,
-        headers: { "Cache-Control": "public, max-age=300" },
-      }
-    );
+    return {
+      question: marketData[0],
+      totalOptionAShares: marketData[1],
+      totalOptionBShares: marketData[2],
+      optionA: marketData[3],
+      optionB: marketData[4],
+      endTime: marketData[5],
+      outcome: marketData[6],
+      resolved: marketData[7],
+    };
   } catch (error) {
-    console.error(`Failed to generate image for market ${marketId}:`, error);
-    return new ImageResponse(
-      (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "1200px",
-            height: "800px",
-            background: "#f0f0f0",
-            color: "#333",
-            fontSize: "32px",
-          }}
-        >
-          Error generating market image.
-        </div>
-      ),
-      { status: 500, width: 1200, height: 800 }
-    );
+    console.error(`Failed to fetch market ${marketId}:`, error);
+    throw error;
   }
 }
 
-export const dynamic = "force-dynamic";
+interface Props {
+  params: { marketId: string };
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  try {
+    const market = await fetchMarketData(params.marketId);
+    const total = market.totalOptionAShares + market.totalOptionBShares;
+    const yesPercent =
+      total > 0
+        ? ((Number(market.totalOptionAShares) / Number(total)) * 100).toFixed(1)
+        : "0";
+
+    return {
+      title: market.question,
+      description: `Bet on ${market.question} - ${market.optionA}: ${yesPercent}%`,
+      other: {
+        "fc:frame": "next",
+        "fc:frame:image": `https://buster-mkt.vercel.app/api/market-image?marketId=${params.marketId}`,
+        "fc:frame:button:1": `Bet on ${market.question.slice(0, 20)}...`,
+        "fc:frame:button:1:action": "launch_frame",
+        "fc:frame:button:1:url": `https://buster-mkt.vercel.app/market/${params.marketId}`,
+        "fc:frame:button:1:name": "Buster Market",
+      },
+    };
+  } catch {
+    return {
+      title: "Market Not Found",
+      description: "Unable to load market data",
+    };
+  }
+}
+
+// Explicitly type as NextPage to ensure Next.js compatibility
+const MarketPage: NextPage<Props> = async ({ params }) => {
+  try {
+    const market = await fetchMarketData(params.marketId);
+    return (
+      <div className="container mx-auto p-4">
+        <MarketCard
+          index={Number(params.marketId)}
+          market={market}
+          filter={
+            market.resolved
+              ? "resolved"
+              : market.endTime < BigInt(Date.now() / 1000)
+              ? "pending"
+              : "active"
+          }
+        />
+      </div>
+    );
+  } catch {
+    return (
+      <div className="container mx-auto p-4">
+        <h1 className="text-2xl font-bold">Market Not Found</h1>
+        <p>Unable to load market data. Please try again.</p>
+      </div>
+    );
+  }
+};
+
+export default MarketPage;
