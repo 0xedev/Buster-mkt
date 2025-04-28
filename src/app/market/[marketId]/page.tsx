@@ -1,5 +1,4 @@
 import { Metadata } from "next";
-import { NextPage } from "next";
 import { getContract, readContract } from "thirdweb";
 import { base } from "thirdweb/chains";
 import { client } from "@/app/client";
@@ -63,11 +62,11 @@ async function fetchMarketData(marketId: string): Promise<Market> {
   }
 }
 
-interface Props {
+export async function generateMetadata({
+  params,
+}: {
   params: { marketId: string };
-}
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+}): Promise<Metadata> {
   try {
     const market = await fetchMarketData(params.marketId);
     const total = market.totalOptionAShares + market.totalOptionBShares;
@@ -96,7 +95,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-const MarketPage: NextPage<Props> = async ({ params }) => {
+const MarketPage = async ({ params }: { params: { marketId: string } }) => {
   try {
     const market = await fetchMarketData(params.marketId);
     return (
