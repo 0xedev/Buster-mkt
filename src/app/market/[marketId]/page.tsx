@@ -116,13 +116,15 @@ export async function generateMetadata({
   }
 }
 
-// Define the correct type for Next.js App Router page component
-interface PageProps {
-  params: { marketId: string };
-  searchParams?: { [key: string]: string | string[] };
-}
+// The way we export the page component is the key to fixing this issue
+// Instead of using a function declaration with an interface,
+// we'll use a direct export with a specific type format expected by Next.js
 
-const MarketPage = async ({ params }: PageProps) => {
+export default async function Page({
+  params,
+}: {
+  params: { marketId: string };
+}) {
   try {
     const market = await fetchMarketData(params.marketId);
     return (
@@ -149,6 +151,4 @@ const MarketPage = async ({ params }: PageProps) => {
       </div>
     );
   }
-};
-
-export default MarketPage;
+}
