@@ -1,8 +1,9 @@
-import { Metadata } from "next";
+import { Metadata, NextPage } from "next";
 import { getContract, readContract } from "thirdweb";
 import { base } from "thirdweb/chains";
 import { client } from "@/app/client";
 import { MarketCard } from "@/components/marketCard";
+import { MiniAppClient } from "@/components/MiniAppClient";
 
 // Define contract
 const contractAddress =
@@ -62,11 +63,11 @@ async function fetchMarketData(marketId: string): Promise<Market> {
   }
 }
 
-export async function generateMetadata({
-  params,
-}: {
+interface Props {
   params: { marketId: string };
-}): Promise<Metadata> {
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const market = await fetchMarketData(params.marketId);
     const total = market.totalOptionAShares + market.totalOptionBShares;
@@ -75,16 +76,26 @@ export async function generateMetadata({
         ? ((Number(market.totalOptionAShares) / Number(total)) * 100).toFixed(1)
         : "0";
 
+    const frameEmbed = JSON.stringify({
+      version: "next",
+      imageUrl: `https://buster-mkt.vercel.app/api/market-image?marketId=${params.marketId}`,
+      button: {
+        title: "Bet Now",
+        action: {
+          type: "launch_frame",
+          name: "Buster Market",
+          url: `https://buster-mkt.vercel.app/market/${params.marketId}`,
+          splashImageUrl: "https://buster-mkt.vercel.app/logo.png",
+          splashBackgroundColor: "#ffffff",
+        },
+      },
+    });
+
     return {
       title: market.question,
       description: `Bet on ${market.question} - ${market.optionA}: ${yesPercent}%`,
       other: {
-        "fc:frame": "next",
-        "fc:frame:image": `https://buster-mkt.vercel.app/api/market-image?marketId=${params.marketId}`,
-        "fc:frame:button:1": `Bet on ${market.question.slice(0, 20)}...`,
-        "fc:frame:button:1:action": "launch_frame",
-        "fc:frame:button:1:url": `https://buster-mkt.vercel.app/market/${params.marketId}`,
-        "fc:frame:button:1:name": "Buster Market",
+        "fc:frame": frameEmbed,
       },
     };
   } catch {
@@ -95,11 +106,12 @@ export async function generateMetadata({
   }
 }
 
-const MarketPage = async ({ params }: { params: { marketId: string } }) => {
+const MarketPage: NextPage<Props> = async ({ params }) => {
   try {
     const market = await fetchMarketData(params.marketId);
     return (
       <div className="container mx-auto p-4">
+        <MiniAppClient />
         <MarketCard
           index={Number(params.marketId)}
           market={market}
