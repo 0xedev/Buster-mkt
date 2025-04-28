@@ -2,72 +2,120 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useState, useRef, useEffect } from "react";
 import { useActiveAccount, useSendAndConfirmTransaction } from "thirdweb/react";
-import { prepareContractCall, readContract, toWei } from "thirdweb";
+import { prepareContractCall, readContract } from "thirdweb";
 import { contract, tokenContract } from "@/constants/contract";
 import { approve } from "thirdweb/extensions/erc20";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 
-// Types for the component props
 interface MarketBuyInterfaceProps {
   marketId: number;
   market: {
+    question: string;
     optionA: string;
     optionB: string;
-    question: string;
+    totalOptionAShares: bigint;
+    totalOptionBShares: bigint;
   };
 }
 
-// Type aliases for better readability
-type BuyingStep = "initial" | "allowance" | "confirm";
+type BuyingStep = "initial" | "amount" | "allowance" | "confirm";
 type Option = "A" | "B" | null;
 
-// Define maximum bet size constant
 const MAX_BET = 500;
+
+// Convert amount to token units (handles custom decimals)
+function toUnits(amount: string, decimals: number): bigint {
+  const [integer = "0", fraction = ""] = amount.split(".");
+  const paddedFraction = fraction.padEnd(decimals, "0").slice(0, decimals);
+  return (
+    BigInt(integer + paddedFraction) *
+    BigInt(10) ** BigInt(decimals - paddedFraction.length)
+  );
+}
 
 export function MarketBuyInterface({
   marketId,
   market,
 }: MarketBuyInterfaceProps) {
-  // Blockchain interactions
   const account = useActiveAccount();
   const { mutateAsync: mutateTransaction } = useSendAndConfirmTransaction();
   const { toast } = useToast();
 
-  // UI state management
   const [isBuying, setIsBuying] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [containerHeight, setContainerHeight] = useState("auto");
   const contentRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Transaction state
   const [selectedOption, setSelectedOption] = useState<Option>(null);
   const [amount, setAmount] = useState<string>("");
   const [buyingStep, setBuyingStep] = useState<BuyingStep>("initial");
   const [isApproving, setIsApproving] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
-
-  // Add to state variables
   const [error, setError] = useState<string | null>(null);
+  const [tokenSymbol, setTokenSymbol] = useState<string>("BUSTER");
+  const [tokenDecimals, setTokenDecimals] = useState<number>(18);
 
-  // Update container height when content changes
+  // Fetch token metadata
+  useEffect(() => {
+    const fetchTokenMetadata = async () => {
+      try {
+        const [symbol, decimals] = await Promise.all([
+          readContract({
+            contract: tokenContract,
+            method: "function symbol() view returns (string)",
+            params: [],
+          }),
+          readContract({
+            contract: tokenContract,
+            method: "function decimals() view returns (uint8)",
+            params: [],
+          }),
+        ]);
+        setTokenSymbol(symbol);
+        setTokenDecimals(decimals);
+      } catch (err) {
+        console.error("Failed to fetch token metadata:", err);
+      }
+    };
+    fetchTokenMetadata();
+  }, []);
+
+  // Update container height
   useEffect(() => {
     if (contentRef.current) {
-      setTimeout(() => {
-        setContainerHeight(`${contentRef.current?.offsetHeight || 0}px`);
-      }, 0);
+      setContainerHeight(`${contentRef.current.offsetHeight}px`);
     }
   }, [isBuying, buyingStep, isVisible, error]);
 
-  // Handlers for user interactions
+  // Focus input on amount step
+  useEffect(() => {
+    if (buyingStep === "amount" && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [buyingStep]);
+
+  // Calculate implied odds
+  const totalShares = market.totalOptionAShares + market.totalOptionBShares;
+  const yesOdds =
+    totalShares > 0n && market.totalOptionAShares > 0n
+      ? Number((totalShares * 100n) / market.totalOptionAShares) / 100
+      : 0;
+  const noOdds =
+    totalShares > 0n && market.totalOptionBShares > 0n
+      ? Number((totalShares * 100n) / market.totalOptionBShares) / 100
+      : 0;
+
   const handleBuy = (option: "A" | "B") => {
     setIsVisible(false);
     setTimeout(() => {
       setIsBuying(true);
       setSelectedOption(option);
+      setBuyingStep("amount");
       setIsVisible(true);
-    }, 200); // Match transition duration
+    }, 200);
   };
 
   const handleCancel = () => {
@@ -82,27 +130,36 @@ export function MarketBuyInterface({
     }, 200);
   };
 
-  // Check if user needs to approve token spending
   const checkApproval = async () => {
     const numAmount = Number(amount);
-
     if (!amount || numAmount <= 0) {
       setError("Amount must be greater than 0");
       return;
     }
-
     if (numAmount > MAX_BET) {
       toast({
         title: "Maximum Bet Exceeded",
-        description: `Max shares you can buy is ${MAX_BET}`,
+        description: `Maximum shares you can buy is ${MAX_BET} ${tokenSymbol}`,
         variant: "destructive",
       });
       return;
     }
 
-    setError(null);
-
     try {
+      const balance = await readContract({
+        contract: tokenContract,
+        method: "function balanceOf(address) view returns (uint256)",
+        params: [account?.address as string],
+      });
+      if (toUnits(amount, tokenDecimals) > balance) {
+        toast({
+          title: "Insufficient Balance",
+          description: `You don't have enough ${tokenSymbol} to buy ${amount} shares`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       const userAllowance = await readContract({
         contract: tokenContract,
         method:
@@ -111,14 +168,18 @@ export function MarketBuyInterface({
       });
 
       setBuyingStep(
-        userAllowance < BigInt(toWei(amount)) ? "allowance" : "confirm"
+        userAllowance < toUnits(amount, tokenDecimals) ? "allowance" : "confirm"
       );
-    } catch (error) {
-      console.error(error);
+      setError(null);
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to check token allowance",
+        variant: "destructive",
+      });
     }
   };
 
-  // Handle token approval transaction
   const handleSetApproval = async () => {
     setIsApproving(true);
     try {
@@ -130,25 +191,27 @@ export function MarketBuyInterface({
       });
       await mutateTransaction(tx);
       setBuyingStep("confirm");
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      toast({
+        title: "Approval Failed",
+        description: "Failed to approve token spending",
+        variant: "destructive",
+      });
     } finally {
       setIsApproving(false);
     }
   };
 
-  // Handle share purchase transaction
   const handleConfirm = async () => {
     if (!selectedOption || !amount || Number(amount) <= 0) {
       setError("Must select an option and enter an amount greater than 0");
       return;
     }
-
     const numAmount = Number(amount);
     if (numAmount > MAX_BET) {
       toast({
         title: "Maximum Bet Exceeded",
-        description: `Max shares you can buy is ${MAX_BET}`,
+        description: `Maximum shares you can buy is ${MAX_BET} ${tokenSymbol}`,
         variant: "destructive",
       });
       return;
@@ -163,27 +226,27 @@ export function MarketBuyInterface({
         params: [
           BigInt(marketId),
           selectedOption === "A",
-          BigInt(toWei(amount)),
+          toUnits(amount, tokenDecimals),
         ],
       });
       await mutateTransaction(tx);
-
-      // Show success toast
       toast({
         title: "Purchase Successful!",
         description: `You bought ${amount} ${
           selectedOption === "A" ? market.optionA : market.optionB
         } shares`,
-        duration: 5000, // 5 seconds
+        duration: 5000,
       });
-
       handleCancel();
-    } catch (error) {
-      console.error(error);
-      // Optionally show error toast
+    } catch (err: any) {
+      const errorMessage = err.message.includes(
+        "Market trading period has ended"
+      )
+        ? "Market trading period has ended"
+        : "Failed to process purchase";
       toast({
         title: "Purchase Failed",
-        description: "There was an error processing your purchase",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -191,26 +254,25 @@ export function MarketBuyInterface({
     }
   };
 
-  // Handle amount input to remove leading zeros
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Get value from input
     const inputValue = e.target.value;
-
-    // Only accept digits
-    if (/^\d*$/.test(inputValue)) {
-      // Remove leading zeros
-      const cleanedValue = inputValue.replace(/^0+/, "");
-      setAmount(cleanedValue);
+    if (/^\d*\.?\d*$/.test(inputValue)) {
+      const parts = inputValue.split(".");
+      if (parts[1]?.length > tokenDecimals) return;
+      setAmount(inputValue);
     }
-
     setError(null);
   };
 
-  // Render the component
+  const handleMaxBet = () => {
+    setAmount(MAX_BET.toString());
+    setError(null);
+  };
+
   return (
     <div
-      className="relative transition-[height] duration-200 ease-in-out overflow-hidden"
-      style={{ height: containerHeight }}
+      className="relative transition-all duration-200 ease-in-out overflow-hidden"
+      style={{ maxHeight: containerHeight }}
     >
       <div
         ref={contentRef}
@@ -220,39 +282,107 @@ export function MarketBuyInterface({
         )}
       >
         {!isBuying ? (
-          // Initial option selection buttons
-          <div className="flex justify-between gap-4 mb-4">
-            <Button
-              className="flex-1"
-              onClick={() => handleBuy("A")}
-              aria-label={`Vote ${market.optionA} for "${market.question}"`}
-              disabled={!account}
-            >
-              {market.optionA}
-            </Button>
-            <Button
-              className="flex-1"
-              onClick={() => handleBuy("B")}
-              aria-label={`Vote ${market.optionB} for "${market.question}"`}
-              disabled={!account}
-            >
-              {market.optionB}
-            </Button>
+          <div className="flex flex-col gap-4 mb-4">
+            <h2 className="text-lg font-bold">{market.question}</h2>
+            <div className="flex justify-between gap-4">
+              <Button
+                className="flex-1 min-w-[120px] bg-green-600 hover:bg-green-700"
+                onClick={() => handleBuy("A")}
+                aria-label={`Buy ${market.optionA} shares for "${market.question}"`}
+                disabled={!account}
+              >
+                {market.optionA} ({yesOdds.toFixed(2)}x)
+              </Button>
+              <Button
+                className="flex-1 min-w-[120px] bg-red-600 hover:bg-red-700"
+                onClick={() => handleBuy("B")}
+                aria-label={`Buy ${market.optionB} shares for "${market.question}"`}
+                disabled={!account}
+              >
+                {market.optionB} ({noOdds.toFixed(2)}x)
+              </Button>
+            </div>
           </div>
         ) : (
-          // Buy interface with different steps
-          <div className="flex flex-col mb-4">
-            {buyingStep === "allowance" ? (
-              // Approval step
+          <div className="flex flex-col mb-4" aria-live="polite">
+            <h2 className="text-lg font-bold mb-2">{market.question}</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Selected:{" "}
+              {selectedOption === "A" ? market.optionA : market.optionB} (
+              {(selectedOption === "A" ? yesOdds : noOdds).toFixed(2)}x)
+            </p>
+            {buyingStep === "amount" ? (
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-500 mb-1">
+                  Enter amount (Max: {MAX_BET} {tokenSymbol})
+                </span>
+                <div className="flex flex-col gap-1 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-grow relative">
+                      <Input
+                        ref={inputRef}
+                        type="text"
+                        placeholder="Enter amount"
+                        value={amount}
+                        onChange={handleAmountChange}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") checkApproval();
+                          if (e.key === "-" || e.key === "e" || e.key === "+")
+                            e.preventDefault();
+                        }}
+                        className={cn(
+                          "w-full",
+                          error && "border-red-500 focus-visible:ring-red-500"
+                        )}
+                      />
+                    </div>
+                    <Button
+                      onClick={handleMaxBet}
+                      variant="outline"
+                      className="px-3"
+                    >
+                      Max
+                    </Button>
+                    <span className="font-bold whitespace-nowrap">
+                      {tokenSymbol}
+                    </span>
+                  </div>
+                  <div className="min-h-[20px]">
+                    {error && (
+                      <span className="text-sm text-red-500">{error}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <Button
+                    onClick={checkApproval}
+                    className="flex-1 min-w-[120px]"
+                    disabled={!amount}
+                  >
+                    Next
+                  </Button>
+                  <Button
+                    onClick={handleCancel}
+                    variant="outline"
+                    className="flex-1 min-w-[120px]"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : buyingStep === "allowance" ? (
               <div className="flex flex-col border-2 border-gray-200 rounded-lg p-4">
-                <h2 className="text-lg font-bold mb-4">Approval Needed</h2>
-                <p className="mb-4">
-                  You need to approve the transaction before proceeding.
+                <h3 className="text-lg font-bold mb-2">
+                  Step 1/2: Approve Tokens
+                </h3>
+                <p className="mb-4 text-sm">
+                  Approve unlimited {tokenSymbol} spending to buy shares without
+                  future approvals.
                 </p>
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2">
                   <Button
                     onClick={handleSetApproval}
-                    className="mb-2"
+                    className="min-w-[120px]"
                     disabled={isApproving}
                   >
                     {isApproving ? (
@@ -261,35 +391,36 @@ export function MarketBuyInterface({
                         Approving...
                       </>
                     ) : (
-                      "Set Approval"
+                      "Approve"
                     )}
                   </Button>
                   <Button
                     onClick={handleCancel}
-                    className="ml-2"
                     variant="outline"
+                    className="min-w-[120px]"
                     disabled={isApproving}
                   >
                     Cancel
                   </Button>
                 </div>
               </div>
-            ) : buyingStep === "confirm" ? (
-              // Confirmation step
+            ) : (
               <div className="flex flex-col border-2 border-gray-200 rounded-lg p-4">
-                <h2 className="text-lg font-bold mb-4">Confirm Transaction</h2>
-                <p className="mb-4">
-                  You are about to buy{" "}
+                <h3 className="text-lg font-bold mb-2">
+                  Step 2/2: Confirm Purchase
+                </h3>
+                <p className="mb-4 text-sm">
+                  Buy{" "}
                   <span className="font-bold">
                     {amount}{" "}
                     {selectedOption === "A" ? market.optionA : market.optionB}
                   </span>{" "}
-                  share(s).
+                  shares for {amount} {tokenSymbol}.
                 </p>
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2">
                   <Button
                     onClick={handleConfirm}
-                    className="mb-2"
+                    className="min-w-[120px]"
                     disabled={isConfirming}
                   >
                     {isConfirming ? (
@@ -303,59 +434,9 @@ export function MarketBuyInterface({
                   </Button>
                   <Button
                     onClick={handleCancel}
-                    className="ml-2"
                     variant="outline"
+                    className="min-w-[120px]"
                     disabled={isConfirming}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              // Amount input step
-              <div className="flex flex-col">
-                <span className="text-xs text-gray-500 mb-1">
-                  {`1 ${
-                    selectedOption === "A" ? market.optionA : market.optionB
-                  } = 1 BUSTER (Max: ${MAX_BET})`}
-                </span>
-                <div className="flex flex-col gap-1 mb-4">
-                  <div className="flex items-center gap-2 overflow-visible">
-                    <div className="flex-grow relative">
-                      <Input
-                        type="text"
-                        placeholder="Enter amount"
-                        value={amount}
-                        onChange={handleAmountChange}
-                        onKeyDown={(e) => {
-                          if (e.key === "-" || e.key === "e" || e.key === "+") {
-                            e.preventDefault();
-                          }
-                        }}
-                        className={cn(
-                          "w-full",
-                          error && "border-red-500 focus-visible:ring-red-500"
-                        )}
-                      />
-                    </div>
-                    <span className="font-bold whitespace-nowrap">
-                      {selectedOption === "A" ? market.optionA : market.optionB}
-                    </span>
-                  </div>
-                  <div className="min-h-[20px]">
-                    {error && (
-                      <span className="text-sm text-red-500">{error}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <Button onClick={checkApproval} className="flex-1">
-                    Confirm
-                  </Button>
-                  <Button
-                    onClick={handleCancel}
-                    variant="outline"
-                    className="flex-1"
                   >
                     Cancel
                   </Button>
