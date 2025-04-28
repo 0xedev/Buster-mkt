@@ -57,12 +57,13 @@ export function MarketBuyInterface({
   const [error, setError] = useState<string | null>(null);
   const [tokenSymbol, setTokenSymbol] = useState<string>("BUSTER");
   const [tokenDecimals, setTokenDecimals] = useState<number>(18);
+  const [balance, setBalance] = useState<bigint>(0n);
 
-  // Fetch token metadata
+  // Fetch token metadata and balance
   useEffect(() => {
-    const fetchTokenMetadata = async () => {
+    const fetchTokenData = async () => {
       try {
-        const [symbol, decimals] = await Promise.all([
+        const [symbol, decimals, userBalance] = await Promise.all([
           readContract({
             contract: tokenContract,
             method: "function symbol() view returns (string)",
@@ -73,15 +74,23 @@ export function MarketBuyInterface({
             method: "function decimals() view returns (uint8)",
             params: [],
           }),
+          account
+            ? readContract({
+                contract: tokenContract,
+                method: "function balanceOf(address) view returns (uint256)",
+                params: [account.address],
+              })
+            : 0n,
         ]);
         setTokenSymbol(symbol);
         setTokenDecimals(decimals);
-      } catch (err) {
-        console.error("Failed to fetch token metadata:", err);
+        setBalance(userBalance);
+      } catch {
+        console.error("Failed to fetch token data");
       }
     };
-    fetchTokenMetadata();
-  }, []);
+    fetchTokenData();
+  }, [account]);
 
   // Update container height
   useEffect(() => {
@@ -146,15 +155,13 @@ export function MarketBuyInterface({
     }
 
     try {
-      const balance = await readContract({
-        contract: tokenContract,
-        method: "function balanceOf(address) view returns (uint256)",
-        params: [account?.address as string],
-      });
-      if (toUnits(amount, tokenDecimals) > balance) {
+      const amountInUnits = toUnits(amount, tokenDecimals);
+      if (amountInUnits > balance) {
         toast({
           title: "Insufficient Balance",
-          description: `You don't have enough ${tokenSymbol} to buy ${amount} shares`,
+          description: `You have ${(
+            Number(balance) / Math.pow(10, tokenDecimals)
+          ).toFixed(2)} ${tokenSymbol}, need ${amount}`,
           variant: "destructive",
         });
         return;
@@ -167,19 +174,14 @@ export function MarketBuyInterface({
         params: [account?.address as string, contract.address],
       });
 
-      setBuyingStep(
-        userAllowance < toUnits(amount, tokenDecimals) ? "allowance" : "confirm"
-      );
+      setBuyingStep(amountInUnits > userAllowance ? "allowance" : "confirm");
       setError(null);
-    } catch (_err) {
-      // Prefix with underscore
+    } catch {
       toast({
-        title: "Approval Failed",
-        description: "Failed to approve token spending",
+        title: "Error",
+        description: "Failed to check token allowance",
         variant: "destructive",
       });
-    } finally {
-      setIsApproving(false);
     }
   };
 
@@ -194,10 +196,10 @@ export function MarketBuyInterface({
       });
       await mutateTransaction(tx);
       setBuyingStep("confirm");
-    } catch (err) {
+    } catch {
       toast({
         title: "Approval Failed",
-        description: "Failed to approve token spending",
+        description: "Failed to approve token spending. Check your wallet.",
         variant: "destructive",
       });
     } finally {
@@ -242,20 +244,13 @@ export function MarketBuyInterface({
       });
       handleCancel();
     } catch (error: unknown) {
-      // Catch as unknown
-      // Default message
-      let errorMessage = "Failed to process purchase";
-      // Type check before accessing .message
-      if (
-        error instanceof Error &&
-        error.message.includes("Market trading period has ended")
-      ) {
-        errorMessage = "Market trading period has ended";
-      } else if (error instanceof Error) {
-        // You could potentially use error.message here for other errors if desired
-        console.error("Purchase Error:", error.message); // Log other errors
-      } else {
-        console.error("Unknown Purchase Error:", error); // Log non-Error types
+      let errorMessage = "Failed to process purchase. Check your wallet.";
+      if (error instanceof Error) {
+        if (error.message.includes("Market trading period has ended")) {
+          errorMessage = "Market trading period has ended";
+        } else if (error.message.includes("insufficient funds")) {
+          errorMessage = "Insufficient funds for gas";
+        }
       }
       toast({
         title: "Purchase Failed",
@@ -269,16 +264,26 @@ export function MarketBuyInterface({
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
-    if (/^\d*\.?\d*$/.test(inputValue)) {
-      const parts = inputValue.split(".");
-      if (parts[1]?.length > tokenDecimals) return;
-      setAmount(inputValue);
+    if (inputValue === "") {
+      setAmount("");
+      setError(null);
+      return;
     }
+    if (!/^\d*\.?\d*$/.test(inputValue)) return; // Allow only valid numbers
+    const parts = inputValue.split(".");
+    if (parts[0].length > 15 || parts[1]?.length > tokenDecimals) return; // Limit size
+    const numValue = Number(inputValue);
+    if (numValue < 0) return; // Prevent negative
+    setAmount(inputValue);
     setError(null);
   };
 
   const handleMaxBet = () => {
-    setAmount(MAX_BET.toString());
+    const maxAmount = Math.min(
+      MAX_BET,
+      Number(balance) / Math.pow(10, tokenDecimals)
+    ).toFixed(tokenDecimals);
+    setAmount(maxAmount);
     setError(null);
   };
 
@@ -315,6 +320,13 @@ export function MarketBuyInterface({
                 {market.optionB} ({noOdds.toFixed(2)}x)
               </Button>
             </div>
+            {account && (
+              <p className="text-xs text-gray-500 text-center">
+                Available:{" "}
+                {(Number(balance) / Math.pow(10, tokenDecimals)).toFixed(2)}{" "}
+                {tokenSymbol}
+              </p>
+            )}
           </div>
         ) : (
           <div className="flex flex-col mb-4" aria-live="polite">
@@ -327,7 +339,9 @@ export function MarketBuyInterface({
             {buyingStep === "amount" ? (
               <div className="flex flex-col">
                 <span className="text-xs text-gray-500 mb-1">
-                  Enter amount (Max: {MAX_BET} {tokenSymbol})
+                  Enter amount (Max: {MAX_BET} {tokenSymbol}, Available:{" "}
+                  {(Number(balance) / Math.pow(10, tokenDecimals)).toFixed(2)}{" "}
+                  {tokenSymbol})
                 </span>
                 <div className="flex flex-col gap-1 mb-4">
                   <div className="flex items-center gap-2">
@@ -347,12 +361,14 @@ export function MarketBuyInterface({
                           "w-full",
                           error && "border-red-500 focus-visible:ring-red-500"
                         )}
+                        aria-describedby={error ? "amount-error" : undefined}
                       />
                     </div>
                     <Button
                       onClick={handleMaxBet}
                       variant="outline"
                       className="px-3"
+                      aria-label="Set maximum bet amount"
                     >
                       Max
                     </Button>
@@ -362,7 +378,9 @@ export function MarketBuyInterface({
                   </div>
                   <div className="min-h-[20px]">
                     {error && (
-                      <span className="text-sm text-red-500">{error}</span>
+                      <span id="amount-error" className="text-sm text-red-500">
+                        {error}
+                      </span>
                     )}
                   </div>
                 </div>
