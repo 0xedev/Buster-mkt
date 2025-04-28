@@ -1,18 +1,36 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useActiveAccount } from "thirdweb/react";
 import { prepareEvent, readContract, getContractEvents } from "thirdweb";
 import { eth_blockNumber } from "thirdweb/rpc";
 import { getRpcClient } from "thirdweb/rpc";
 import { contract } from "@/constants/contract";
 import { base } from "thirdweb/chains";
+import { debounce } from "lodash";
+
+// Cache keys for local storage
+const CACHE_KEY = "vote_history_cache";
+const LAST_BLOCK_KEY = "last_fetched_block";
 
 interface Vote {
   marketId: number;
   option: string;
   amount: bigint;
   marketName: string;
+}
+
+interface MarketInfo {
+  marketId: number;
+  question: string;
+  optionA: string;
+  optionB: string;
+}
+
+interface CacheData {
+  votes: Vote[];
+  marketInfo: Record<number, MarketInfo>;
+  [LAST_BLOCK_KEY]: string;
 }
 
 const preparedEvent = prepareEvent({
@@ -25,17 +43,43 @@ export function VoteHistory() {
   const [votes, setVotes] = useState<Vote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (!account) {
-      console.log("No account connected");
-      setIsLoading(false);
-      return;
+  // Load cache from local storage
+  const loadCache = useCallback((): CacheData => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      return cached
+        ? JSON.parse(cached)
+        : { votes: [], marketInfo: {}, [LAST_BLOCK_KEY]: "0" };
+    } catch {
+      return { votes: [], marketInfo: {}, [LAST_BLOCK_KEY]: "0" };
     }
+  }, []);
 
-    const fetchVotes = async () => {
+  // Save cache to local storage
+  const saveCache = useCallback((data: CacheData) => {
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    } catch (error) {
+      console.error("Cache save error:", error);
+    }
+  }, []);
+
+  // Debounced fetch function
+  const fetchVotes = useCallback(
+    debounce(async (accountAddress: string) => {
+      if (!accountAddress) {
+        setVotes([]);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       try {
-        console.log("Fetching vote history for address:", account.address);
+        // Load cache
+        const cache = loadCache();
+        let newVotes = [...cache.votes];
+        let marketInfoCache = { ...cache.marketInfo };
+        let fromBlock = BigInt(cache[LAST_BLOCK_KEY] || "28965072"); // Deployment block fallback
 
         // Fetch latest block number
         const rpcClient = getRpcClient({
@@ -43,19 +87,15 @@ export function VoteHistory() {
           chain: base,
         });
         const latestBlock = await eth_blockNumber(rpcClient);
-        const DEPLOYMENT_BLOCK = BigInt(28965072);
-        const blockRange = BigInt(10000);
-        let fromBlock = DEPLOYMENT_BLOCK;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const allEvents: any[] = [];
 
-        console.log("Fetching SharesPurchased events...");
+        // Fetch events incrementally
+        const blockRange = BigInt(1000);
+        let allEvents: any[] = [];
         while (fromBlock <= latestBlock) {
           const toBlock =
             fromBlock + blockRange > latestBlock
               ? latestBlock
               : fromBlock + blockRange;
-          console.log(`Fetching events from block ${fromBlock} to ${toBlock}`);
           const events = await getContractEvents({
             contract,
             fromBlock,
@@ -66,88 +106,44 @@ export function VoteHistory() {
           fromBlock = toBlock + BigInt(1);
         }
 
-        console.log(
-          `Fetched ${allEvents.length} SharesPurchased events`,
-          allEvents.map((e) => ({
-            marketId: e.args.marketId.toString(),
-            buyer: e.args.buyer,
-            isOptionA: e.args.isOptionA,
-            amount: e.args.amount.toString(),
-          }))
-        );
-
-        // Filter events for the user's address
+        // Filter user events
         const userEvents = allEvents.filter(
-          (e) => e.args.buyer.toLowerCase() === account.address.toLowerCase()
+          (e) => e.args.buyer.toLowerCase() === accountAddress.toLowerCase()
         );
-        console.log(`Filtered ${userEvents.length} events for user`);
 
         // Get unique market IDs
         const marketIds = [
           ...new Set(userEvents.map((e) => Number(e.args.marketId))),
         ];
-        console.log("Unique market IDs:", marketIds);
+        const uncachedMarketIds = marketIds.filter(
+          (id) => !marketInfoCache[id]
+        );
 
-        if (marketIds.length === 0) {
-          console.log("No votes found for user");
-          setVotes([]);
-          setIsLoading(false);
-          return;
+        // Fetch market info in batch
+        if (uncachedMarketIds.length > 0) {
+          const marketInfos = await readContract({
+            contract,
+            method:
+              "function getMarketInfoBatch(uint256[] _marketIds) view returns (string[] questions, string[] optionAs, string[] optionBs, uint256[] endTimes, uint8[] outcomes, uint256[] totalOptionASharesArray, uint256[] totalOptionBSharesArray, bool[] resolvedArray)",
+            params: [uncachedMarketIds.map(BigInt)],
+          });
+
+          // Update market info cache
+          uncachedMarketIds.forEach((marketId, i) => {
+            marketInfoCache[marketId] = {
+              marketId,
+              question: marketInfos[0][i],
+              optionA: marketInfos[1][i],
+              optionB: marketInfos[2][i],
+            };
+          });
         }
 
-        // Fetch market info
-        console.log("Fetching market info...");
-        const marketInfos = await Promise.all(
-          marketIds.map(async (marketId) => {
-            try {
-              const market = await readContract({
-                contract,
-                method:
-                  "function getMarketInfo(uint256 _marketId) view returns (string question, string optionA, string optionB, uint256 endTime, uint8 outcome, uint256 totalOptionAShares, uint256 totalOptionBShares, bool resolved)",
-                params: [BigInt(marketId)],
-              });
-              console.log(`Market ${marketId} info:`, {
-                question: market[0],
-                optionA: market[1],
-                optionB: market[2],
-              });
-              return {
-                marketId,
-                question: market[0],
-                optionA: market[1],
-                optionB: market[2],
-              };
-            } catch (error) {
-              console.error(`Market ${marketId} fetch failed:`, error);
-              return null;
-            }
-          })
-        );
-
-        const validMarkets = marketInfos.filter(
-          (
-            m
-          ): m is {
-            marketId: number;
-            question: string;
-            optionA: string;
-            optionB: string;
-          } => m !== null
-        );
-        console.log("Valid markets:", validMarkets);
-
         // Map events to votes
-        const userVotes = userEvents
+        const newUserVotes = userEvents
           .map((e) => {
-            const market = validMarkets.find(
-              (m) => m.marketId === Number(e.args.marketId)
-            );
-            if (!market) {
-              console.warn(
-                `No market info for marketId ${e.args.marketId}; skipping event`
-              );
-              return null;
-            }
+            const market = marketInfoCache[Number(e.args.marketId)];
+            if (!market) return null;
             return {
               marketId: Number(e.args.marketId),
               option: e.args.isOptionA ? market.optionA : market.optionB,
@@ -156,30 +152,42 @@ export function VoteHistory() {
             };
           })
           .filter((vote): vote is Vote => vote !== null);
-        console.log("User votes:", userVotes);
 
-        setVotes(userVotes);
+        // Merge new votes with cached votes, avoiding duplicates
+        const voteMap = new Map<number, Vote>();
+        [...cache.votes, ...newUserVotes].forEach((vote, i) => {
+          voteMap.set(i, vote);
+        });
+        newVotes = Array.from(voteMap.values());
+
+        // Update cache
+        saveCache({
+          votes: newVotes,
+          marketInfo: marketInfoCache,
+          [LAST_BLOCK_KEY]: latestBlock.toString(),
+        });
+
+        setVotes(newVotes);
       } catch (error) {
         console.error("Vote history error:", error);
         setVotes([]);
       } finally {
         setIsLoading(false);
       }
-    };
+    }, 500),
+    [loadCache, saveCache]
+  );
 
-    fetchVotes();
-  }, [account]);
+  useEffect(() => {
+    fetchVotes(account?.address || "");
+    return () => fetchVotes.cancel();
+  }, [account, fetchVotes]);
 
   if (!account) {
     return (
       <div className="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-lg shadow-sm border border-gray-200">
         <div className="text-gray-500 font-medium">
-          Connect wallet to view vote history
-        </div>
-        <div className="mt-2">
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-            Connect Wallet
-          </button>
+          Your market history will appear here
         </div>
       </div>
     );

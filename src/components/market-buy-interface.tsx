@@ -85,12 +85,12 @@ export function MarketBuyInterface({
   // Check if user needs to approve token spending
   const checkApproval = async () => {
     const numAmount = Number(amount);
-    
+
     if (!amount || numAmount <= 0) {
       setError("Amount must be greater than 0");
       return;
     }
-    
+
     if (numAmount > MAX_BET) {
       toast({
         title: "Maximum Bet Exceeded",
@@ -99,7 +99,7 @@ export function MarketBuyInterface({
       });
       return;
     }
-    
+
     setError(null);
 
     try {
@@ -111,9 +111,7 @@ export function MarketBuyInterface({
       });
 
       setBuyingStep(
-        userAllowance < BigInt(toWei(amount))
-          ? "allowance"
-          : "confirm"
+        userAllowance < BigInt(toWei(amount)) ? "allowance" : "confirm"
       );
     } catch (error) {
       console.error(error);
@@ -127,7 +125,8 @@ export function MarketBuyInterface({
       const tx = await approve({
         contract: tokenContract,
         spender: contract.address,
-        amount: Number(amount),
+        amount:
+          "115792089237316195423570985008687907853269984665640564039457584007913129639935", // Max uint256
       });
       await mutateTransaction(tx);
       setBuyingStep("confirm");
@@ -196,14 +195,14 @@ export function MarketBuyInterface({
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Get value from input
     const inputValue = e.target.value;
-    
+
     // Only accept digits
     if (/^\d*$/.test(inputValue)) {
       // Remove leading zeros
-      const cleanedValue = inputValue.replace(/^0+/, '');
+      const cleanedValue = inputValue.replace(/^0+/, "");
       setAmount(cleanedValue);
     }
-    
+
     setError(null);
   };
 

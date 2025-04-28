@@ -5,6 +5,13 @@ import { base } from "thirdweb/chains";
 import { getContract, getContractEvents, prepareEvent } from "thirdweb";
 import { eth_blockNumber } from "thirdweb/rpc";
 import { getRpcClient } from "thirdweb/rpc";
+import NodeCache from "node-cache";
+
+// Initialize cache with 5-minute TTL
+const cache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
+const CACHE_KEY = "leaderboard";
+const LAST_BLOCK_KEY = "last_fetched_block";
+const NEYNAR_CACHE_KEY = "neynar_users";
 
 // Define the contract ABI
 const CONTRACT_ABI = [
@@ -16,7 +23,7 @@ const CONTRACT_ABI = [
       { indexed: true, name: "user", type: "address" },
       { indexed: false, name: "amount", type: "uint256" },
     ],
-    anonymous: false, // Added for clarity if needed by thirdweb prepareEvent
+    anonymous: false,
   },
 ] as const;
 
@@ -24,21 +31,43 @@ const CONTRACT_ABI = [
 const contract = getContract({
   client,
   chain: base,
-  address: "0xD3fa48B3bb4f89bF3B75F5763475B774076215D1",
+  address: "0xc703856dc56576800F9bc7DfD6ac15e92Ac2d7D6",
   abi: CONTRACT_ABI,
 });
-
-// Prepare the Claimed event - Ensure signature matches EXACTLY or use the ABI object
-// Using ABI object is generally safer if ABI is stable
 
 const CLAIMED_EVENT = prepareEvent({
   signature:
     "event Claimed(uint256 indexed marketId, address indexed user, uint256 amount)",
 });
 
+// Retry utility for RPC calls
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  retries = 3,
+  delay = 1000
+): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (i === retries - 1) throw error;
+      console.warn(`Retry ${i + 1}/${retries} failed:`, error);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error("Max retries reached");
+}
+
 export async function GET() {
   try {
     console.log("🚀 Starting leaderboard fetch...");
+
+    // Check cache
+    const cachedLeaderboard = cache.get(CACHE_KEY);
+    if (cachedLeaderboard) {
+      console.log("✅ Serving from cache");
+      return NextResponse.json(cachedLeaderboard);
+    }
 
     // Validate environment variables
     const neynarApiKey = process.env.NEYNAR_API_KEY;
@@ -53,13 +82,7 @@ export async function GET() {
     // Initialize Neynar client
     let neynar: NeynarAPIClient;
     try {
-      // Correct initialization if using apiKey directly (check SDK constructor)
-      // If the SDK expects an object like { apiKey: '...' }, use that.
-      // Based on the provided SDK structure, it seems to expect a Configuration object.
-      // Let's assume your previous initialization was correct for your SDK version.
-      // If not, adjust according to the actual SDK constructor.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      neynar = new NeynarAPIClient({ apiKey: neynarApiKey } as any); // Use 'as any' if type mismatch, or fix config
+      neynar = new NeynarAPIClient({ apiKey: neynarApiKey } as any);
       console.log("✅ Neynar client initialized.");
     } catch (error) {
       console.error("❌ Failed to initialize Neynar client:", error);
@@ -72,195 +95,146 @@ export async function GET() {
       );
     }
 
-    // --- Test call (keep or remove as needed) ---
-    try {
-      const testAddress = "0x209296518BFFe5F06cB7131D85764D0339b21f1a";
-      console.log(`🧪 Running test Neynar call for address: ${testAddress}`);
-      const testResponse = await neynar.fetchBulkUsersByEthOrSolAddress({
-        addresses: [testAddress],
-        addressTypes: ["custody_address", "verified_address"], 
-      });
-      console.log(
-        "🧪 Test Neynar Response Structure:",
-        JSON.stringify(testResponse, null, 2)
-      );
-    } catch (testError) {
-      console.error("🧪 Test Neynar call failed:", testError);
-    }
-    // --- End Test call ---
-
     // Fetch latest block number
     console.log("🔗 Fetching latest block number...");
     const rpcClient = getRpcClient({ client, chain: base });
-    const latestBlock = await eth_blockNumber(rpcClient);
+    const latestBlock = await withRetry(() => eth_blockNumber(rpcClient));
     console.log(`🔢 Latest block: ${latestBlock}`);
 
     // Fetch Claimed events with pagination
     console.log("📦 Fetching Claimed events...");
-    const DEPLOYMENT_BLOCK = BigInt(28965072); // Confirmed deployment block
-    const blockRange = BigInt(10000); // Max 10,000 blocks per request seems reasonable
-    let fromBlock = DEPLOYMENT_BLOCK;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const allEvents: any[] = []; // Consider using a more specific type if possible
+    const DEPLOYMENT_BLOCK = BigInt(28965072);
+    const cachedBlock = cache.get<string>(LAST_BLOCK_KEY);
+    let fromBlock = cachedBlock ? BigInt(cachedBlock) : DEPLOYMENT_BLOCK;
+    const blockRange = BigInt(1000);
+    let allEvents: any[] = [];
 
     while (fromBlock <= latestBlock) {
       const toBlock =
-        fromBlock + blockRange - BigInt(1) > latestBlock // Subtract 1 for inclusive range
+        fromBlock + blockRange - BigInt(1) > latestBlock
           ? latestBlock
           : fromBlock + blockRange - BigInt(1);
-      // Prevent fetching negative range if latestBlock < fromBlock (shouldn't happen here)
       if (toBlock < fromBlock) {
-        console.log(`🏁 Reached end of blocks to scan (or invalid range).`);
+        console.log(`🏁 Reached end of blocks to scan.`);
         break;
       }
       console.log(`📄 Fetching events from block ${fromBlock} to ${toBlock}`);
-      try {
-        const events = await getContractEvents({
+      const events = await withRetry(() =>
+        getContractEvents({
           contract,
           events: [CLAIMED_EVENT],
           fromBlock,
           toBlock,
-        });
-        console.log(`✅ Fetched ${events.length} events in this batch.`);
-        allEvents.push(...events);
-        fromBlock = toBlock + BigInt(1);
-      } catch (eventError) {
-        console.error(
-          `❌ Error fetching events from ${fromBlock} to ${toBlock}:`,
-          eventError
-        );
-        // Optional: Decide how to handle errors - skip block range, retry, stop?
-        // For now, let's skip this range and continue
-        console.warn(
-          `⚠️ Skipping block range ${fromBlock}-${toBlock} due to error.`
-        );
-        fromBlock = toBlock + BigInt(1);
-      }
+        })
+      );
+      console.log(`✅ Fetched ${events.length} events in this batch.`);
+      allEvents.push(...events);
+      fromBlock = toBlock + BigInt(1);
     }
 
     console.log(`🧾 Total Claimed events fetched: ${allEvents.length}`);
-    if (allEvents.length > 0) {
-      console.log(
-        "👀 Sample Event Data:",
-        allEvents.slice(0, 3).map((e) => ({
-          marketId: e.args?.marketId?.toString(),
-          user: e.args?.user,
-          amount: e.args?.amount?.toString(),
-          blockNumber: e.blockNumber?.toString(),
-        }))
-      );
-    }
 
-    // Aggregate winnings
+    // Aggregate winnings in parallel
     console.log("💰 Aggregating winnings...");
-    const TOKEN_DECIMALS = 18; // Verify with token contract (0x55b04F15...)
+    const TOKEN_DECIMALS = 18;
     const winnersMap = new Map<string, number>();
-    for (const event of allEvents) {
-      // Add more robust checking for event args
-      if (
-        !event.args ||
-        typeof event.args.user !== "string" ||
-        typeof event.args.amount === "undefined"
-      ) {
-        console.warn(
-          "⚠️ Invalid or missing event args:",
-          JSON.stringify(event, null, 2)
-        );
-        continue;
-      }
-      const user = event.args.user.toLowerCase(); // Use lowercase for consistent map keys
-      const amountWei = BigInt(event.args.amount); // Keep as BigInt initially
-      const amountDecimal = Number(amountWei) / Math.pow(10, TOKEN_DECIMALS);
+    await Promise.all(
+      allEvents.map(async (event) => {
+        if (
+          !event.args ||
+          typeof event.args.user !== "string" ||
+          typeof event.args.amount === "undefined"
+        ) {
+          console.warn(
+            "⚠️ Invalid event args:",
+            JSON.stringify(event, null, 2)
+          );
+          return;
+        }
+        const user = event.args.user.toLowerCase();
+        const amountWei = BigInt(event.args.amount);
+        const amountDecimal = Number(amountWei) / Math.pow(10, TOKEN_DECIMALS);
 
-      console.log(
-        `💸 Processing: user=${user}, marketId=${event.args.marketId}, amount=${amountDecimal}`
-      );
-      const currentWinnings = winnersMap.get(user) || 0;
-      winnersMap.set(user, currentWinnings + amountDecimal);
-    }
+        winnersMap.set(user, (winnersMap.get(user) || 0) + amountDecimal);
+      })
+    );
     console.log("📊 Winners map:", Array.from(winnersMap.entries()));
 
     // Convert to array of winners
     const winners = Array.from(winnersMap.entries()).map(
       ([address, winnings]) => ({
-        address, // Already lowercase
+        address,
         winnings,
       })
     );
     console.log("🏅 Winners extracted:", winners);
 
     // Fetch Farcaster usernames
-    console.log(" Farcaster users...");
-    const addressesToFetch = winners.map((w) => w.address);
-    // Define the type for the map explicitly
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let addressToUsersMap: Record<string, any[]> = {};
+    console.log("📬 Fetching Farcaster users...");
+    const neynarCache =
+      cache.get<Record<string, any[]>>(NEYNAR_CACHE_KEY) || {};
+    const addressesToFetch = winners
+      .map((w) => w.address)
+      .filter((addr) => !neynarCache[addr]);
+    let addressToUsersMap: Record<string, any[]> = { ...neynarCache };
 
     if (addressesToFetch.length > 0) {
       console.log(
-        `📬 Requesting Neynar for ${addressesToFetch.length} addresses:`,
-        addressesToFetch
+        `📬 Requesting Neynar for ${addressesToFetch.length} addresses`
       );
       try {
-        // CORRECT: Get the map response
-        addressToUsersMap = await neynar.fetchBulkUsersByEthOrSolAddress({
-          addresses: addressesToFetch,
-          // Use Enum for safety if available and imported
-          addressTypes: ["custody_address", "verified_address"],
-        });
+        const newUsersMap = await withRetry(() =>
+          neynar.fetchBulkUsersByEthOrSolAddress({
+            addresses: addressesToFetch,
+            addressTypes: ["custody_address", "verified_address"],
+          })
+        );
+        addressToUsersMap = { ...addressToUsersMap, ...newUsersMap };
+        cache.set(NEYNAR_CACHE_KEY, addressToUsersMap);
         console.log(
           `✅ Neynar responded. Found users for ${
-            Object.keys(addressToUsersMap).length
+            Object.keys(newUsersMap).length
           } addresses.`
-        );
-        console.log(
-          "📄 Raw Neynar address-to-user map:",
-          JSON.stringify(addressToUsersMap, null, 2)
         );
       } catch (neynarError) {
         console.error("❌ Neynar API error:", neynarError);
-        // Keep addressToUsersMap as empty {}
       }
     } else {
-      console.log("🤷 No addresses to fetch from Neynar.");
+      console.log("🤷 All addresses cached for Neynar.");
     }
 
     // Build leaderboard
     console.log("🧠 Building leaderboard...");
     const leaderboard = winners
       .map((winner) => {
-        console.log(`🔗 Matching address: ${winner.address}`);
-        // CORRECT: Look up in the map using the winner's address (already lowercase)
         const usersForAddress = addressToUsersMap[winner.address];
-        // Take the first user found for that address (usually the correct one)
         const user =
           usersForAddress && usersForAddress.length > 0
             ? usersForAddress[0]
             : undefined;
-
-        console.log(
-          `➡️ Matched user:`,
-          user ? { fid: user.fid, username: user.username } : undefined
-        );
         return {
-          username: user?.username || `${winner.address.slice(0, 6)}...${winner.address.slice(-4)}`, 
-          fid: user?.fid || "nil", // Use optional chaining
-          pfp_url: user?.pfp_url || null, // Add profile picture URL
+          username:
+            user?.username ||
+            `${winner.address.slice(0, 6)}...${winner.address.slice(-4)}`,
+          fid: user?.fid || "nil",
+          pfp_url: user?.pfp_url || null,
           winnings: winner.winnings,
-          address: winner.address, // Include address for debugging/display
+          address: winner.address,
         };
       })
-      .sort((a, b) => b.winnings - a.winnings) // Sort by winnings descending
-      .slice(0, 10); // Take top 10
+      .sort((a, b) => b.winnings - a.winnings)
+      .slice(0, 10);
 
     console.log("🏆 Final Leaderboard:", leaderboard);
 
-    // Return the leaderboard
-    // Consider adding caching headers here if appropriate
+    // Cache leaderboard and last block
+    cache.set(CACHE_KEY, leaderboard);
+    cache.set(LAST_BLOCK_KEY, latestBlock.toString());
+    console.log("✅ Cached leaderboard and last block");
+
     return NextResponse.json(leaderboard);
   } catch (error) {
     console.error("❌ Leaderboard fetch error:", error);
-    // Log the stack trace for better debugging
     console.error((error as Error).stack);
     return NextResponse.json(
       {
