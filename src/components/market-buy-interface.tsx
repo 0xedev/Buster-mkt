@@ -346,15 +346,6 @@ export function MarketBuyInterface({
     setError(null);
   };
 
-  // const handleMaxBet = () => {
-  //   const maxAmount = Math.min(
-  //     MAX_BET,
-  //     Number(balance) / Math.pow(10, tokenDecimals)
-  //   ).toFixed(tokenDecimals);
-  //   setAmount(maxAmount);
-  //   setError(null);
-  // };
-
   const handleMaxBet = () => {
     const maxPossibleValue = Math.min(
       MAX_BET,
