@@ -97,10 +97,12 @@ export async function generateMetadata(
       other: {
         "fc:frame": "vNext",
         "fc:frame:image": imageUrl,
-        "fc:frame:post_url": postUrl, // Needed if you have post buttons
-        "fc:frame:button:1": "View Market",
-        "fc:frame:button:1:action": "link",
-        "fc:frame:button:1:target": marketUrl,
+        "fc:frame:post_url": postUrl,
+        "fc:frame:button:1": `Bet on ${market.optionA}`,
+        "fc:frame:button:1:action": "post",
+        "fc:frame:button:2": "View Market",
+        "fc:frame:button:2:action": "link",
+        "fc:frame:button:2:target": marketUrl,
         // Add more buttons if needed
       },
       // Open Graph metadata

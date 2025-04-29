@@ -16,5 +16,3 @@ export const tokenContract = getContract({
   chain: base,
   address: tokenAddress,
 });
-
-//0xc703856dc56576800F9bc7DfD6ac15e92Ac2d7D6

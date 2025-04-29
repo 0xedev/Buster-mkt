@@ -19,12 +19,13 @@ import { MarketBuyInterface } from "./market-buy-interface";
 import { MarketSharesDisplay } from "./market-shares-display";
 
 // Interface for market data
-interface Market {
+export interface Market {
+  // index?: number; // Optional: if you need the original index inside the card
   question: string;
   optionA: string;
   optionB: string;
   endTime: bigint;
-  outcome: number;
+  outcome: number; // Solidity enum maps to number
   totalOptionAShares: bigint;
   totalOptionBShares: bigint;
   resolved: boolean;
@@ -38,30 +39,24 @@ interface SharesBalance {
 
 // Props for the MarketCard component
 interface MarketCardProps {
-  index: number;
-  filter: "active" | "pending" | "resolved";
-  market?: Market;
-  cachedMarkets?: Map<number, Market>;
-  isLoading?: boolean;
+  index: number; // Keep index for contract calls like getShareBalance
+  market: Market; // Receive the processed market data directly
 }
 
-export function MarketCard({
-  index,
-  filter,
-  market,
-  cachedMarkets,
-  isLoading,
-}: MarketCardProps) {
+export function MarketCard({ index, market }: MarketCardProps) {
   const account = useActiveAccount();
 
-  const marketData = market || cachedMarkets?.get(index);
+  // --- Use the market data passed via props ---
+  const marketData = market;
+  // --- END ---
 
+  // Fetch shares balance (keep as is, uses index)
   const { data: sharesBalanceData } = useReadContract({
     contract,
     method:
       "function getShareBalance(uint256 _marketId, address _user) view returns (uint256 optionAShares, uint256 optionBShares)",
     params: [BigInt(index), account?.address as string],
-    queryOptions: { enabled: !!account?.address },
+    queryOptions: { enabled: !!account?.address && !!marketData }, // Also check marketData exists
   });
 
   const sharesBalance: SharesBalance | undefined = sharesBalanceData
@@ -71,9 +66,10 @@ export function MarketCard({
       }
     : undefined;
 
-  const isExpired =
-    marketData && new Date(Number(marketData.endTime) * 1000) < new Date();
-  const isResolved = marketData?.resolved;
+  // Calculate status based on the marketData prop
+  // These are now used for *internal* display logic within the card
+  const isExpired = new Date(Number(marketData.endTime) * 1000) < new Date();
+  const isResolved = marketData.resolved;
 
   // Construct Warpcast share URL
   const appUrl =
@@ -84,23 +80,6 @@ export function MarketCard({
       marketData?.question || `Market ${index}`
     }`
   )}&embeds[]=${encodeURIComponent(marketPageUrl)}`;
-
-  const shouldShow = () => {
-    if (!marketData) return false;
-    switch (filter) {
-      case "active":
-        return !isExpired;
-      case "pending":
-        return isExpired && !isResolved;
-      case "resolved":
-        return isExpired && isResolved;
-      default:
-        return true;
-    }
-  };
-
-  if (isLoading) return <MarketCardSkeleton />;
-  if (!marketData || !shouldShow()) return null;
 
   return (
     <Card key={index} className="flex flex-col">
