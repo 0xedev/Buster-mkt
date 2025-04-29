@@ -100,7 +100,7 @@ export function EnhancedPredictionMarketDashboard() {
     const active: Market[] = [];
     const pending: Market[] = [];
     const resolved: Market[] = [];
-
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     processedMarkets.forEach((market, index) => {
       // Add index here if needed later
       const isExpired = Number(market.endTime) < now;
