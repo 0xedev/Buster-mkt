@@ -480,9 +480,7 @@ export function MarketBuyInterface({
               </div>
             ) : buyingStep === "allowance" ? (
               <div className="flex flex-col border-2 border-gray-200 rounded-lg p-4">
-                <h3 className="text-lg font-bold mb-2">
-                  Step 1/2: Approve Tokens
-                </h3>
+                <h3 className="text-lg font-bold mb-2">Approve Tokens</h3>
                 <p className="mb-4 text-sm">
                   Approve unlimited {tokenSymbol} spending to buy shares without
                   future approvals.
@@ -514,9 +512,7 @@ export function MarketBuyInterface({
               </div>
             ) : (
               <div className="flex flex-col border-2 border-gray-200 rounded-lg p-4">
-                <h3 className="text-lg font-bold mb-2">
-                  Step 2/2: Confirm Purchase
-                </h3>
+                <h3 className="text-lg font-bold mb-2">Confirm Purchase</h3>
                 <p className="mb-4 text-sm">
                   Buy{" "}
                   <span className="font-bold">
