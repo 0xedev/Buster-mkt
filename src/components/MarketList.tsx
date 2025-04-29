@@ -1,91 +1,134 @@
+"use client"; // Add "use client" if not already present at the top
+
 import { useReadContract } from "thirdweb/react";
 import { contract } from "@/constants/contract";
-import { MarketCard } from "./marketCard";
-import { useMemo, useState } from "react";
+import { MarketCard, Market } from "./marketCard"; // Import Market interface
+import { MarketCardSkeleton } from "./market-card-skeleton"; // Import Skeleton
+import { useMemo } from "react";
 
-// Interface for market data
-interface Market {
-  question: string;
-  optionA: string;
-  optionB: string;
-  endTime: bigint;
-  outcome: number;
-  totalOptionAShares: bigint;
-  totalOptionBShares: bigint;
-  resolved: boolean;
-}
-
+// Interface MarketListProps (keep as is)
 interface MarketListProps {
   filter: "active" | "pending" | "resolved";
 }
 
-export function MarketList({ filter }: MarketListProps) {
-  // Cache for market data
-  const [cachedMarkets, setCachedMarkets] = useState<Map<number, Market>>(
-    new Map()
-  );
+// --- Helper function to determine market status ---
+function getMarketStatus(market: Market): "active" | "pending" | "resolved" {
+  const now = Math.floor(Date.now() / 1000);
+  const isExpired = Number(market.endTime) < now;
+  const isResolved = market.resolved;
 
-  // Fetch market count
+  if (isResolved) {
+    return "resolved";
+  } else if (isExpired) {
+    return "pending";
+  } else {
+    return "active";
+  }
+}
+// --- End Helper ---
+
+export function MarketList({ filter }: MarketListProps) {
+  // --- REMOVED: cachedMarkets state is no longer needed ---
+  // const [cachedMarkets, setCachedMarkets] = useState<Map<number, Market>>(new Map());
+
+  // Fetch market count (keep as is)
   const { data: marketCount } = useReadContract({
     contract,
     method: "function getMarketCount() view returns (uint256)",
     params: [],
   });
 
-  // Generate array of market IDs
+  // Generate array of market IDs (keep as is)
   const marketIds = useMemo(() => {
-    if (!marketCount) return [];
+    if (marketCount === undefined || marketCount === null) return []; // Handle undefined/null
     return Array.from({ length: Number(marketCount) }, (_, i) => BigInt(i));
   }, [marketCount]);
 
-  // Fetch market data in batch
+  // Fetch market data in batch (keep as is)
   const { data: marketsData, isLoading } = useReadContract({
     contract,
     method:
       "function getMarketInfoBatch(uint256[] _marketIds) view returns (string[] questions, string[] optionAs, string[] optionBs, uint256[] endTimes, uint8[] outcomes, uint256[] totalOptionASharesArray, uint256[] totalOptionBSharesArray, bool[] resolvedArray)",
     params: [marketIds],
+    // Only run query if marketIds has elements
+    queryOptions: { enabled: marketIds.length > 0 },
   });
 
-  // Parse and cache market data
-  const markets = useMemo(() => {
-    if (!marketsData) return [];
+  // --- REVISED: Parse market data and include original index ---
+  const allParsedMarkets = useMemo(() => {
+    if (!marketsData || marketIds.length === 0) return [];
 
-    const parsedMarkets: Market[] = marketsData[0].map((_, i) => ({
-      question: marketsData[0][i],
-      optionA: marketsData[1][i],
-      optionB: marketsData[2][i],
-      endTime: marketsData[3][i],
-      outcome: marketsData[4][i],
-      totalOptionAShares: marketsData[5][i],
-      totalOptionBShares: marketsData[6][i],
-      resolved: marketsData[7][i],
-    }));
+    // Deconstruct for clarity
+    const [
+      questions,
+      optionAs,
+      optionBs,
+      endTimes,
+      outcomes,
+      totalOptionASharesArray,
+      totalOptionBSharesArray,
+      resolvedArray,
+    ] = marketsData;
 
-    // Update cache
-    const newCache = new Map(cachedMarkets);
-    parsedMarkets.forEach((market, i) => {
-      newCache.set(Number(marketIds[i]), market);
-    });
-    setCachedMarkets(newCache);
-
+    // Map raw data to Market objects, including the original index (marketId)
+    const parsedMarkets: (Market & { originalIndex: number })[] = [];
+    for (let i = 0; i < marketIds.length; i++) {
+      // Basic check if data exists for this index
+      if (questions[i] !== undefined) {
+        parsedMarkets.push({
+          originalIndex: Number(marketIds[i]), // Store the original market ID
+          question: questions[i],
+          optionA: optionAs[i],
+          optionB: optionBs[i],
+          endTime: endTimes[i],
+          outcome: outcomes[i],
+          totalOptionAShares: totalOptionASharesArray[i],
+          totalOptionBShares: totalOptionBSharesArray[i],
+          resolved: resolvedArray[i],
+        });
+      }
+    }
     return parsedMarkets;
   }, [marketsData, marketIds]);
+  // --- END REVISED ---
 
+  // --- NEW: Filter markets based on the filter prop ---
+  const filteredMarkets = useMemo(() => {
+    return allParsedMarkets.filter(
+      (market) => getMarketStatus(market) === filter
+    );
+  }, [allParsedMarkets, filter]);
+  // --- END NEW ---
+
+  // --- REVISED: Render Skeletons or Filtered Markets ---
   return (
-    <div className="grid gap-4">
-      {isLoading
-        ? Array.from({ length: 3 }).map((_, i) => (
-            <MarketCard key={i} index={i} filter={filter} isLoading />
-          ))
-        : markets.map((market, i) => (
-            <MarketCard
-              key={i}
-              index={i}
-              filter={filter}
-              market={market}
-              cachedMarkets={cachedMarkets}
-            />
-          ))}
+    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      {" "}
+      {/* Added grid layout like dashboard */}
+      {isLoading ? (
+        // Render skeletons directly
+        Array.from({ length: 3 }).map((_, i) => (
+          <MarketCardSkeleton key={`skeleton-${i}`} />
+        ))
+      ) : filteredMarkets.length > 0 ? (
+        // Render filtered markets, passing only index and market
+        filteredMarkets.map((market) => (
+          <MarketCard
+            key={market.originalIndex} // Use original index as key
+            index={market.originalIndex} // Pass original index
+            market={market} // Pass the market data object
+            // filter, isLoading, cachedMarkets props are removed
+          />
+        ))
+      ) : (
+        // Optional: Add an empty state message if no markets match the filter
+        <div className="col-span-full text-center text-gray-500 py-10">
+          {" "}
+          {/* Span across grid columns */}
+          No {filter} markets found.
+        </div>
+      )}
     </div>
   );
+  // --- END REVISED ---
 }

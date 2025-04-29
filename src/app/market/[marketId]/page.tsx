@@ -1,11 +1,11 @@
-import { Metadata, ResolvingMetadata } from "next"; // Import ResolvingMetadata
+import { Metadata, ResolvingMetadata } from "next";
 import { getContract, readContract } from "thirdweb";
 import { base } from "thirdweb/chains";
 import { client } from "@/app/client";
 import { MarketCard, Market } from "@/components/marketCard";
 import { MiniAppClient } from "@/components/MiniAppClient";
 
-// Define contract (keep as is)
+// Contract definition
 const contractAddress =
   process.env.CONTRACT_ADDRESS || "0xc703856dc56576800F9bc7DfD6ac15e92Ac2d7D6";
 const contract = getContract({
@@ -14,19 +14,18 @@ const contract = getContract({
   address: contractAddress,
 });
 
-// Type for contract return (keep as is)
+// Interface for market data
 type MarketInfoContractReturn = readonly [
-  string, // question
-  string, // optionA
-  string, // optionB
-  bigint, // endTime
-  number, // outcome (uint8)
-  bigint, // totalOptionAShares
-  bigint, // totalOptionBShares
-  boolean // resolved
+  string,
+  string,
+  string,
+  bigint,
+  number,
+  bigint,
+  bigint,
+  boolean
 ];
 
-// Fetch market data (keep as is)
 async function fetchMarketData(marketId: string): Promise<Market> {
   try {
     const marketData = (await readContract({
@@ -52,41 +51,31 @@ async function fetchMarketData(marketId: string): Promise<Market> {
   }
 }
 
-// --- Define Props Interface for the Page and Metadata ---
-interface MarketPageProps {
-  params: { marketId: string };
-  // searchParams?: { [key: string]: string | string[] | undefined }; // Add if needed
-}
-// --- END Props Interface ---
-
-// --- generateMetadata function: Use standard signature ---
+// generateMetadata: Handle params as Promise
 export async function generateMetadata(
-  { params }: MarketPageProps,
+  { params }: { params: Promise<{ marketId: string }> },
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  parent: ResolvingMetadata // Add parent parameter type
+  parent: ResolvingMetadata
 ): Promise<Metadata> {
   try {
-    // params is already destructured
-    const market = await fetchMarketData(params.marketId);
+    const { marketId } = await params; // Await params
+    const market = await fetchMarketData(marketId);
 
     const imageUrl = `${
       process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app"
-    }/api/market-image?marketId=${params.marketId}`;
+    }/api/market-image?marketId=${marketId}`;
     const postUrl = `${
       process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app"
     }/api/frame-action`;
     const marketUrl = `${
       process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app"
-    }/market/${params.marketId}`;
+    }/market/${marketId}`;
 
     const total = market.totalOptionAShares + market.totalOptionBShares;
     const yesPercent =
       total > 0n
         ? (Number((market.totalOptionAShares * 1000n) / total) / 10).toFixed(1)
         : "0.0";
-
-    // Optionally merge with parent metadata if needed
-    // const previousImages = (await parent).openGraph?.images || []
 
     return {
       title: market.question,
@@ -100,7 +89,6 @@ export async function generateMetadata(
         "fc:frame:button:2": "View Market",
         "fc:frame:button:2:action": "link",
         "fc:frame:button:2:target": marketUrl,
-        // Add other necessary frame inputs if needed
         "fc:frame:input:text": "Enter amount in $BSTR",
       },
       metadataBase: new URL(
@@ -111,7 +99,6 @@ export async function generateMetadata(
         description: `Bet on ${market.question} - ${market.optionA}: ${yesPercent}%`,
         images: [
           { url: imageUrl, width: 1200, height: 630, alt: market.question },
-          // ...previousImages, // Example of using parent metadata
         ],
         url: marketUrl,
         type: "website",
@@ -125,40 +112,38 @@ export async function generateMetadata(
     };
   } catch (error) {
     console.error("Error generating metadata:", error);
-    // Return minimal metadata on error
     return {
       title: "Market Not Found",
       description: "Unable to load market data for metadata",
     };
   }
 }
-// --- END generateMetadata ---
 
-// --- Page Component: Use standard signature ---
-export default async function Page({ params }: MarketPageProps) {
+// Page Component: Handle params as Promise
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ marketId: string }>;
+}) {
   try {
-    // params is already destructured
-    const market = await fetchMarketData(params.marketId);
-
+    const { marketId } = await params; // Await params
+    const market = await fetchMarketData(marketId);
+    console.log(`Market ${marketId}:`, market); // Debug log
     return (
       <div className="container mx-auto p-4">
         <MiniAppClient />
-        <MarketCard index={Number(params.marketId)} market={market} />
+        <MarketCard index={Number(marketId)} market={market} />
       </div>
     );
   } catch (error) {
     console.error("Error rendering market page:", error);
-    // Render an error state
     return (
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold text-red-600">Market Not Found</h1>
         <p>
           There was an error loading the market data. Please try again later.
         </p>
-        {/* Optionally display error details during development */}
-        {/* process.env.NODE_ENV === 'development' && <pre>{error.message}</pre> */}
       </div>
     );
   }
 }
-// --- END Page Component ---
