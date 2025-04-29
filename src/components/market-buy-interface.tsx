@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react";
 import { useActiveAccount, useSendAndConfirmTransaction } from "thirdweb/react";
 import { prepareContractCall, readContract } from "thirdweb";
 import { contract, tokenContract } from "@/constants/contract";
-import { approve } from "thirdweb/extensions/erc20";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
@@ -85,12 +84,17 @@ export function MarketBuyInterface({
         setTokenSymbol(symbol);
         setTokenDecimals(decimals);
         setBalance(userBalance);
-      } catch {
-        console.error("Failed to fetch token data");
+      } catch (error) {
+        console.error("Failed to fetch token data", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch token information",
+          variant: "destructive",
+        });
       }
     };
     fetchTokenData();
-  }, [account]);
+  }, [account, toast]);
 
   // Update container height
   useEffect(() => {
@@ -155,6 +159,15 @@ export function MarketBuyInterface({
     }
 
     try {
+      if (!account) {
+        toast({
+          title: "Wallet Connection Required",
+          description: "Please connect your wallet to continue",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const amountInUnits = toUnits(amount, tokenDecimals);
       if (amountInUnits > balance) {
         toast({
@@ -167,16 +180,19 @@ export function MarketBuyInterface({
         return;
       }
 
+      // Check allowance
       const userAllowance = await readContract({
         contract: tokenContract,
         method:
           "function allowance(address owner, address spender) view returns (uint256)",
-        params: [account?.address as string, contract.address],
+        params: [account.address, contract.address],
       });
 
+      // Proceed based on allowance
       setBuyingStep(amountInUnits > userAllowance ? "allowance" : "confirm");
       setError(null);
-    } catch {
+    } catch (error) {
+      console.error("Allowance check error:", error);
       toast({
         title: "Error",
         description: "Failed to check token allowance",
@@ -186,20 +202,59 @@ export function MarketBuyInterface({
   };
 
   const handleSetApproval = async () => {
+    if (!account) {
+      toast({
+        title: "Wallet Connection Required",
+        description: "Please connect your wallet to continue",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsApproving(true);
     try {
-      const tx = await approve({
+      // Using prepareContractCall instead of the approve function
+      // This is the ERC20 approval method
+      const tx = await prepareContractCall({
         contract: tokenContract,
-        spender: contract.address,
-        amount:
-          "115792089237316195423570985008687907853269984665640564039457584007913129639935", // Max uint256
+        method:
+          "function approve(address spender, uint256 amount) returns (bool)",
+        params: [
+          contract.address,
+          BigInt(
+            "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+          ), // Max uint256
+        ],
       });
+
+      // Send the transaction and wait for confirmation
       await mutateTransaction(tx);
+
+      // If successful, move to the next step
       setBuyingStep("confirm");
-    } catch {
+
+      toast({
+        title: "Approval Successful",
+        description: `You've approved ${tokenSymbol} for trading`,
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Approval error:", error);
+      // More descriptive error message
+      let errorMessage =
+        "Failed to approve token spending. Please check your wallet.";
+
+      if (error instanceof Error) {
+        if (error.message.includes("user rejected")) {
+          errorMessage = "Transaction was rejected in your wallet";
+        } else if (error.message.includes("insufficient funds")) {
+          errorMessage = "Insufficient funds for gas";
+        }
+      }
+
       toast({
         title: "Approval Failed",
-        description: "Failed to approve token spending. Check your wallet.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -212,6 +267,16 @@ export function MarketBuyInterface({
       setError("Must select an option and enter an amount greater than 0");
       return;
     }
+
+    if (!account) {
+      toast({
+        title: "Wallet Connection Required",
+        description: "Please connect your wallet to continue",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const numAmount = Number(amount);
     if (numAmount > MAX_BET) {
       toast({
@@ -244,9 +309,12 @@ export function MarketBuyInterface({
       });
       handleCancel();
     } catch (error: unknown) {
+      console.error("Purchase error:", error);
       let errorMessage = "Failed to process purchase. Check your wallet.";
       if (error instanceof Error) {
-        if (error.message.includes("Market trading period has ended")) {
+        if (error.message.includes("user rejected")) {
+          errorMessage = "Transaction was rejected in your wallet";
+        } else if (error.message.includes("Market trading period has ended")) {
           errorMessage = "Market trading period has ended";
         } else if (error.message.includes("insufficient funds")) {
           errorMessage = "Insufficient funds for gas";
