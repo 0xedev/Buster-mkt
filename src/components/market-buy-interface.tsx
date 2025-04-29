@@ -346,12 +346,30 @@ export function MarketBuyInterface({
     setError(null);
   };
 
+  // const handleMaxBet = () => {
+  //   const maxAmount = Math.min(
+  //     MAX_BET,
+  //     Number(balance) / Math.pow(10, tokenDecimals)
+  //   ).toFixed(tokenDecimals);
+  //   setAmount(maxAmount);
+  //   setError(null);
+  // };
+
   const handleMaxBet = () => {
-    const maxAmount = Math.min(
+    const maxPossibleValue = Math.min(
       MAX_BET,
       Number(balance) / Math.pow(10, tokenDecimals)
-    ).toFixed(tokenDecimals);
-    setAmount(maxAmount);
+    );
+    const displayPrecision = Math.min(6, tokenDecimals);
+    const formattedMaxAmount = maxPossibleValue.toFixed(displayPrecision);
+    let finalAmountString = formattedMaxAmount;
+    if (finalAmountString.includes(".")) {
+      finalAmountString = finalAmountString.replace(/0+$/, "");
+      if (finalAmountString.endsWith(".")) {
+        finalAmountString = finalAmountString.slice(0, -1);
+      }
+    }
+    setAmount(finalAmountString);
     setError(null);
   };
 
