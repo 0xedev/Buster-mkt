@@ -4,6 +4,7 @@ import { base } from "thirdweb/chains";
 import { client } from "@/app/client";
 import satori from "satori";
 import sharp from "sharp";
+import { promises as fs } from "fs";
 
 // Define contract (ensure this is the correct address and chain)
 const contractAddress =
@@ -87,9 +88,9 @@ async function fetchMarketData(marketId: string): Promise<MarketImageData> {
 }
 
 // --- Load font data outside the handler for efficiency ---
-const fontDataPromise = fetch(
-  "https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.woff2"
-).then((res) => res.arrayBuffer());
+const fontDataPromise = fs.readFile(
+  "./public/fonts/Inter/static/Inter_18pt-Regular.ttf"
+);
 // ---
 
 export async function GET(request: NextRequest) {
@@ -207,7 +208,7 @@ export async function GET(request: NextRequest) {
           {
             name: "Inter", // Match font family name used in style
             data: fontData,
-            weight: 700, // Ensure weight matches usage
+            weight: 400, // Ensure weight matches usage
             style: "normal",
           },
           // Add other weights/styles if needed
@@ -228,6 +229,7 @@ export async function GET(request: NextRequest) {
       headers: {
         "Content-Type": "image/png",
         "Cache-Control": "public, max-age=60", // Shorter cache during debugging
+        "Access-Control-Allow-Origin": "*",
       },
     });
   } catch (error) {
