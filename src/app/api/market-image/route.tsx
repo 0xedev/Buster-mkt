@@ -5,6 +5,7 @@ import { client } from "@/app/client";
 import satori from "satori";
 import sharp from "sharp";
 import { promises as fs } from "fs";
+import path from "node:path";
 
 // Define contract (ensure this is the correct address and chain)
 const contractAddress =
@@ -88,9 +89,17 @@ async function fetchMarketData(marketId: string): Promise<MarketImageData> {
 }
 
 // --- Load font data outside the handler for efficiency ---
-const fontDataPromise = fs.readFile(
-  "./public/fonts/Inter/static/Inter_18pt-Regular.ttf"
+const fontPath = path.join(
+  process.cwd(),
+  "public",
+  "fonts",
+  "Inter", // Assuming this directory structure is correct
+  "static",
+  "Inter_18pt-Regular.ttf"
 );
+console.log("Attempting to load font from:", fontPath); // Add log to verify path
+
+const fontDataPromise = fs.readFile(fontPath);
 // ---
 
 export async function GET(request: NextRequest) {
@@ -156,7 +165,7 @@ export async function GET(request: NextRequest) {
         <h1
           style={{
             fontSize: "48px", // Slightly larger font
-            fontWeight: "bold",
+            fontWeight: "normal",
             marginBottom: "50px",
             maxWidth: "1000px",
             lineHeight: 1.3, // Adjust line height for wrapping
@@ -172,7 +181,7 @@ export async function GET(request: NextRequest) {
             justifyContent: "space-around",
             width: "80%",
             fontSize: "36px",
-            fontWeight: "bold",
+            fontWeight: "normal",
           }}
         >
           <div
