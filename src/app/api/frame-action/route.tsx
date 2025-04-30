@@ -15,12 +15,28 @@ type MarketInfoContractReturn = readonly [
 
 export async function POST(req: NextRequest) {
   let marketId: string | undefined;
+  let rawState: string | undefined;
   try {
     const body = await req.json();
     const buttonIndex = body.untrustedData?.buttonIndex;
-    const state = body.untrustedData?.state;
-    const decodedState = state ? JSON.parse(decodeURIComponent(state)) : {};
+    rawState = body.untrustedData?.state;
+
+    console.log("Frame Action: Raw state received:", rawState); // Log raw state
+
+    const decodedState = rawState
+      ? (() => {
+          try {
+            return JSON.parse(decodeURIComponent(rawState));
+          } catch (e) {
+            console.error("Frame Action: Failed to parse state:", e);
+            return {};
+          }
+        })()
+      : {};
+
     marketId = decodedState.marketId;
+
+    console.log("Frame Action: Extracted marketId:", marketId); // Log extracted marketId
 
     if (!marketId || isNaN(Number(marketId))) {
       console.error("Frame Action: Invalid marketId", marketId);
@@ -75,7 +91,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         frame: {
           version: "vNext",
-          image: imageUrl,
+          image: `${imageUrl}&view=details`, // Add view=details parameter
           post_url: postUrl,
           buttons: [
             { label: "Back", action: "post" },
@@ -128,7 +144,7 @@ export async function POST(req: NextRequest) {
         version: "vNext",
         image: `${baseUrl}/api/market-image?marketId=${fallbackMarketId}&error=true`,
         post_url: `${baseUrl}/api/frame-action`,
-        buttons: [{ label: "View Market", action: "post" }],
+        buttons: [{ label: "Try Again", action: "post" }], // Use "Try Again" to avoid loops
         state: JSON.stringify({ marketId: fallbackMarketId }),
       },
       message: `Error: ${errorMessage.substring(0, 100)}`,
