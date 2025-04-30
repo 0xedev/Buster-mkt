@@ -303,8 +303,11 @@ export async function GET(request: NextRequest) {
         {/* Footer (Optional) */}
         <div
           style={{
+            display: "flex", // <-- ADD THIS
+            justifyContent: "center", // <-- ADD THIS (to center the text horizontally)
+            alignItems: "center", // <-- Optional: Vertically center if needed
             width: "100%",
-            textAlign: "center",
+            // textAlign: "center", // justifyContent replaces textAlign for flex
             fontSize: "18px",
             color: "#adb5bd",
           }}
