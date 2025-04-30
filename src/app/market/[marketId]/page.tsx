@@ -86,10 +86,12 @@ export async function generateMetadata(
         "fc:frame:post_url": postUrl,
         "fc:frame:button:1": `Bet on ${market.optionA}`,
         "fc:frame:button:1:action": "post",
-        "fc:frame:button:2": "View Market",
-        "fc:frame:button:2:action": "link",
-        "fc:frame:button:2:target": marketUrl,
+        "fc:frame:button:2": `Bet on ${market.optionB}`,
+        "fc:frame:button:2:action": "post",
+        "fc:frame:button:3": "View Market",
+        "fc:frame:button:3:action": "post",
         "fc:frame:input:text": "Enter amount in $BSTR",
+        "fc:frame:state": JSON.stringify({ marketId }),
       },
       metadataBase: new URL(
         process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app"

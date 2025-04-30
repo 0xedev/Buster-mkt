@@ -1,81 +1,134 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server"; // Use NextRequest
 import { getContract, readContract } from "thirdweb";
 import { base } from "thirdweb/chains";
 import { client } from "@/app/client";
 import satori from "satori";
 import sharp from "sharp";
 
-// Define contract
+// Define contract (ensure this is the correct address and chain)
 const contractAddress =
   process.env.CONTRACT_ADDRESS || "0xc703856dc56576800F9bc7DfD6ac15e92Ac2d7D6";
 const contract = getContract({
   client,
-  chain: base,
+  chain: base, // Make sure this matches your deployment (base or baseSepolia)
   address: contractAddress,
 });
 
-interface Market {
+// Interface for the data needed by the image generator
+interface MarketImageData {
   question: string;
   optionA: string;
   optionB: string;
   totalOptionAShares: bigint;
   totalOptionBShares: bigint;
+  // Add other fields if needed by the image (endTime, resolved, etc.)
 }
 
-type MarketInfo = readonly [
-  string,
-  bigint,
-  bigint,
-  string,
-  string,
-  bigint,
-  number,
-  boolean
+// --- CORRECTED: Type matching the ACTUAL contract return order ---
+type MarketInfoContractReturn = readonly [
+  string, // question (index 0)
+  string, // optionA (index 1)
+  string, // optionB (index 2)
+  bigint, // endTime (index 3)
+  number, // outcome (index 4 - uint8)
+  bigint, // totalOptionAShares (index 5)
+  bigint, // totalOptionBShares (index 6)
+  boolean // resolved (index 7)
 ];
+// --- END CORRECTION ---
 
-async function fetchMarketData(marketId: string): Promise<Market> {
+async function fetchMarketData(marketId: string): Promise<MarketImageData> {
+  console.log(`Market Image API: Fetching info for marketId ${marketId}...`);
   try {
+    // --- CORRECTED: Method signature matching the contract ---
     const marketData = (await readContract({
       contract,
       method:
-        "function getMarketInfo(uint256 marketId) view returns (string question, uint256 totalOptionAShares, uint256 totalOptionBShares, string optionA, string optionB, uint256 endTime, uint8 outcome, bool resolved)",
+        "function getMarketInfo(uint256 _marketId) view returns (string question, string optionA, string optionB, uint256 endTime, uint8 outcome, uint256 totalOptionAShares, uint256 totalOptionBShares, bool resolved)",
       params: [BigInt(marketId)],
-    })) as MarketInfo;
+    })) as MarketInfoContractReturn; // Use the corrected type
+    // --- END CORRECTION ---
 
+    console.log(
+      `Market Image API: Raw data received for marketId ${marketId}:`,
+      marketData
+    );
+
+    // Basic validation
+    if (!marketData || !Array.isArray(marketData) || marketData.length < 8) {
+      console.error(
+        `Market Image API: Invalid or incomplete data received from contract for marketId ${marketId}`,
+        marketData
+      );
+      throw new Error("Incomplete data received from contract");
+    }
+
+    // --- CORRECTED: Access data using correct indices ---
     return {
-      question: marketData[0],
-      totalOptionAShares: marketData[1],
-      totalOptionBShares: marketData[2],
-      optionA: marketData[3],
-      optionB: marketData[4],
+      question: marketData[0], // Correct index
+      optionA: marketData[1], // Correct index
+      optionB: marketData[2], // Correct index
+      totalOptionAShares: marketData[5], // Correct index
+      totalOptionBShares: marketData[6], // Correct index
+      // Add other fields if needed:
+      // endTime: marketData[3],
+      // resolved: marketData[7],
     };
+    // --- END CORRECTION ---
   } catch (error) {
-    console.error(`Failed to fetch market ${marketId}:`, error);
+    // Log the specific error during fetch
+    console.error(
+      `Market Image API: Failed to fetch or parse market ${marketId}:`,
+      error
+    );
+    // Re-throw to be caught by the main handler
     throw error;
   }
 }
 
-export async function GET(request: Request) {
+// --- Load font data outside the handler for efficiency ---
+const fontDataPromise = fetch(
+  "https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.woff2"
+).then((res) => res.arrayBuffer());
+// ---
+
+export async function GET(request: NextRequest) {
+  // Use NextRequest
+  const { searchParams } = new URL(request.url);
+  const marketId = searchParams.get("marketId");
+
+  console.log(
+    `--- Market Image API: Received request for marketId: ${marketId} ---`
+  );
+
+  if (!marketId || isNaN(Number(marketId))) {
+    console.error("Market Image API: Invalid or missing marketId");
+    return new NextResponse("Invalid market ID", { status: 400 });
+  }
+
   try {
-    const { searchParams } = new URL(request.url);
-    const marketId = searchParams.get("marketId");
+    const market = await fetchMarketData(marketId); // Fetch data using corrected function
 
-    if (!marketId || isNaN(Number(marketId))) {
-      return new NextResponse("Invalid marketId", { status: 400 });
-    }
-
-    const market = await fetchMarketData(marketId);
+    // --- Use BigInt for calculations before converting to Number for display ---
     const total = market.totalOptionAShares + market.totalOptionBShares;
     const yesPercent =
-      total > 0
-        ? ((Number(market.totalOptionAShares) / Number(total)) * 100).toFixed(1)
-        : "0";
+      total > 0n // Use BigInt comparison
+        ? (Number((market.totalOptionAShares * 1000n) / total) / 10).toFixed(1) // BigInt math for precision
+        : "0.0";
     const noPercent =
-      total > 0
-        ? ((Number(market.totalOptionBShares) / Number(total)) * 100).toFixed(1)
-        : "0";
+      total > 0n // Use BigInt comparison
+        ? (Number((market.totalOptionBShares * 1000n) / total) / 10).toFixed(1) // BigInt math for precision
+        : "0.0";
+    // --- END BigInt Calculation ---
 
-    // Generate SVG with satori (3:2 ratio, 1200x800)
+    console.log(
+      `Market Image API: Generating image for marketId ${marketId} with percentages: ${yesPercent}% / ${noPercent}%`
+    );
+
+    // Wait for font data to be loaded
+    const fontData = await fontDataPromise;
+
+    // Generate SVG with satori
     const svg = await satori(
       <div
         style={{
@@ -83,47 +136,81 @@ export async function GET(request: Request) {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          width: "1200px",
-          height: "800px",
+          width: "1200px", // Consider frame spec (1.91:1 ratio often preferred, e.g., 1200x630)
+          height: "630px", // Adjusted height for 1.91:1 ratio
           backgroundColor: "#ffffff",
           color: "#000000",
-          fontFamily: "Inter",
+          fontFamily: '"Inter"', // Ensure font name matches the one loaded
           textAlign: "center",
           padding: "40px",
+          border: "1px solid #e0e0e0", // Optional border
+          borderRadius: "8px", // Optional rounded corners
         }}
       >
+        <div
+          style={{ fontSize: "24px", color: "#888888", marginBottom: "30px" }}
+        >
+          Buster Market
+        </div>
         <h1
           style={{
-            fontSize: "36px",
+            fontSize: "48px", // Slightly larger font
             fontWeight: "bold",
-            marginBottom: "60px",
+            marginBottom: "50px",
             maxWidth: "1000px",
+            lineHeight: 1.3, // Adjust line height for wrapping
           }}
         >
-          {market.question.length > 60
-            ? market.question.slice(0, 57) + "..."
-            : market.question}
+          {/* Simple length check is okay, but consider better text wrapping libraries if needed */}
+          {market.question}
         </h1>
-        <div style={{ fontSize: "30px", marginBottom: "30px" }}>
-          {market.optionA}: {yesPercent}%
+        {/* Use flexbox for side-by-side percentages */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-around",
+            width: "80%",
+            fontSize: "36px",
+            fontWeight: "bold",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <span>{market.optionA}</span>
+            <span style={{ marginTop: "10px", color: "#4CAF50" }}>
+              {yesPercent}%
+            </span>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <span>{market.optionB}</span>
+            <span style={{ marginTop: "10px", color: "#F44336" }}>
+              {noPercent}%
+            </span>
+          </div>
         </div>
-        <div style={{ fontSize: "30px", marginBottom: "60px" }}>
-          {market.optionB}: {noPercent}%
-        </div>
-        <div style={{ fontSize: "24px", color: "#888888" }}>Buster Market</div>
       </div>,
       {
-        width: 1200,
-        height: 800,
+        width: 1200, // Match container width
+        height: 630, // Match container height
         fonts: [
           {
-            name: "Inter",
-            data: await fetch(
-              "https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.woff2"
-            ).then((res) => res.arrayBuffer()),
-            weight: 700,
+            name: "Inter", // Match font family name used in style
+            data: fontData,
+            weight: 700, // Ensure weight matches usage
             style: "normal",
           },
+          // Add other weights/styles if needed
         ],
       }
     );
@@ -131,14 +218,25 @@ export async function GET(request: Request) {
     // Convert SVG to PNG with sharp
     const pngBuffer = await sharp(Buffer.from(svg)).png().toBuffer();
 
+    console.log(
+      `Market Image API: Successfully generated PNG for marketId ${marketId}`
+    );
+
+    // Return PNG response
     return new NextResponse(pngBuffer, {
+      status: 200, // Explicitly set status 200
       headers: {
         "Content-Type": "image/png",
-        "Cache-Control": "public, max-age=300",
+        "Cache-Control": "public, max-age=60", // Shorter cache during debugging
       },
     });
   } catch (error) {
-    console.error("Failed to generate market image:", error);
+    // Log the error that occurred anywhere in the process
+    console.error(
+      `Market Image API: Overall failure for marketId ${marketId}:`,
+      error
+    );
+    // Return a generic 500 error response
     return new NextResponse("Failed to generate image", { status: 500 });
   }
 }
