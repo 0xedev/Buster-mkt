@@ -46,23 +46,28 @@ export async function POST(req: NextRequest) {
       );
       throw new Error(`Failed to fetch market data for ${marketId}`);
     }
-
+    //eslint-disable-next-line @typescript-eslint/no-unused-vars
     const optionA = marketData[1];
+    //eslint-disable-next-line @typescript-eslint/no-unused-vars
     const optionB = marketData[2];
     const totalOptionAShares = marketData[5];
     const totalOptionBShares = marketData[6];
     const endTime = marketData[3];
+    //eslint-disable-next-line @typescript-eslint/no-unused-vars
     const resolved = marketData[7];
 
     const total = totalOptionAShares + totalOptionBShares;
+    //eslint-disable-next-line @typescript-eslint/no-unused-vars
     const yesPercent =
       total > 0n
         ? (Number((totalOptionAShares * 1000n) / total) / 10).toFixed(1)
         : "0.0";
+    //eslint-disable-next-line @typescript-eslint/no-unused-vars
     const noPercent =
       total > 0n
         ? (Number((totalOptionBShares * 1000n) / total) / 10).toFixed(1)
         : "0.0";
+    //eslint-disable-next-line @typescript-eslint/no-unused-vars
     const endDate = new Date(Number(endTime) * 1000).toLocaleDateString();
 
     if (buttonIndex === 1) {
