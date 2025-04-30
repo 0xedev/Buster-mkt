@@ -6,6 +6,7 @@ import satori from "satori";
 import sharp from "sharp";
 import { promises as fs } from "fs";
 import path from "node:path";
+import { format } from "date-fns";
 
 // Define contract (ensure this is the correct address and chain)
 const contractAddress =
@@ -23,6 +24,8 @@ interface MarketImageData {
   optionB: string;
   totalOptionAShares: bigint;
   totalOptionBShares: bigint;
+  endTime: bigint;
+  resolved: boolean;
   // Add other fields if needed by the image (endTime, resolved, etc.)
 }
 
@@ -70,11 +73,10 @@ async function fetchMarketData(marketId: string): Promise<MarketImageData> {
       question: marketData[0], // Correct index
       optionA: marketData[1], // Correct index
       optionB: marketData[2], // Correct index
+      endTime: marketData[3],
       totalOptionAShares: marketData[5], // Correct index
       totalOptionBShares: marketData[6], // Correct index
-      // Add other fields if needed:
-      // endTime: marketData[3],
-      // resolved: marketData[7],
+      resolved: marketData[7],
     };
     // --- END CORRECTION ---
   } catch (error) {
@@ -88,18 +90,43 @@ async function fetchMarketData(marketId: string): Promise<MarketImageData> {
   }
 }
 
+function formatEndTime(endTimeSeconds: bigint): string {
+  try {
+    const endDate = new Date(Number(endTimeSeconds) * 1000);
+    // Example format: "Ends May 1, 2024 @ 10:30 PM UTC"
+    // Adjust format string as needed (see date-fns docs)
+    return `Ends ${format(endDate, "MMM d, yyyy '@' h:mm a 'UTC'")}`;
+  } catch (e) {
+    console.error("Error formatting time:", e);
+    return "Ends: Invalid Date";
+  }
+}
+
 // --- Load font data outside the handler for efficiency ---
-const fontPath = path.join(
+const regularFontPath = path.join(
   process.cwd(),
   "public",
   "fonts",
-  "Inter", // Assuming this directory structure is correct
+  "Inter",
   "static",
-  "Inter_18pt-Regular.ttf"
+  "Inter_18pt-Regular.ttf" // Assuming you have Regular too
 );
-console.log("Attempting to load font from:", fontPath); // Add log to verify path
+const boldFontPath = path.join(
+  process.cwd(),
+  "public",
+  "fonts",
+  "Inter",
+  "static",
+  "Inter_18pt-Bold.ttf" // Path to Bold font
+);
 
-const fontDataPromise = fs.readFile(fontPath);
+console.log("Attempting to load fonts from:", regularFontPath, boldFontPath);
+
+// Read both files
+const regularFontDataPromise = fs.readFile(regularFontPath);
+const boldFontDataPromise = fs.readFile(boldFontPath);
+
+// const fontDataPromise = fs.readFile(fontPath);
 // ---
 
 export async function GET(request: NextRequest) {
@@ -121,22 +148,32 @@ export async function GET(request: NextRequest) {
 
     // --- Use BigInt for calculations before converting to Number for display ---
     const total = market.totalOptionAShares + market.totalOptionBShares;
-    const yesPercent =
-      total > 0n // Use BigInt comparison
-        ? (Number((market.totalOptionAShares * 1000n) / total) / 10).toFixed(1) // BigInt math for precision
-        : "0.0";
-    const noPercent =
-      total > 0n // Use BigInt comparison
-        ? (Number((market.totalOptionBShares * 1000n) / total) / 10).toFixed(1) // BigInt math for precision
-        : "0.0";
+    const yesPercentNum =
+      total > 0n
+        ? Number((market.totalOptionAShares * 10000n) / total) / 100
+        : 0;
+    const noPercentNum =
+      total > 0n
+        ? Number((market.totalOptionBShares * 10000n) / total) / 100
+        : 0;
     // --- END BigInt Calculation ---
 
+    // Format for display
+    const yesPercentDisplay = yesPercentNum.toFixed(1);
+    const noPercentDisplay = noPercentNum.toFixed(1);
+
+    // Format the end time
+    const formattedTime = formatEndTime(market.endTime);
+
     console.log(
-      `Market Image API: Generating image for marketId ${marketId} with percentages: ${yesPercent}% / ${noPercent}%`
+      `Market Image API: Generating image for marketId ${marketId} with percentages: ${yesPercentDisplay}% / ${noPercentDisplay}%`
     );
 
     // Wait for font data to be loaded
-    const fontData = await fontDataPromise;
+    const [regularFontData, boldFontData] = await Promise.all([
+      regularFontDataPromise,
+      boldFontDataPromise,
+    ]);
 
     // Generate SVG with satori
     const svg = await satori(
@@ -144,84 +181,156 @@ export async function GET(request: NextRequest) {
         style={{
           display: "flex",
           flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          width: "1200px", // Consider frame spec (1.91:1 ratio often preferred, e.g., 1200x630)
-          height: "630px", // Adjusted height for 1.91:1 ratio
-          backgroundColor: "#ffffff",
-          color: "#000000",
-          fontFamily: '"Inter"', // Ensure font name matches the one loaded
-          textAlign: "center",
-          padding: "40px",
-          border: "1px solid #e0e0e0", // Optional border
-          borderRadius: "8px", // Optional rounded corners
+          alignItems: "stretch", // Stretch children width
+          justifyContent: "space-between", // Space out header, content, footer (if any)
+          width: "1200px",
+          height: "630px",
+          backgroundColor: "#f8f9fa", // Lighter gray background
+          color: "#212529", // Darker text
+          fontFamily: '"Inter"',
+          padding: "40px 50px", // Adjust padding
         }}
       >
         <div
-          style={{ fontSize: "24px", color: "#888888", marginBottom: "30px" }}
-        >
-          Buster Market
-        </div>
-        <h1
           style={{
-            fontSize: "48px", // Slightly larger font
-            fontWeight: "normal",
-            marginBottom: "50px",
-            maxWidth: "1000px",
-            lineHeight: 1.3, // Adjust line height for wrapping
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            width: "100%",
+            fontSize: "24px",
+            color: "#6c757d" /* Gray text */,
           }}
         >
-          {/* Simple length check is okay, but consider better text wrapping libraries if needed */}
-          {market.question}
-        </h1>
-        {/* Use flexbox for side-by-side percentages */}
+          <span>Buster Market</span>
+          <span>{formattedTime}</span>
+        </div>
         <div
           style={{
             display: "flex",
-            justifyContent: "space-around",
-            width: "80%",
-            fontSize: "36px",
-            fontWeight: "normal",
+            flexDirection: "column",
+            alignItems: "center",
+            flexGrow: 1,
+            justifyContent: "center",
           }}
         >
+          {/* Question */}
+          <h1
+            style={{
+              fontSize: "52px", // Slightly larger
+              fontWeight: 700, // Use bold weight
+              textAlign: "center",
+              marginBottom: "40px", // Space below question
+              maxWidth: "1000px",
+              lineHeight: 1.3,
+            }}
+          >
+            {market.question}
+          </h1>
+
+          {/* Progress Bar Area */}
           <div
             style={{
+              width: "80%",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
             }}
           >
-            <span>{market.optionA}</span>
-            <span style={{ marginTop: "10px", color: "#4CAF50" }}>
-              {yesPercent}%
-            </span>
+            {/* Bar */}
+            <div
+              style={{
+                display: "flex",
+                width: "100%",
+                height: "24px",
+                backgroundColor: "#e9ecef",
+                borderRadius: "12px",
+                overflow: "hidden",
+                marginBottom: "15px",
+              }}
+            >
+              <div
+                style={{
+                  width: `${yesPercentNum}%`,
+                  backgroundColor: "#28a745" /* Green */,
+                }}
+              ></div>
+              <div
+                style={{
+                  width: `${noPercentNum}%`,
+                  backgroundColor: "#dc3545" /* Red */,
+                }}
+              ></div>
+            </div>
+            {/* Labels */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                width: "100%",
+                fontSize: "28px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  color: "#28a745",
+                }}
+              >
+                <span style={{ fontSize: "24px", color: "#495057" }}>
+                  {market.optionA}
+                </span>
+                <span style={{ fontWeight: 700 }}>{yesPercentDisplay}%</span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-end",
+                  color: "#dc3545",
+                }}
+              >
+                <span style={{ fontSize: "24px", color: "#495057" }}>
+                  {market.optionB}
+                </span>
+                <span style={{ fontWeight: 700 }}>{noPercentDisplay}%</span>
+              </div>
+            </div>
           </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <span>{market.optionB}</span>
-            <span style={{ marginTop: "10px", color: "#F44336" }}>
-              {noPercent}%
-            </span>
-          </div>
+        </div>
+
+        {/* Footer (Optional) */}
+        <div
+          style={{
+            width: "100%",
+            textAlign: "center",
+            fontSize: "18px",
+            color: "#adb5bd",
+          }}
+        >
+          Market ID: {marketId}
         </div>
       </div>,
       {
-        width: 1200, // Match container width
-        height: 630, // Match container height
+        width: 1200,
+        height: 630,
+        // --- UPDATED: Include both fonts ---
         fonts: [
           {
-            name: "Inter", // Match font family name used in style
-            data: fontData,
-            weight: 400, // Ensure weight matches usage
+            name: "Inter",
+            data: regularFontData,
+            weight: 400, // Regular
             style: "normal",
           },
-          // Add other weights/styles if needed
+          {
+            name: "Inter",
+            data: boldFontData,
+            weight: 700, // Bold
+            style: "normal",
+          },
         ],
+        // --- END UPDATE ---
       }
     );
 

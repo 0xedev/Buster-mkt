@@ -61,15 +61,11 @@ export async function generateMetadata(
     const { marketId } = await params; // Await params
     const market = await fetchMarketData(marketId);
 
-    const imageUrl = `${
-      process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app"
-    }/api/market-image?marketId=${marketId}`;
-    const postUrl = `${
-      process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app"
-    }/api/frame-action`;
-    const marketUrl = `${
-      process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app"
-    }/market/${marketId}`;
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app";
+    const imageUrl = `${baseUrl}/api/market-image?marketId=${marketId}`;
+    const postUrl = `${baseUrl}/api/frame-action`;
+    const marketUrl = `${baseUrl}/market/${marketId}`;
 
     const total = market.totalOptionAShares + market.totalOptionBShares;
     const yesPercent =
@@ -79,26 +75,19 @@ export async function generateMetadata(
 
     return {
       title: market.question,
-      description: `Bet on ${market.question} - ${market.optionA}: ${yesPercent}%`,
+      description: `View market: ${market.question} - ${market.optionA}: ${yesPercent}%`,
       other: {
         "fc:frame": "vNext",
         "fc:frame:image": imageUrl,
         "fc:frame:post_url": postUrl,
-        "fc:frame:button:1": `Bet on ${market.optionA}`,
+        "fc:frame:button:1": "View Market",
         "fc:frame:button:1:action": "post",
-        "fc:frame:button:2": `Bet on ${market.optionB}`,
-        "fc:frame:button:2:action": "post",
-        "fc:frame:button:3": "View Market",
-        "fc:frame:button:3:action": "post",
-        "fc:frame:input:text": "Enter amount in $BSTR",
         "fc:frame:state": JSON.stringify({ marketId }),
       },
-      metadataBase: new URL(
-        process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app"
-      ),
+      metadataBase: new URL(baseUrl),
       openGraph: {
         title: market.question,
-        description: `Bet on ${market.question} - ${market.optionA}: ${yesPercent}%`,
+        description: `View market: ${market.question} - ${market.optionA}: ${yesPercent}%`,
         images: [
           { url: imageUrl, width: 1200, height: 630, alt: market.question },
         ],
@@ -108,7 +97,7 @@ export async function generateMetadata(
       twitter: {
         card: "summary_large_image",
         title: market.question,
-        description: `Bet on ${market.question} - ${market.optionA}: ${yesPercent}%`,
+        description: `View market: ${market.question} - ${market.optionA}: ${yesPercent}%`,
         images: [imageUrl],
       },
     };
