@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
       action: "post" | "link";
       target?: string;
     }[];
+    //eslint-disable-next-line @typescript-eslint/no-explicit-any
     let responseState: Record<string, any>;
 
     // Determine response based on the view we were just in
