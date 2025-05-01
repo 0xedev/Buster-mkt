@@ -58,9 +58,9 @@ export async function generateMetadata(
         "fc:frame": "vNext",
         "fc:frame:image": imageUrl,
         "fc:frame:post_url": postUrl,
-        "fc:frame:button:1": "View Market",
-        "fc:frame:button:1:action": "link",
-        "fc:frame:button:1:target": marketUrl,
+        "fc:frame:button:1": "View Details", // Changed label slightly for clarity
+        "fc:frame:button:1:action": "post",
+        // "fc:frame:button:1:target": marketUrl,
         "fc:frame:state": Buffer.from(JSON.stringify({ marketId })).toString(
           "base64"
         ),

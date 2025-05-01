@@ -13,8 +13,11 @@ type MarketInfoContractReturn = readonly [
 ];
 
 export async function POST(req: NextRequest) {
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app";
   let marketId: string | undefined;
   let rawState: string | undefined;
+  let currentView: "overview" | "details" = "overview"; // Default view
   try {
     const body = await req.json();
     rawState = body.untrustedData?.state;
@@ -37,6 +40,7 @@ export async function POST(req: NextRequest) {
       : {};
 
     marketId = decodedState.marketId;
+    currentView = decodedState.view === "details" ? "details" : "overview";
 
     console.log("Frame Action: Extracted marketId:", marketId);
 
@@ -45,21 +49,43 @@ export async function POST(req: NextRequest) {
       throw new Error("Invalid marketId in frame state");
     }
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app";
+    // const baseUrl =
+    //   process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app";
     const imageUrl = `${baseUrl}/api/market-image?marketId=${marketId}&t=${Date.now()}`;
     const postUrl = `${baseUrl}/api/frame-action`;
-    const marketDetailsUrl = `${baseUrl}/market/${marketId}/details`;
+    // const marketDetailsUrl = `${baseUrl}/market/${marketId}/details`;
+
+    let responseButtons: {
+      label: string;
+      action: "post" | "link";
+      target?: string;
+    }[];
+    let responseState: Record<string, any>;
+
+    // Determine response based on the view we were just in
+    if (currentView === "overview") {
+      // We were in overview, user clicked "View Details", show details frame
+      console.log(
+        `Frame Action: Transitioning to details view for market ${marketId}`
+      );
+      responseButtons = [{ label: "Back", action: "post" }];
+      responseState = { marketId, view: "details" }; // Set state for the next action
+    } else {
+      // We were in details, user clicked "Back", show overview frame
+      console.log(
+        `Frame Action: Transitioning back to overview for market ${marketId}`
+      );
+      responseButtons = [{ label: "View Details", action: "post" }];
+      responseState = { marketId, view: "overview" }; // Set state for the next action
+    }
 
     return NextResponse.json({
       frame: {
         version: "vNext",
         image: imageUrl,
         post_url: postUrl,
-        buttons: [
-          { label: "View Market", action: "link", target: marketDetailsUrl },
-        ],
-        state: Buffer.from(JSON.stringify({ marketId })).toString("base64"),
+        buttons: responseButtons,
+        state: Buffer.from(JSON.stringify(responseState)).toString("base64"),
       },
     });
   } catch (error: unknown) {
