@@ -57,14 +57,7 @@ export async function POST(req: NextRequest) {
         image: imageUrl,
         post_url: postUrl,
         buttons: [
-          {
-            label: "Buy shares📈📉",
-            action: "launch_frame",
-            target: marketDetailsUrl,
-            name: "Buy shares📈📉",
-            splashImageUrl: `${baseUrl}/img/icon.jpg`,
-            splashBackgroundColor: "#ffffff",
-          },
+          { label: "View Market", action: "link", target: marketDetailsUrl },
         ],
         state: Buffer.from(JSON.stringify({ marketId })).toString("base64"),
       },
