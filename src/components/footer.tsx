@@ -8,12 +8,12 @@ export function Footer() {
           <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
             Built by{" "}
             <Link
-              href="https://warpcast.com/ayojoseph"
+              href="https://warpcast.com/~/channel/politics"
               target="_blank"
               rel="noreferrer"
               className="font-medium underline underline-offset-4"
             >
-              oxdev.base.eth
+              Politics
             </Link>
             .
           </p>
