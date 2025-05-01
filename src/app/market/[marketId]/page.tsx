@@ -1,41 +1,34 @@
+import { readContract } from "thirdweb";
+import { contract } from "@/constants/contract";
 import { Metadata, ResolvingMetadata } from "next";
-import { getContract, readContract } from "thirdweb";
-import { base } from "thirdweb/chains";
-import { client } from "@/app/client";
-import { MarketCard, Market } from "@/components/marketCard";
-import { MiniAppClient } from "@/components/MiniAppClient";
+import { notFound } from "next/navigation";
 
-// Contract definition
-const contractAddress =
-  process.env.CONTRACT_ADDRESS || "0xc703856dc56576800F9bc7DfD6ac15e92Ac2d7D6";
-const contract = getContract({
-  client,
-  chain: base,
-  address: contractAddress,
-});
+async function fetchMarketData(marketId: string) {
+  const marketData = await readContract({
+    contract,
+    method:
+      "function getMarketInfo(uint256 _marketId) view returns (string question, string optionA, string optionB, uint256 endTime, uint8 outcome, uint256 totalOptionAShares, uint256 totalOptionBShares, bool resolved)",
+    params: [BigInt(marketId)],
+  });
+  return marketData;
+}
 
-// Interface for market data
-type MarketInfoContractReturn = readonly [
-  string,
-  string,
-  string,
-  bigint,
-  number,
-  bigint,
-  bigint,
-  boolean
-];
-
-async function fetchMarketData(marketId: string): Promise<Market> {
+export async function generateMetadata(
+  { params }: { params: Promise<{ marketId: string }> },
+  //eslint-disable-next-line @typescript-eslint/no-unused-vars
+  parent: ResolvingMetadata
+): Promise<Metadata> {
   try {
-    const marketData = (await readContract({
-      contract,
-      method:
-        "function getMarketInfo(uint256 _marketId) view returns (string question, string optionA, string optionB, uint256 endTime, uint8 outcome, uint256 totalOptionAShares, uint256 totalOptionBShares, bool resolved)",
-      params: [BigInt(marketId)],
-    })) as MarketInfoContractReturn;
+    const { marketId } = await params;
 
-    return {
+    if (!marketId || isNaN(Number(marketId))) {
+      console.error("generateMetadata: Invalid marketId", marketId);
+      throw new Error("Invalid marketId");
+    }
+
+    const marketData = await fetchMarketData(marketId);
+
+    const market = {
       question: marketData[0],
       optionA: marketData[1],
       optionB: marketData[2],
@@ -45,27 +38,12 @@ async function fetchMarketData(marketId: string): Promise<Market> {
       totalOptionBShares: marketData[6],
       resolved: marketData[7],
     };
-  } catch (error) {
-    console.error(`Failed to fetch market ${marketId}:`, error);
-    throw error;
-  }
-}
-
-// generateMetadata: Handle params as Promise
-export async function generateMetadata(
-  { params }: { params: Promise<{ marketId: string }> },
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  parent: ResolvingMetadata
-): Promise<Metadata> {
-  try {
-    const { marketId } = await params; // Await params
-    const market = await fetchMarketData(marketId);
 
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app";
     const imageUrl = `${baseUrl}/api/market-image?marketId=${marketId}`;
     const postUrl = `${baseUrl}/api/frame-action`;
-    const marketUrl = `${baseUrl}/market/${marketId}`;
+    const marketUrl = `${baseUrl}/market/${marketId}/details`;
 
     const total = market.totalOptionAShares + market.totalOptionBShares;
     const yesPercent =
@@ -81,8 +59,11 @@ export async function generateMetadata(
         "fc:frame:image": imageUrl,
         "fc:frame:post_url": postUrl,
         "fc:frame:button:1": "View Market",
-        "fc:frame:button:1:action": "post",
-        "fc:frame:state": JSON.stringify({ marketId }),
+        "fc:frame:button:1:action": "link",
+        "fc:frame:button:1:target": marketUrl,
+        "fc:frame:state": Buffer.from(JSON.stringify({ marketId })).toString(
+          "base64"
+        ),
       },
       metadataBase: new URL(baseUrl),
       openGraph: {
@@ -110,31 +91,16 @@ export async function generateMetadata(
   }
 }
 
-// Page Component: Handle params as Promise
-export default async function Page({
+export default async function MarketPage({
   params,
 }: {
   params: Promise<{ marketId: string }>;
 }) {
-  try {
-    const { marketId } = await params; // Await params
-    const market = await fetchMarketData(marketId);
-    console.log(`Market ${marketId}:`, market); // Debug log
-    return (
-      <div className="container mx-auto p-4">
-        <MiniAppClient />
-        <MarketCard index={Number(marketId)} market={market} />
-      </div>
-    );
-  } catch (error) {
-    console.error("Error rendering market page:", error);
-    return (
-      <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold text-red-600">Market Not Found</h1>
-        <p>
-          There was an error loading the market data. Please try again later.
-        </p>
-      </div>
-    );
+  const { marketId } = await params;
+
+  if (!marketId || isNaN(Number(marketId))) {
+    notFound();
   }
+
+  return <div>Redirecting to market details...</div>;
 }

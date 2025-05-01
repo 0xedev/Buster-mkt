@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readContract } from "thirdweb";
-import { contract } from "@/constants/contract";
 
+//eslint-disable-next-line @typescript-eslint/no-unused-vars
 type MarketInfoContractReturn = readonly [
   string,
   string,
@@ -18,7 +17,6 @@ export async function POST(req: NextRequest) {
   let rawState: string | undefined;
   try {
     const body = await req.json();
-    const buttonIndex = body.untrustedData?.buttonIndex;
     rawState = body.untrustedData?.state;
 
     console.log("Frame Action: Raw state received:", rawState);
@@ -26,6 +24,10 @@ export async function POST(req: NextRequest) {
     const decodedState = rawState
       ? (() => {
           try {
+            if (rawState.match(/^[A-Za-z0-9+/=]+$/)) {
+              const base64Decoded = atob(rawState);
+              return JSON.parse(base64Decoded);
+            }
             return JSON.parse(decodeURIComponent(rawState));
           } catch (e) {
             console.error("Frame Action: Failed to parse state:", e);
@@ -47,84 +49,17 @@ export async function POST(req: NextRequest) {
       process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app";
     const imageUrl = `${baseUrl}/api/market-image?marketId=${marketId}&t=${Date.now()}`;
     const postUrl = `${baseUrl}/api/frame-action`;
-    const marketUrl = `${baseUrl}/market/${marketId}`;
+    const marketDetailsUrl = `${baseUrl}/market/${marketId}/details`;
 
-    const marketData = (await readContract({
-      contract,
-      method:
-        "function getMarketInfo(uint256 _marketId) view returns (string question, string optionA, string optionB, uint256 endTime, uint8 outcome, uint256 totalOptionAShares, uint256 totalOptionBShares, bool resolved)",
-      params: [BigInt(marketId)],
-    })) as MarketInfoContractReturn;
-
-    if (!marketData || marketData.length < 8) {
-      console.error(
-        `Frame Action: Failed to fetch valid market data for ${marketId}`
-      );
-      throw new Error(`Failed to fetch market data for ${marketId}`);
-    }
-    //eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const optionA = marketData[1];
-    //eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const optionB = marketData[2];
-    const totalOptionAShares = marketData[5];
-    const totalOptionBShares = marketData[6];
-    const endTime = marketData[3];
-    //eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const resolved = marketData[7];
-
-    const total = totalOptionAShares + totalOptionBShares;
-    //eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const yesPercent =
-      total > 0n
-        ? (Number((totalOptionAShares * 1000n) / total) / 10).toFixed(1)
-        : "0.0";
-    //eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const noPercent =
-      total > 0n
-        ? (Number((totalOptionBShares * 1000n) / total) / 10).toFixed(1)
-        : "0.0";
-    //eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const endDate = new Date(Number(endTime) * 1000).toLocaleDateString();
-
-    if (buttonIndex === 1) {
-      // "View Market" button - render a new frame with market details
-      return NextResponse.json({
-        frame: {
-          version: "vNext",
-          image: `${imageUrl}&view=details`, // Add view=details parameter
-          post_url: postUrl,
-          buttons: [
-            { label: "Back", action: "post" },
-            { label: "Open in App", action: "link", target: marketUrl },
-          ],
-          state: JSON.stringify({ marketId, view: "details" }),
-        },
-        message: "Viewing market details",
-      });
-    }
-
-    if (decodedState.view === "details" && buttonIndex === 1) {
-      // "Back" button - return to initial frame
-      return NextResponse.json({
-        frame: {
-          version: "vNext",
-          image: imageUrl,
-          post_url: postUrl,
-          buttons: [{ label: "View Market", action: "post" }],
-          state: JSON.stringify({ marketId }),
-        },
-        message: "Back to market overview",
-      });
-    }
-
-    // Default frame (shouldn’t be reached after initial frame)
     return NextResponse.json({
       frame: {
         version: "vNext",
         image: imageUrl,
         post_url: postUrl,
-        buttons: [{ label: "View Market", action: "post" }],
-        state: JSON.stringify({ marketId }),
+        buttons: [
+          { label: "View Market", action: "link", target: marketDetailsUrl },
+        ],
+        state: Buffer.from(JSON.stringify({ marketId })).toString("base64"),
       },
     });
   } catch (error: unknown) {
@@ -144,8 +79,10 @@ export async function POST(req: NextRequest) {
         version: "vNext",
         image: `${baseUrl}/api/market-image?marketId=${fallbackMarketId}&error=true`,
         post_url: `${baseUrl}/api/frame-action`,
-        buttons: [{ label: "Try Again", action: "post" }], // Use "Try Again" to avoid loops
-        state: JSON.stringify({ marketId: fallbackMarketId }),
+        buttons: [{ label: "Try Again", action: "post" }],
+        state: Buffer.from(
+          JSON.stringify({ marketId: fallbackMarketId })
+        ).toString("base64"),
       },
       message: `Error: ${errorMessage.substring(0, 100)}`,
     });
