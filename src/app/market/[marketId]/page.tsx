@@ -58,9 +58,12 @@ export async function generateMetadata(
         "fc:frame": "vNext",
         "fc:frame:image": imageUrl,
         "fc:frame:post_url": postUrl,
-        "fc:frame:button:1": "View Market",
-        "fc:frame:button:1:action": "link",
+        "fc:frame:button:1": "Buy shares📈📉",
+        "fc:frame:button:1:action": "launch_frame",
         "fc:frame:button:1:target": marketUrl,
+        "fc:frame:button:1:name": "Market Details",
+        "fc:frame:button:1:splashImageUrl": `${baseUrl}/icon.jpg`,
+        "fc:frame:button:1:splashBackgroundColor": "#ffffff",
         "fc:frame:state": Buffer.from(JSON.stringify({ marketId })).toString(
           "base64"
         ),
