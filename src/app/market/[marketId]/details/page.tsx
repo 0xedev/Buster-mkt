@@ -18,11 +18,11 @@ type MarketInfoContractReturn = readonly [
 ];
 
 interface Props {
-  params: { marketId: string };
+  params: Promise<{ marketId: string }>; // params is now a Promise
 }
 
 export default async function MarketDetailsPage({ params }: Props) {
-  const { marketId } = params;
+  const { marketId } = await params; // Await the params to resolve the marketId
 
   if (!marketId || isNaN(Number(marketId))) {
     notFound();
@@ -45,10 +45,10 @@ export default async function MarketDetailsPage({ params }: Props) {
     question: marketData[0],
     optionA: marketData[1],
     optionB: marketData[2],
-    endTime: marketData[3], // Keep as bigint
-    outcome: marketData[4], // Keep as number
-    totalOptionAShares: marketData[5], // Keep as bigint
-    totalOptionBShares: marketData[6], // Keep as bigint
+    endTime: marketData[3], // Keep as bigint to match Market interface
+    outcome: marketData[4], // Keep as number to match Market interface
+    totalOptionAShares: marketData[5], // Keep as bigint to match Market interface
+    totalOptionBShares: marketData[6], // Keep as bigint to match Market interface
     resolved: marketData[7],
   };
 
