@@ -6,11 +6,11 @@
   },
   "frame": {
     "version": "1",
-    "name": "FORECAST",
+    "name": "POLICAST PREDICTION MARKET",
     "iconUrl": "https://buster-mkt.vercel.app/icon.jpg",
     "homeUrl": "https://buster-mkt.vercel.app",
     "imageUrl": "https://buster-mkt.vercel.app/icon.jpg",
-    "buttonTitle": "Forecast",
+    "buttonTitle": "Explore Markets🏪",
     "splashImageUrl": "https://buster-mkt.vercel.app/icon.jpg",
     "splashBackgroundColor": "#ffffff",
     "webhookUrl": "https://buster-mkt.vercel.app/api/webhook"

@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const buttonIndex = body.untrustedData?.buttonIndex;
     rawState = body.untrustedData?.state;
 
-    console.log("Frame Action: Raw state received:", rawState); // Log raw state
+    console.log("Frame Action: Raw state received:", rawState);
 
     const decodedState = rawState
       ? (() => {
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
     marketId = decodedState.marketId;
 
-    console.log("Frame Action: Extracted marketId:", marketId); // Log extracted marketId
+    console.log("Frame Action: Extracted marketId:", marketId);
 
     if (!marketId || isNaN(Number(marketId))) {
       console.error("Frame Action: Invalid marketId", marketId);
