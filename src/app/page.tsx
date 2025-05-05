@@ -23,6 +23,7 @@ export const metadata: Metadata = {
           url: "https://buster-mkt.vercel.app",
           splashImageUrl: "https://buster-mkt.vercel.app/icon.jpg",
           splashBackgroundColor: "#ffffff",
+          state: '{"marketId":"1"}',
         },
       },
     }),

@@ -61,7 +61,10 @@ export async function POST(req: NextRequest) {
       target?: string;
     }[];
     //eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let responseState: Record<string, any>;
+    let responseState: {
+      marketId: string;
+      view: "overview" | "details";
+    };
 
     // Determine response based on the view we were just in
     if (currentView === "overview") {
