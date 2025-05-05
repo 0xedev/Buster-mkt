@@ -1,5 +1,5 @@
 "use client";
-
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -120,11 +120,26 @@ export function MarketCard({ index, market }: MarketCardProps) {
         ) : (
           <div />
         )}
-        <Button asChild variant="outline" size="sm">
-          <a href={warpcastShareUrl} target="_blank" rel="noopener noreferrer">
-            Share
-          </a>
-        </Button>
+        <div className="flex items-center space-x-2">
+          {" "}
+          {/* Wrap buttons */}
+          <Button asChild variant="outline" size="sm">
+            {" "}
+            {/* Share Button */}
+            <a
+              href={warpcastShareUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Share
+            </a>
+          </Button>
+          <Button asChild variant="default" size="sm">
+            {" "}
+            {/* View Details Button */}
+            <Link href={`/market/${index}/details`}>View Details</Link>
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   );
