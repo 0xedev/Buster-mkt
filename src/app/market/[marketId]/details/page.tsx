@@ -79,9 +79,9 @@ export async function generateMetadata(
       "fc:frame:post_url": postUrl,
       "fc:frame:button:1": "View Details",
       "fc:frame:button:1:action": "post",
-      "fc:frame:state": Buffer.from(JSON.stringify({ marketId })).toString(
-        "base64"
-      ),
+      "fc:frame:state": Buffer.from(
+        JSON.stringify({ marketId, view: "overview" })
+      ).toString("base64"),
     },
     metadataBase: new URL(baseUrl),
     openGraph: {
@@ -204,7 +204,6 @@ export default async function MarketDetailsPage({ params }: Props) {
     <div className="flex flex-col min-h-screen bg-gray-50">
       <Navbar />
       <main className="flex-grow container mx-auto p-4 md:p-6">
-        {/* Breadcrumb with Home Button */}
         <div className="flex items-center text-sm text-gray-600 mb-4">
           <Button asChild variant="outline" size="sm" className="mr-2">
             <Link href="/">Home</Link>
@@ -216,7 +215,6 @@ export default async function MarketDetailsPage({ params }: Props) {
           <span className="font-medium text-gray-900">Market #{marketId}</span>
         </div>
 
-        {/* Market Header */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 md:mb-0">
@@ -263,19 +261,16 @@ export default async function MarketDetailsPage({ params }: Props) {
           </div>
         </div>
 
-        {/* Market Card Component */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-semibold mb-4">Market Details</h2>
           <MarketCard index={Number(marketId)} market={market} />
 
-          {/* Additional Market Stats */}
           <div className="mt-8 border-t pt-6">
             <h3 className="text-lg font-semibold mb-4">
               Current Market Sentiment
             </h3>
 
             <div className="space-y-4">
-              {/* Option A Progress Bar */}
               <div>
                 <div className="flex justify-between mb-1">
                   <span className="font-medium">{market.optionA}</span>
@@ -292,7 +287,6 @@ export default async function MarketDetailsPage({ params }: Props) {
                 </div>
               </div>
 
-              {/* Option B Progress Bar */}
               <div>
                 <div className="flex justify-between mb-1">
                   <span className="font-medium">{market.optionB}</span>

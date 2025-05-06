@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-
 //eslint-disable-next-line @typescript-eslint/no-unused-vars
 type MarketInfoContractReturn = readonly [
   string,
@@ -17,7 +16,8 @@ export async function POST(req: NextRequest) {
     process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app";
   let marketId: string | undefined;
   let rawState: string | undefined;
-  let currentView: "overview" | "details" = "overview"; // Default view
+  let currentView: "overview" | "details" = "overview";
+
   try {
     const body = await req.json();
     rawState = body.untrustedData?.state;
@@ -49,38 +49,31 @@ export async function POST(req: NextRequest) {
       throw new Error("Invalid marketId in frame state");
     }
 
-    // const baseUrl =
-    //   process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app";
     const imageUrl = `${baseUrl}/api/market-image?marketId=${marketId}&t=${Date.now()}`;
     const postUrl = `${baseUrl}/api/frame-action`;
-    // const marketDetailsUrl = `${baseUrl}/market/${marketId}/details`;
 
     let responseButtons: {
       label: string;
       action: "post" | "link";
       target?: string;
     }[];
-    //eslint-disable-next-line @typescript-eslint/no-explicit-any
     let responseState: {
       marketId: string;
       view: "overview" | "details";
     };
 
-    // Determine response based on the view we were just in
     if (currentView === "overview") {
-      // We were in overview, user clicked "View Details", show details frame
       console.log(
         `Frame Action: Transitioning to details view for market ${marketId}`
       );
-      responseButtons = [{ label: "Back", action: "post" }];
-      responseState = { marketId, view: "details" }; // Set state for the next action
+      responseButtons = [
+        { label: "Back to Markets", action: "link", target: `${baseUrl}/` },
+      ];
+      responseState = { marketId, view: "details" };
     } else {
-      // We were in details, user clicked "Back", show overview frame
-      console.log(
-        `Frame Action: Transitioning back to overview for market ${marketId}`
-      );
+      console.log(`Frame Action: Showing overview for market ${marketId}`);
       responseButtons = [{ label: "View Details", action: "post" }];
-      responseState = { marketId, view: "overview" }; // Set state for the next action
+      responseState = { marketId, view: "overview" };
     }
 
     return NextResponse.json({
