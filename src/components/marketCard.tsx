@@ -1,4 +1,5 @@
 "use client";
+
 import Link from "next/link";
 import {
   Card,
@@ -12,7 +13,6 @@ import { useActiveAccount, useReadContract } from "thirdweb/react";
 import { contract } from "@/constants/contract";
 import { MarketProgress } from "./market-progress";
 import MarketTime from "./market-time";
-// import { MarketCardSkeleton } from "./market-card-skeleton";
 import { MarketResolved } from "./market-resolved";
 import { MarketPending } from "./market-pending";
 import { MarketBuyInterface } from "./market-buy-interface";
@@ -20,12 +20,11 @@ import { MarketSharesDisplay } from "./market-shares-display";
 
 // Interface for market data
 export interface Market {
-  // index?: number; // Optional: if you need the original index inside the card
   question: string;
   optionA: string;
   optionB: string;
   endTime: bigint;
-  outcome: number; // Solidity enum maps to number
+  outcome: number;
   totalOptionAShares: bigint;
   totalOptionBShares: bigint;
   resolved: boolean;
@@ -39,24 +38,21 @@ interface SharesBalance {
 
 // Props for the MarketCard component
 interface MarketCardProps {
-  index: number; // Keep index for contract calls like getShareBalance
-  market: Market; // Receive the processed market data directly
+  index: number;
+  market: Market;
 }
 
 export function MarketCard({ index, market }: MarketCardProps) {
   const account = useActiveAccount();
 
-  // --- Use the market data passed via props ---
   const marketData = market;
-  // --- END ---
 
-  // Fetch shares balance (keep as is, uses index)
   const { data: sharesBalanceData } = useReadContract({
     contract,
     method:
       "function getShareBalance(uint256 _marketId, address _user) view returns (uint256 optionAShares, uint256 optionBShares)",
     params: [BigInt(index), account?.address as string],
-    queryOptions: { enabled: !!account?.address && !!marketData }, // Also check marketData exists
+    queryOptions: { enabled: !!account?.address && !!marketData },
   });
 
   const sharesBalance: SharesBalance | undefined = sharesBalanceData
@@ -66,12 +62,9 @@ export function MarketCard({ index, market }: MarketCardProps) {
       }
     : undefined;
 
-  // Calculate status based on the marketData prop
-  // These are now used for *internal* display logic within the card
   const isExpired = new Date(Number(marketData.endTime) * 1000) < new Date();
   const isResolved = marketData.resolved;
 
-  // Construct Warpcast share URL
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app";
   const marketPageUrl = `${appUrl}/market/${index}`;
@@ -121,11 +114,7 @@ export function MarketCard({ index, market }: MarketCardProps) {
           <div />
         )}
         <div className="flex items-center space-x-2">
-          {" "}
-          {/* Wrap buttons */}
           <Button asChild variant="outline" size="sm">
-            {" "}
-            {/* Share Button */}
             <a
               href={warpcastShareUrl}
               target="_blank"
@@ -135,9 +124,9 @@ export function MarketCard({ index, market }: MarketCardProps) {
             </a>
           </Button>
           <Button asChild variant="default" size="sm">
-            {" "}
-            {/* View Details Button */}
-            <Link href={`/market/${index}/details`}>View Details</Link>
+            <Link href={`/market/${index}/details`} legacyBehavior>
+              View Details
+            </Link>
           </Button>
         </div>
       </CardFooter>
