@@ -123,8 +123,8 @@ export function MarketCard({ index, market }: MarketCardProps) {
               Share
             </a>
           </Button>
-          <Button asChild variant="default" size="sm">
-            <Link href={`/market/${index}/details`} legacyBehavior>
+          <Button asChild variant="secondary" size="sm">
+            <Link href={`/market/${index}/`} legacyBehavior>
               View Details
             </Link>
           </Button>
