@@ -162,10 +162,10 @@ export async function GET() {
 
     // Fetch Claimed events
     console.log("📦 Fetching Claimed events...");
-    const DEPLOYMENT_BLOCK = BigInt(28965072);
+    const DEPLOYMENT_BLOCK = BigInt(29490017);
     const cachedBlock = cache.get<string>(LAST_BLOCK_KEY);
     let fromBlock = cachedBlock ? BigInt(cachedBlock) : DEPLOYMENT_BLOCK;
-    const blockRange = BigInt(1000);
+    const blockRange = BigInt(700);
     const allEvents: ClaimedEvent[] = [];
 
     while (fromBlock <= latestBlock) {
@@ -290,7 +290,10 @@ export async function GET() {
 
     // Cache leaderboard and last block
     cache.set(CACHE_KEY, leaderboard);
-    cache.set(LAST_BLOCK_KEY, latestBlock.toString());
+    if (fromBlock > latestBlock) {
+      // This means the loop completed fully
+      cache.set(LAST_BLOCK_KEY, latestBlock.toString());
+    }
     console.log("✅ Cached leaderboard and last block");
 
     return NextResponse.json({

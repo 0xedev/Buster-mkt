@@ -137,7 +137,7 @@ export function VoteHistory() {
           const cache = loadCache();
           let newVotes = [...cache.votes];
           const marketInfoCache = { ...cache.marketInfo };
-          let fromBlock = BigInt(cache[LAST_BLOCK_KEY] || "28965072"); // Deployment block
+          let fromBlock = BigInt(cache[LAST_BLOCK_KEY] || "29490017 "); // Deployment block
 
           // Fetch latest block number
           const rpcClient = getRpcClient({
@@ -147,7 +147,7 @@ export function VoteHistory() {
           const latestBlock = await eth_blockNumber(rpcClient);
 
           // Fetch events incrementally
-          const blockRange = BigInt(1000);
+          const blockRange = BigInt(700);
           const allEvents: SharesPurchasedEvent[] = [];
           while (fromBlock <= latestBlock) {
             const toBlock =
