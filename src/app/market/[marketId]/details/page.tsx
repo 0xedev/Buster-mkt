@@ -27,7 +27,6 @@ interface Props {
 
 export async function generateMetadata(
   { params }: { params: Promise<{ marketId: string }> },
-  //eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   const { marketId } = await params;
@@ -61,6 +60,7 @@ export async function generateMetadata(
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app";
   const imageUrl = `${baseUrl}/api/market-image?marketId=${marketId}`;
+  //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const postUrl = `${baseUrl}/api/frame-action`;
   const marketUrl = `${baseUrl}/market/${marketId}/details`;
 
@@ -70,18 +70,30 @@ export async function generateMetadata(
       ? (Number((market.totalOptionAShares * 1000n) / total) / 10).toFixed(1)
       : "0.0";
 
+  const miniAppEmbed = {
+    version: "next" as const,
+    imageUrl: imageUrl,
+    button: {
+      title: "View Market Details",
+      action: {
+        type: "launch_frame" as const,
+        name: market.question.substring(0, 30),
+        url: marketUrl,
+      },
+    },
+  };
+
+  const resolvedParent = await parent;
+  const otherParentData = resolvedParent.other || {};
+
+  // Ensure fc:frame is explicitly a string key
+  const fcFrameKey = "fc:frame" as string;
   return {
     title: market.question,
     description: `View market: ${market.question} - ${market.optionA}: ${yesPercent}%`,
     other: {
-      "fc:frame": "vNext",
-      "fc:frame:image": imageUrl,
-      "fc:frame:post_url": postUrl,
-      "fc:frame:button:1": "View Details",
-      "fc:frame:button:1:action": "post",
-      "fc:frame:state": Buffer.from(
-        JSON.stringify({ marketId, view: "overview" })
-      ).toString("base64"),
+      ...otherParentData, // Spread parent's other metadata first
+      [fcFrameKey]: JSON.stringify(miniAppEmbed), //
     },
     metadataBase: new URL(baseUrl),
     openGraph: {

@@ -24,6 +24,7 @@ interface MarketImageData {
   totalOptionBShares: bigint;
   endTime: bigint;
   resolved: boolean;
+  outcome: number;
 }
 
 type MarketInfoContractReturn = readonly [
@@ -65,6 +66,7 @@ async function fetchMarketData(marketId: string): Promise<MarketImageData> {
       optionA: marketData[1],
       optionB: marketData[2],
       endTime: marketData[3],
+      outcome: marketData[4],
       totalOptionAShares: marketData[5],
       totalOptionBShares: marketData[6],
       resolved: marketData[7],
@@ -88,6 +90,33 @@ function formatEndTime(endTimeSeconds: bigint): string {
   }
 }
 
+function formatTimeRemaining(endTimeSeconds: bigint): string {
+  try {
+    const endTimeMs = Number(endTimeSeconds) * 1000;
+    const now = Date.now();
+
+    if (now > endTimeMs) {
+      return "Ended";
+    }
+
+    const diffMs = endTimeMs - now;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(
+      (diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+    );
+
+    if (diffDays > 0) {
+      return `${diffDays}d ${diffHours}h remaining`;
+    } else {
+      const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      return `${diffHours}h ${diffMinutes}m remaining`;
+    }
+  } catch (e) {
+    console.error("Error calculating time remaining:", e);
+    return "";
+  }
+}
+
 const regularFontPath = path.join(
   process.cwd(),
   "public",
@@ -104,19 +133,42 @@ const boldFontPath = path.join(
   "static",
   "Inter_18pt-Bold.ttf"
 );
+const mediumFontPath = path.join(
+  process.cwd(),
+  "public",
+  "fonts",
+  "Inter",
+  "static",
+  "Inter_18pt-Medium.ttf"
+);
 
 console.log("Attempting to load fonts from:", regularFontPath, boldFontPath);
 
 const regularFontDataPromise = fs.readFile(regularFontPath);
 const boldFontDataPromise = fs.readFile(boldFontPath);
+const mediumFontDataPromise = fs.readFile(mediumFontPath).catch(() => null);
+
+const colors = {
+  background: "#ffffff",
+  cardBg: "#f8fafc",
+  primary: "#3b82f6",
+  secondary: "#8b5cf6",
+  success: "#10b981",
+  danger: "#ef4444",
+  text: {
+    primary: "#1e293b",
+    secondary: "#64748b",
+    light: "#94a3b8",
+  },
+  border: "#e2e8f0",
+};
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const marketId = searchParams.get("marketId");
-  const isError = searchParams.get("error") === "true";
 
   console.log(
-    `--- Market Image API: Received request for marketId: ${marketId}, error: ${isError} ---`
+    `--- Market Image API: Received request for marketId: ${marketId} ---`
   );
 
   if (!marketId || isNaN(Number(marketId))) {
@@ -125,176 +177,405 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    let market: MarketImageData;
-    let yesPercentNum: number = 0;
-    let noPercentNum: number = 0;
-    let yesPercentDisplay: string = "0.0";
-    let noPercentDisplay: string = "0.0";
-    let formattedTime: string = "Ends: Unknown";
-    let displayQuestion: string = "Market Not Found";
+    const market = await fetchMarketData(marketId);
 
-    if (isError) {
-      displayQuestion = "Error Loading Market";
-    } else {
-      market = await fetchMarketData(marketId);
-      displayQuestion = market.question;
+    const total = market.totalOptionAShares + market.totalOptionBShares;
+    const optionAPercentNum =
+      total > 0n
+        ? Number((market.totalOptionAShares * 10000n) / total) / 100
+        : 50;
+    const optionBPercentNum =
+      total > 0n
+        ? Number((market.totalOptionBShares * 10000n) / total) / 100
+        : 50;
 
-      const total = market.totalOptionAShares + market.totalOptionBShares;
-      yesPercentNum =
-        total > 0n
-          ? Number((market.totalOptionAShares * 10000n) / total) / 100
-          : 0;
-      noPercentNum =
-        total > 0n
-          ? Number((market.totalOptionBShares * 10000n) / total) / 100
-          : 0;
-      yesPercentDisplay = yesPercentNum.toFixed(1);
-      noPercentDisplay = noPercentNum.toFixed(1);
-      formattedTime = formatEndTime(market.endTime);
-    }
+    const optionAPercentDisplay = optionAPercentNum.toFixed(1);
+    const optionBPercentDisplay = optionBPercentNum.toFixed(1);
+
+    const formattedTime = formatEndTime(market.endTime);
+    const timeRemaining = formatTimeRemaining(market.endTime);
 
     console.log(
-      `Market Image API: Generating image for marketId ${marketId} with percentages: ${yesPercentDisplay}% / ${noPercentDisplay}%`
+      `Market Image API: Generating image for marketId ${marketId} with percentages: ${optionAPercentDisplay}% / ${optionBPercentDisplay}%`
     );
 
-    const [regularFontData, boldFontData] = await Promise.all([
+    const [regularFontData, boldFontData, mediumFontData] = await Promise.all([
       regularFontDataPromise,
       boldFontDataPromise,
+      mediumFontDataPromise,
     ]);
+
+    const now = Date.now();
+    const endTimeMs = Number(market.endTime) * 1000;
+    const isEnded = now > endTimeMs;
+
+    let statusText = "Active";
+    let statusColor = colors.primary;
+
+    if (market.resolved) {
+      statusText = "Resolved";
+      statusColor = colors.success;
+    } else if (isEnded) {
+      statusText = "Ended (Unresolved)";
+      statusColor = colors.danger;
+    }
+
+    let optionAColor = colors.primary;
+    let optionBColor = colors.secondary;
+
+    if (market.resolved) {
+      if (market.outcome === 1) {
+        optionAColor = colors.success;
+        optionBColor = colors.text.light;
+      } else {
+        optionAColor = colors.text.light;
+        optionBColor = colors.success;
+      }
+    }
 
     const svg = await satori(
       <div
         style={{
           display: "flex",
           flexDirection: "column",
-          alignItems: "stretch",
-          justifyContent: "space-between",
           width: "1200px",
           height: "630px",
-          backgroundColor: "#f8f9fa",
-          color: "#212529",
+          backgroundColor: colors.background,
+          color: colors.text.primary,
           fontFamily: '"Inter"',
-          padding: "40px 50px",
+          padding: "0px",
         }}
       >
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
+            position: "absolute",
+            top: 0,
+            left: 0,
             width: "100%",
-            fontSize: "24px",
-            color: "#6c757d",
+            height: "180px",
+            background: "linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%)",
+            zIndex: 0,
           }}
-        >
-          <span>Buster Market</span>
-          <span>{formattedTime}</span>
-        </div>
+        />
         <div
           style={{
+            margin: "40px",
+            padding: "40px",
+            backgroundColor: colors.cardBg,
+            borderRadius: "24px",
+            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
             display: "flex",
             flexDirection: "column",
-            alignItems: "center",
-            flexGrow: 1,
-            justifyContent: "center",
+            height: "calc(100% - 80px)",
+            zIndex: 1,
           }}
         >
-          <h1
+          <div
             style={{
-              fontSize: "52px",
-              fontWeight: 700,
-              textAlign: "center",
-              marginBottom: "40px",
-              maxWidth: "1000px",
-              lineHeight: 1.3,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              width: "100%",
+              marginBottom: "12px",
             }}
           >
-            {displayQuestion}
-          </h1>
-
-          {!isError && (
             <div
               style={{
-                width: "80%",
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "28px",
+                  fontWeight: 700,
+                  color: colors.primary,
+                }}
+              >
+                Buster Market
+              </div>
+              <div
+                style={{
+                  backgroundColor: statusColor,
+                  color: "white",
+                  padding: "6px 16px",
+                  borderRadius: "16px",
+                  fontSize: "16px",
+                  fontWeight: 500,
+                }}
+              >
+                {statusText}
+              </div>
+            </div>
+            <div
+              style={{
                 display: "flex",
                 flexDirection: "column",
-                alignItems: "center",
+                alignItems: "flex-end",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "18px",
+                  color: colors.text.secondary,
+                }}
+              >
+                {formattedTime}
+              </div>
+              {!isEnded && !market.resolved && (
+                <div
+                  style={{
+                    fontSize: "16px",
+                    color: colors.primary,
+                    fontWeight: 500,
+                    marginTop: "4px",
+                  }}
+                >
+                  {timeRemaining}
+                </div>
+              )}
+            </div>
+          </div>
+          <div
+            style={{
+              fontSize: "14px",
+              color: colors.text.light,
+              marginBottom: "32px",
+            }}
+          >
+            ID: {marketId}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              flexGrow: 1,
+              justifyContent: "center",
+              padding: "0 40px",
+            }}
+          >
+            <h1
+              style={{
+                fontSize: "48px",
+                fontWeight: 700,
+                textAlign: "center",
+                marginBottom: "60px",
+                lineHeight: 1.3,
+                color: colors.text.primary,
+              }}
+            >
+              {market.question}
+            </h1>
+            <div
+              style={{
+                width: "90%",
+                display: "flex",
+                flexDirection: "column",
+                gap: "24px",
               }}
             >
               <div
                 style={{
                   display: "flex",
-                  width: "100%",
-                  height: "24px",
-                  backgroundColor: "#e9ecef",
-                  borderRadius: "12px",
-                  overflow: "hidden",
-                  marginBottom: "15px",
+                  flexDirection: "column",
+                  gap: "8px",
                 }}
               >
                 <div
                   style={{
-                    width: `${yesPercentNum}%`,
-                    backgroundColor: "#2563eb", // Match MarketCard's bg-blue-600
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
                   }}
-                ></div>
+                >
+                  <div
+                    style={{
+                      fontSize: "22px",
+                      fontWeight: 500,
+                      color: optionAColor,
+                    }}
+                  >
+                    {market.optionA}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "22px",
+                      fontWeight: 700,
+                      color: optionAColor,
+                    }}
+                  >
+                    {optionAPercentDisplay}%
+                  </div>
+                </div>
                 <div
                   style={{
-                    width: `${noPercentNum}%`,
-                    backgroundColor: "#9333ea", // Match MarketCard's bg-purple-600
+                    width: "100%",
+                    height: "12px",
+                    backgroundColor: "#e2e8f0",
+                    borderRadius: "6px",
+                    overflow: "hidden",
                   }}
-                ></div>
+                >
+                  <div
+                    style={{
+                      width: `${optionAPercentNum}%`,
+                      height: "100%",
+                      backgroundColor: optionAColor,
+                    }}
+                  />
+                </div>
+                {market.resolved && market.outcome === 1 && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      color: colors.success,
+                      fontSize: "16px",
+                      fontWeight: 500,
+                    }}
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M8 0C3.6 0 0 3.6 0 8C0 12.4 3.6 16 8 16C12.4 16 16 12.4 16 8C16 3.6 12.4 0 8 0ZM7 11.4L3.6 8L5 6.6L7 8.6L11 4.6L12.4 6L7 11.4Z"
+                        fill="#10b981"
+                      />
+                    </svg>
+                    Winner
+                  </div>
+                )}
               </div>
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
-                  width: "100%",
-                  fontSize: "28px",
+                  flexDirection: "column",
+                  gap: "8px",
                 }}
               >
                 <div
                   style={{
                     display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    color: "#2563eb",
+                    justifyContent: "space-between",
+                    alignItems: "center",
                   }}
                 >
-                  <span style={{ fontSize: "24px", color: "#495057" }}>
-                    {market!.optionA}
-                  </span>
-                  <span style={{ fontWeight: 700 }}>{yesPercentDisplay}%</span>
+                  <div
+                    style={{
+                      fontSize: "22px",
+                      fontWeight: 500,
+                      color: optionBColor,
+                    }}
+                  >
+                    {market.optionB}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "22px",
+                      fontWeight: 700,
+                      color: optionBColor,
+                    }}
+                  >
+                    {optionBPercentDisplay}%
+                  </div>
                 </div>
                 <div
                   style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-end",
-                    color: "#9333ea",
+                    width: "100%",
+                    height: "12px",
+                    backgroundColor: "#e2e8f0",
+                    borderRadius: "6px",
+                    overflow: "hidden",
                   }}
                 >
-                  <span style={{ fontSize: "24px", color: "#495057" }}>
-                    {market!.optionB}
-                  </span>
-                  <span style={{ fontWeight: 700 }}>{noPercentDisplay}%</span>
+                  <div
+                    style={{
+                      width: `${optionBPercentNum}%`,
+                      height: "100%",
+                      backgroundColor: optionBColor,
+                    }}
+                  />
                 </div>
+                {market.resolved && market.outcome === 2 && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      color: colors.success,
+                      fontSize: "16px",
+                      fontWeight: 500,
+                    }}
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M8 0C3.6 0 0 3.6 0 8C0 12.4 3.6 16 8 16C12.4 16 16 12.4 16 8C16 3.6 12.4 0 8 0ZM7 11.4L3.6 8L5 6.6L7 8.6L11 4.6L12.4 6L7 11.4Z"
+                        fill="#10b981"
+                      />
+                    </svg>
+                    Winner
+                  </div>
+                )}
               </div>
             </div>
-          )}
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            width: "100%",
-            fontSize: "18px",
-            color: "#adb5bd",
-          }}
-        >
-          Market ID: {marketId}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              marginTop: "32px",
+              paddingTop: "20px",
+              borderTop: `1px solid ${colors.border}`,
+            }}
+          >
+            <div
+              style={{
+                fontSize: "16px",
+                color: colors.text.light,
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+              }}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+                  stroke="#94a3b8"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M12 6V12L16 14"
+                  stroke="#94a3b8"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Last updated: {format(new Date(), "MMM d, yyyy")}
+            </div>
+          </div>
         </div>
       </div>,
       {
@@ -304,15 +585,25 @@ export async function GET(request: NextRequest) {
           {
             name: "Inter",
             data: regularFontData,
-            weight: 400,
-            style: "normal",
+            weight: 400 as const,
+            style: "normal" as const,
           },
           {
             name: "Inter",
             data: boldFontData,
-            weight: 700,
-            style: "normal",
+            weight: 700 as const,
+            style: "normal" as const,
           },
+          ...(mediumFontData
+            ? [
+                {
+                  name: "Inter",
+                  data: mediumFontData,
+                  weight: 500 as const,
+                  style: "normal" as const,
+                },
+              ]
+            : []),
         ],
       }
     );
@@ -327,7 +618,7 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": "image/png",
-        "Cache-Control": "public, max-age=3600",
+        "Cache-Control": "public, max-age=300",
         "Access-Control-Allow-Origin": "*",
       },
     });
@@ -336,6 +627,6 @@ export async function GET(request: NextRequest) {
       `Market Image API: Overall failure for marketId ${marketId}:`,
       error
     );
-    return new NextResponse("Failed to generate market image", { status: 500 });
+    return new NextResponse("Failed to generate image", { status: 500 });
   }
 }
