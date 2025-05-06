@@ -67,7 +67,7 @@ export function MarketCard({ index, market }: MarketCardProps) {
 
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app";
-  const marketPageUrl = `${appUrl}/market/${index}`;
+  const marketPageUrl = `${appUrl}/market/${index}/details`;
   const warpcastShareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(
     `Check out this market on Buster Market: ${
       marketData?.question || `Market ${index}`
@@ -114,7 +114,12 @@ export function MarketCard({ index, market }: MarketCardProps) {
           <div />
         )}
         <div className="flex items-center space-x-2">
-          <Button asChild variant="outline" size="sm">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="border border-gray-300 hover:bg-gray-100 hover:text-gray-900 rounded-md px-4 py-2 transition-colors"
+          >
             <a
               href={warpcastShareUrl}
               target="_blank"
@@ -123,8 +128,13 @@ export function MarketCard({ index, market }: MarketCardProps) {
               Share
             </a>
           </Button>
-          <Button asChild variant="secondary" size="sm">
-            <Link href={`/market/${index}/`} legacyBehavior>
+          <Button
+            asChild
+            variant="default"
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-md px-4 py-2 transition-colors"
+          >
+            <Link href={`/market/${index}/details`} legacyBehavior>
               View Details
             </Link>
           </Button>

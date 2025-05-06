@@ -1,7 +1,9 @@
 import { readContract } from "thirdweb";
 import { contract } from "@/constants/contract";
 import { Metadata, ResolvingMetadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 async function fetchMarketData(marketId: string) {
   const marketData = await readContract({
@@ -15,7 +17,7 @@ async function fetchMarketData(marketId: string) {
 
 export async function generateMetadata(
   { params }: { params: Promise<{ marketId: string }> },
-  //eslint-disable-next-line @typescript-eslint/no-unused-vars
+  //eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   try {
@@ -58,9 +60,8 @@ export async function generateMetadata(
         "fc:frame": "vNext",
         "fc:frame:image": imageUrl,
         "fc:frame:post_url": postUrl,
-        "fc:frame:button:1": "View Details", // Changed label slightly for clarity
+        "fc:frame:button:1": "View Details",
         "fc:frame:button:1:action": "post",
-        // "fc:frame:button:1:target": marketUrl,
         "fc:frame:state": Buffer.from(JSON.stringify({ marketId })).toString(
           "base64"
         ),
@@ -102,5 +103,14 @@ export default async function MarketPage({
     notFound();
   }
 
-  return <div>Redirecting to market details...</div>;
+  redirect(`/market/${marketId}/details`);
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <p className="mb-4">Redirecting to market details...</p>
+      <Button asChild variant="outline">
+        <Link href="/">Home</Link>
+      </Button>
+    </div>
+  );
 }
