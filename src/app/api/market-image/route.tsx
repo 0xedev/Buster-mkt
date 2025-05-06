@@ -266,7 +266,7 @@ export async function GET(request: NextRequest) {
             boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
             display: "flex",
             flexDirection: "column",
-            height: "calc(100% - 80px)",
+            height: "550px",
             zIndex: 1,
           }}
         >
