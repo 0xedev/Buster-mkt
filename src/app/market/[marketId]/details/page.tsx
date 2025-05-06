@@ -230,7 +230,7 @@ export default async function MarketDetailsPage({ params }: Props) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen mt-6 bg-gray-50">
       <Navbar />
       <main className="flex-grow container mx-auto p-4 md:p-6">
         <div className="flex items-center text-sm text-gray-600 mb-4">

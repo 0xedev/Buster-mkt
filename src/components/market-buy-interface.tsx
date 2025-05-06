@@ -113,15 +113,18 @@ export function MarketBuyInterface({
   }, [buyingStep]);
 
   // Calculate implied odds
+  // Calculate implied odds
   const totalShares = market.totalOptionAShares + market.totalOptionBShares;
-  const yesOdds =
-    totalShares > 0n && market.totalOptionAShares > 0n
-      ? Number(totalShares) / Number(market.totalOptionBShares)
-      : 0; // Or a very high number if shares are 0
-  const noOdds =
-    totalShares > 0n && market.totalOptionBShares > 0n
-      ? Number(totalShares) / Number(market.totalOptionAShares)
-      : 0;
+  const yesProbability =
+    totalShares > 0n
+      ? Number(market.totalOptionAShares) / Number(totalShares)
+      : 0.5; // Default to 50% if no shares
+  const noProbability =
+    totalShares > 0n
+      ? Number(market.totalOptionBShares) / Number(totalShares)
+      : 0.5; // Default to 50% if no shares
+  const yesOdds = yesProbability > 0 ? 1 / yesProbability : Infinity; // Implied odds as multiplier
+  const noOdds = noProbability > 0 ? 1 / noProbability : Infinity; // Implied odds as multiplier
 
   const handleBuy = (option: "A" | "B") => {
     setIsVisible(false);
