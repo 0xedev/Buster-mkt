@@ -1,7 +1,7 @@
 import { readContract } from "thirdweb";
 import { contract } from "@/constants/contract";
 import { notFound } from "next/navigation";
-import { MarketCard } from "@/components/marketCard";
+// import { MarketCard } from "@/components/marketCard";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,6 +9,12 @@ import { Clock, Award, Users, AlertTriangle } from "lucide-react";
 import { Metadata, ResolvingMetadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { MarketBuyInterface } from "@/components/market-buy-interface";
+import { MarketResolved } from "@/components/market-resolved";
+import { MarketPending } from "@/components/market-pending";
+
+//eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { MarketSharesDisplay } from "@/components/market-shares-display";
 
 type MarketInfoContractReturn = readonly [
   string,
@@ -146,15 +152,25 @@ export default async function MarketDetailsPage({ params }: Props) {
     resolved: marketData[7],
   };
 
-  const totalShares =
-    Number(market.totalOptionAShares) + Number(market.totalOptionBShares);
+  // const totalShares =
+  //   Number(market.totalOptionAShares) + Number(market.totalOptionBShares);
+
+  const TOKEN_DECIMALS = 18; // Assuming 18 decimals for your shares/tokens
+
+  const totalSharesInUnits =
+    market.totalOptionAShares + market.totalOptionBShares;
+  const totalSharesDisplay = Number(totalSharesInUnits) / 10 ** TOKEN_DECIMALS;
   const optionAPercentage =
-    totalShares > 0
-      ? Math.round((Number(market.totalOptionAShares) / totalShares) * 100)
+    totalSharesInUnits > 0n
+      ? Math.round(
+          (Number(market.totalOptionAShares) / Number(totalSharesInUnits)) * 100
+        )
       : 50;
   const optionBPercentage =
-    totalShares > 0
-      ? Math.round((Number(market.totalOptionBShares) / totalShares) * 100)
+    totalSharesInUnits > 0n
+      ? Math.round(
+          (Number(market.totalOptionBShares) / Number(totalSharesInUnits)) * 100
+        )
       : 50;
 
   const endTimeDate = new Date(Number(market.endTime) * 1000);
@@ -255,7 +271,7 @@ export default async function MarketDetailsPage({ params }: Props) {
               <div>
                 <div className="text-sm text-gray-600">Total Participation</div>
                 <div className="font-medium">
-                  {totalShares.toLocaleString()} shares
+                  {totalSharesDisplay.toLocaleString()} shares
                 </div>
               </div>
             </div>
@@ -275,8 +291,24 @@ export default async function MarketDetailsPage({ params }: Props) {
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">Market Details</h2>
-          <MarketCard index={Number(marketId)} market={market} />
+          {/* <h2 className="text-xl font-semibold mb-4">Market Details</h2>
+          <MarketCard index={Number(marketId)} market={market} /> */}
+          <div className="mb-6">
+            {isEnded ? (
+              market.resolved ? (
+                <MarketResolved
+                  marketId={Number(marketId)}
+                  outcome={market.outcome}
+                  optionA={market.optionA}
+                  optionB={market.optionB}
+                />
+              ) : (
+                <MarketPending />
+              )
+            ) : (
+              <MarketBuyInterface marketId={Number(marketId)} market={market} />
+            )}
+          </div>
 
           <div className="mt-8 border-t pt-6">
             <h3 className="text-lg font-semibold mb-4">
@@ -296,7 +328,11 @@ export default async function MarketDetailsPage({ params }: Props) {
                   ></div>
                 </div>
                 <div className="text-sm text-gray-600 mt-1">
-                  {Number(market.totalOptionAShares).toLocaleString()} shares
+                  {(
+                    Number(market.totalOptionAShares) /
+                    10 ** TOKEN_DECIMALS
+                  ).toLocaleString()}{" "}
+                  shares
                 </div>
               </div>
 
@@ -312,7 +348,11 @@ export default async function MarketDetailsPage({ params }: Props) {
                   ></div>
                 </div>
                 <div className="text-sm text-gray-600 mt-1">
-                  {Number(market.totalOptionBShares).toLocaleString()} shares
+                  {(
+                    Number(market.totalOptionBShares) /
+                    10 ** TOKEN_DECIMALS
+                  ).toLocaleString()}{" "}
+                  shares
                 </div>
               </div>
             </div>

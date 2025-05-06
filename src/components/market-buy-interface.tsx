@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useState, useRef, useEffect } from "react";
@@ -114,11 +116,11 @@ export function MarketBuyInterface({
   const totalShares = market.totalOptionAShares + market.totalOptionBShares;
   const yesOdds =
     totalShares > 0n && market.totalOptionAShares > 0n
-      ? Number((totalShares * 100n) / market.totalOptionAShares) / 100
-      : 0;
+      ? Number(totalShares) / Number(market.totalOptionBShares)
+      : 0; // Or a very high number if shares are 0
   const noOdds =
     totalShares > 0n && market.totalOptionBShares > 0n
-      ? Number((totalShares * 100n) / market.totalOptionBShares) / 100
+      ? Number(totalShares) / Number(market.totalOptionAShares)
       : 0;
 
   const handleBuy = (option: "A" | "B") => {
@@ -378,7 +380,7 @@ export function MarketBuyInterface({
       >
         {!isBuying ? (
           <div className="flex flex-col gap-4 mb-4">
-            <h2 className="text-lg font-bold">{market.question}</h2>
+            {/* <h2 className="text-lg font-bold">{market.question}</h2> */}
             <div className="flex justify-between gap-4">
               <Button
                 className="flex-1 min-w-[120px] bg-green-600 hover:bg-green-700"
@@ -407,7 +409,7 @@ export function MarketBuyInterface({
           </div>
         ) : (
           <div className="flex flex-col mb-4" aria-live="polite">
-            <h2 className="text-lg font-bold mb-2">{market.question}</h2>
+            {/* <h2 className="text-lg font-bold mb-2">{market.question}</h2> */}
             <p className="text-sm text-gray-500 mb-4">
               Selected:{" "}
               {selectedOption === "A" ? market.optionA : market.optionB} (

@@ -9,13 +9,16 @@ import {
   CardTitle,
 } from "./ui/card";
 import { Button } from "./ui/button";
-import { useActiveAccount, useReadContract } from "thirdweb/react";
-import { contract } from "@/constants/contract";
+//eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { useActiveAccount } from "thirdweb/react"; //useReadContract
+// import { contract } from "@/constants/contract";
 import { MarketProgress } from "./market-progress";
 import MarketTime from "./market-time";
 import { MarketResolved } from "./market-resolved";
 import { MarketPending } from "./market-pending";
 import { MarketBuyInterface } from "./market-buy-interface";
+
+//eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { MarketSharesDisplay } from "./market-shares-display";
 
 // Interface for market data
@@ -31,10 +34,10 @@ export interface Market {
 }
 
 // Interface for shares balance
-interface SharesBalance {
-  optionAShares: bigint;
-  optionBShares: bigint;
-}
+// interface SharesBalance {
+//   optionAShares: bigint;
+//   optionBShares: bigint;
+// }
 
 // Props for the MarketCard component
 interface MarketCardProps {
@@ -43,24 +46,24 @@ interface MarketCardProps {
 }
 
 export function MarketCard({ index, market }: MarketCardProps) {
-  const account = useActiveAccount();
+  // const account = useActiveAccount();
 
   const marketData = market;
 
-  const { data: sharesBalanceData } = useReadContract({
-    contract,
-    method:
-      "function getShareBalance(uint256 _marketId, address _user) view returns (uint256 optionAShares, uint256 optionBShares)",
-    params: [BigInt(index), account?.address as string],
-    queryOptions: { enabled: !!account?.address && !!marketData },
-  });
-
-  const sharesBalance: SharesBalance | undefined = sharesBalanceData
-    ? {
-        optionAShares: sharesBalanceData[0],
-        optionBShares: sharesBalanceData[1],
-      }
-    : undefined;
+  // const { data: sharesBalanceData } = useReadContract({
+  //   contract,
+  //   method:
+  //     "function getShareBalance(uint256 _marketId, address _user) view returns (uint256 optionAShares, uint256 optionBShares)",
+  //   params: [BigInt(index), account?.address as string],
+  //   queryOptions: { enabled: !!account?.address && !!marketData },
+  // });
+  //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  // const sharesBalance: SharesBalance | undefined = sharesBalanceData
+  //   ? {
+  //       optionAShares: sharesBalanceData[0],
+  //       optionBShares: sharesBalanceData[1],
+  //     }
+  //   : undefined;
 
   const isExpired = new Date(Number(marketData.endTime) * 1000) < new Date();
   const isResolved = marketData.resolved;
@@ -103,7 +106,7 @@ export function MarketCard({ index, market }: MarketCardProps) {
         )}
       </CardContent>
       <CardFooter className="flex justify-between items-center pt-4">
-        {sharesBalance &&
+        {/* {sharesBalance &&
         (sharesBalance.optionAShares > 0n ||
           sharesBalance.optionBShares > 0n) ? (
           <MarketSharesDisplay
@@ -112,7 +115,7 @@ export function MarketCard({ index, market }: MarketCardProps) {
           />
         ) : (
           <div />
-        )}
+        )} */}
         <div className="flex items-center space-x-2">
           <Button
             asChild
