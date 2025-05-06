@@ -60,8 +60,9 @@ export async function generateMetadata(
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app";
   const imageUrl = `${baseUrl}/api/market-image?marketId=${marketId}`;
+
   //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const postUrl = `${baseUrl}/api/frame-action`;
+  // const postUrl = `${baseUrl}/api/frame-action`;
   const marketUrl = `${baseUrl}/market/${marketId}/details`;
 
   const total = market.totalOptionAShares + market.totalOptionBShares;
