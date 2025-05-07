@@ -1,3 +1,5 @@
+"use client";
+
 import { readContract } from "thirdweb";
 import { contract } from "@/constants/contract";
 import { notFound } from "next/navigation";
@@ -12,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { MarketBuyInterface } from "@/components/market-buy-interface";
 import { MarketResolved } from "@/components/market-resolved";
 import { MarketPending } from "@/components/market-pending";
+import { useEffect } from "react";
+import { sdk } from "@farcaster/frame-sdk";
 
 //eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { MarketSharesDisplay } from "@/components/market-shares-display";
@@ -122,6 +126,13 @@ export async function generateMetadata(
 }
 
 export default async function MarketDetailsPage({ params }: Props) {
+  useEffect(() => {
+    const signalReady = async () => {
+      await sdk.actions.ready();
+      console.log("MarketDetailsPage: Mini App signaled ready.");
+    };
+    signalReady();
+  }, []);
   const { marketId } = await params;
 
   if (!marketId || isNaN(Number(marketId))) {
