@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       responseState = { marketId, view: "details" };
     } else {
       console.log(`Frame Action: Showing overview for market ${marketId}`);
-      responseButtons = [{ label: "View Details", action: "post" }];
+      responseButtons = [{ label: "View", action: "post" }];
       responseState = { marketId, view: "overview" };
     }
 

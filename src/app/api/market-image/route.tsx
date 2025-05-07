@@ -238,8 +238,8 @@ export async function GET(request: NextRequest) {
         style={{
           display: "flex",
           flexDirection: "column",
-          width: "795px",
-          height: "550px",
+          width: "695px",
+          height: "424px",
           backgroundColor: colors.background,
           color: colors.text.primary,
           fontFamily: '"Inter"',
@@ -253,7 +253,7 @@ export async function GET(request: NextRequest) {
             top: 0,
             left: 0,
             width: "100%",
-            height: "180px",
+            height: "130px",
             background: colors.gradient,
             zIndex: 0,
           }}
@@ -267,7 +267,7 @@ export async function GET(request: NextRequest) {
             borderRadius: "24px",
             boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
             flexDirection: "column",
-            height: "550px",
+            height: "450px",
             zIndex: 1,
           }}
         >

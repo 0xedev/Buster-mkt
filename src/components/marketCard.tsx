@@ -135,7 +135,7 @@ export function MarketCard({ index, market }: MarketCardProps) {
             className="bg-blue-600 hover:bg-blue-700 text-white rounded-md px-4 py-2 transition-colors"
           >
             <Link href={`/market/${index}/details`} legacyBehavior>
-              View Details
+              View
             </Link>
           </Button>
         </div>
