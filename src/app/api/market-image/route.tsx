@@ -238,8 +238,8 @@ export async function GET(request: NextRequest) {
         style={{
           display: "flex",
           flexDirection: "column",
-          width: "1200px",
-          height: "630px",
+          width: "795px",
+          height: "550px",
           backgroundColor: colors.background,
           color: colors.text.primary,
           fontFamily: '"Inter"',
