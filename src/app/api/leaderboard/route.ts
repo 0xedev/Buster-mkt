@@ -1,15 +1,6 @@
 import { NextResponse } from "next/server";
 import { NeynarAPIClient } from "@neynar/nodejs-sdk";
-import { client } from "@/app/client";
-import { base } from "thirdweb/chains";
-import {
-  getContract,
-  getContractEvents,
-  prepareEvent,
-  readContract,
-} from "thirdweb";
-import { eth_blockNumber, eth_getBlockByNumber } from "thirdweb/rpc";
-import { getRpcClient } from "thirdweb/rpc";
+import { ethers } from "ethers";
 import NodeCache from "node-cache";
 
 // Initialize cache
@@ -17,6 +8,56 @@ const cache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
 const CACHE_KEY = "leaderboard";
 const LAST_BLOCK_KEY = "last_fetched_block";
 const NEYNAR_CACHE_KEY = "neynar_users";
+
+// Alchemy RPC URL
+const ALCHEMY_RPC_URL =
+  "https://base-mainnet.g.alchemy.com/v2/4tJqy59Y_Axu4yjgRuVf1ejipJKPbuh2";
+
+// Initialize ethers provider
+const provider = new ethers.JsonRpcProvider(ALCHEMY_RPC_URL);
+
+// Contract address and ABI
+const CONTRACT_ADDRESS = "0xc703856dc56576800F9bc7DfD6ac15e92Ac2d7D6";
+const CONTRACT_ABI = [
+  {
+    type: "event",
+    name: "Claimed",
+    inputs: [
+      { indexed: true, name: "marketId", type: "uint256" },
+      { indexed: true, name: "user", type: "address" },
+      { indexed: false, name: "amount", type: "uint256" },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "function",
+    name: "bettingToken",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "symbol",
+    inputs: [],
+    outputs: [{ name: "", type: "string" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "decimals",
+    inputs: [],
+    outputs: [{ name: "", type: "uint8" }],
+    stateMutability: "view",
+  },
+];
+
+// Initialize contract instance
+const contractInstance = new ethers.Contract(
+  CONTRACT_ADDRESS,
+  CONTRACT_ABI,
+  provider
+);
 
 // Define types
 interface ClaimedEvent {
@@ -47,40 +88,6 @@ interface LeaderboardEntry {
   winnings: number;
   address: string;
 }
-
-// Contract ABI
-const CONTRACT_ABI = [
-  {
-    type: "event",
-    name: "Claimed",
-    inputs: [
-      { indexed: true, name: "marketId", type: "uint256" },
-      { indexed: true, name: "user", type: "address" },
-      { indexed: false, name: "amount", type: "uint256" },
-    ],
-    anonymous: false,
-  },
-  {
-    type: "function",
-    name: "bettingToken",
-    inputs: [],
-    outputs: [{ name: "", type: "address" }],
-    stateMutability: "view",
-  },
-] as const;
-
-// Initialize contract
-const contract = getContract({
-  client,
-  chain: base,
-  address: "0xc703856dc56576800F9bc7DfD6ac15e92Ac2d7D6",
-  abi: CONTRACT_ABI,
-});
-
-const CLAIMED_EVENT = prepareEvent({
-  signature:
-    "event Claimed(uint256 indexed marketId, address indexed user, uint256 amount)",
-});
 
 // Retry utility
 async function withRetry<T>(
@@ -125,48 +132,40 @@ export async function GET() {
     const neynar = new NeynarAPIClient({ apiKey: neynarApiKey });
     console.log("✅ Neynar client initialized.");
 
-    // Fetch latest block number and timestamp
+    // Fetch latest block number and timestamp using Alchemy RPC
     console.log("🔗 Fetching latest block number...");
-    const rpcClient = getRpcClient({ client, chain: base });
-    const latestBlock = await withRetry(() => eth_blockNumber(rpcClient));
-    const blockInfo = await withRetry(() =>
-      eth_getBlockByNumber(rpcClient, { blockNumber: latestBlock })
+    const latestBlock = BigInt(
+      await withRetry(() => provider.getBlockNumber())
     );
-    const lastUpdated = Number(blockInfo.timestamp) * 1000; // Convert to ms
+    const blockInfo = await withRetry(() =>
+      provider.getBlock(Number(latestBlock))
+    );
+    const lastUpdated = Number(blockInfo?.timestamp || 0) * 1000; // Convert to ms
     console.log(`🔢 Latest block: ${latestBlock}, Timestamp: ${lastUpdated}`);
 
-    // Fetch bettingToken metadata
-    const bettingTokenAddress = await readContract({
-      contract,
-      method: "bettingToken",
-      params: [],
-    });
-    const tokenContract = getContract({
-      client,
-      chain: base,
-      address: bettingTokenAddress,
-    });
+    // Fetch bettingToken metadata using ethers.js
+    const bettingTokenAddress = await withRetry(() =>
+      contractInstance.bettingToken()
+    );
+    const tokenContract = new ethers.Contract(
+      bettingTokenAddress,
+      CONTRACT_ABI,
+      provider
+    );
     const [tokenSymbol, tokenDecimals] = await Promise.all([
-      readContract({
-        contract: tokenContract,
-        method: "function symbol() view returns (string)",
-        params: [],
-      }),
-      readContract({
-        contract: tokenContract,
-        method: "function decimals() view returns (uint8)",
-        params: [],
-      }),
+      withRetry(() => tokenContract.symbol()),
+      withRetry(() => tokenContract.decimals()),
     ]);
     console.log(`💸 Token: ${tokenSymbol}, Decimals: ${tokenDecimals}`);
 
-    // Fetch Claimed events
+    // Fetch Claimed events using ethers.js
     console.log("📦 Fetching Claimed events...");
     const DEPLOYMENT_BLOCK = BigInt(29490017);
     const cachedBlock = cache.get<string>(LAST_BLOCK_KEY);
     let fromBlock = cachedBlock ? BigInt(cachedBlock) : DEPLOYMENT_BLOCK;
-    const blockRange = BigInt(500);
+    const blockRange = BigInt(10000);
     const allEvents: ClaimedEvent[] = [];
+    const eventFilter = contractInstance.filters.Claimed();
 
     while (fromBlock <= latestBlock) {
       const toBlock =
@@ -179,14 +178,25 @@ export async function GET() {
       }
       console.log(`📄 Fetching events from block ${fromBlock} to ${toBlock}`);
       const events = await withRetry(() =>
-        getContractEvents({
-          contract,
-          events: [CLAIMED_EVENT],
-          fromBlock,
-          toBlock,
-        })
+        contractInstance.queryFilter(
+          eventFilter,
+          Number(fromBlock),
+          Number(toBlock)
+        )
       );
-      allEvents.push(...(events as ClaimedEvent[]));
+      // Assert that these are EventLogs for a named event
+      const typedEvents = events as ethers.EventLog[];
+
+      const formattedEvents = typedEvents.map((event: ethers.EventLog) => ({
+        args: {
+          // Cast named args to their expected types
+          marketId: event.args.marketId as bigint,
+          user: event.args.user as string,
+          amount: event.args.amount as bigint,
+        },
+        blockNumber: BigInt(event.blockNumber!), // blockNumber should not be null for historical events
+      }));
+      allEvents.push(...formattedEvents);
       console.log(`✅ Fetched ${events.length} events in this batch.`);
       fromBlock = toBlock + BigInt(1);
     }
@@ -207,7 +217,8 @@ export async function GET() {
       }
       const user = event.args.user.toLowerCase();
       const amountWei = BigInt(event.args.amount);
-      const amountDecimal = Number(amountWei) / Math.pow(10, tokenDecimals);
+      const amountDecimal =
+        Number(amountWei) / Math.pow(10, Number(tokenDecimals));
       winnersMap.set(user, (winnersMap.get(user) || 0) + amountDecimal);
     }
     console.log("📊 Winners map:", Array.from(winnersMap.entries()));

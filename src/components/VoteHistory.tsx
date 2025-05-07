@@ -2,20 +2,40 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useActiveAccount } from "thirdweb/react";
-import { prepareEvent, readContract, getContractEvents } from "thirdweb";
-import { eth_blockNumber } from "thirdweb/rpc";
-import { getRpcClient } from "thirdweb/rpc";
-import { contract } from "@/constants/contract";
-import { base } from "thirdweb/chains";
+import { ethers } from "ethers";
 import { debounce } from "lodash";
 import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { ArrowUpDown } from "lucide-react";
+import { contract } from "@/constants/contract";
 
 // Cache keys for local storage
 const CACHE_KEY = "vote_history_cache";
 const LAST_BLOCK_KEY = "last_fetched_block";
+
+// RPC URL
+const ALCHEMY_RPC_URL =
+  "https://base-mainnet.g.alchemy.com/v2/4tJqy59Y_Axu4yjgRuVf1ejipJKPbuh2";
+
+// Initialize ethers provider
+const provider = new ethers.JsonRpcProvider(ALCHEMY_RPC_URL);
+
+// Contract ABI (minimal for required functions and events)
+const CONTRACT_ABI = [
+  "event SharesPurchased(uint256 indexed marketId, address indexed buyer, bool isOptionA, uint256 amount)",
+  "function bettingToken() view returns (address)",
+  "function getMarketInfoBatch(uint256[] _marketIds) view returns (string[] questions, string[] optionAs, string[] optionBs, uint256[] endTimes, uint8[] outcomes, uint256[] totalOptionASharesArray, uint256[] totalOptionBSharesArray, bool[] resolvedArray)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+];
+
+// Initialize contract instance
+const contractInstance = new ethers.Contract(
+  contract.address,
+  CONTRACT_ABI,
+  provider
+);
 
 interface SharesPurchasedEvent {
   args: {
@@ -47,11 +67,6 @@ interface CacheData {
   [LAST_BLOCK_KEY]: string;
 }
 
-const preparedEvent = prepareEvent({
-  signature:
-    "event SharesPurchased(uint256 indexed marketId, address indexed buyer, bool isOptionA, uint256 amount)",
-});
-
 type SortKey = "marketId" | "marketName" | "option" | "amount";
 type SortDirection = "asc" | "desc";
 
@@ -70,29 +85,18 @@ export function VoteHistory() {
   useEffect(() => {
     const fetchTokenMetadata = async () => {
       try {
-        const bettingTokenAddress = await readContract({
-          contract,
-          method: "function bettingToken() view returns (address)",
-          params: [],
-        });
-        const tokenContract = {
-          ...contract,
-          address: bettingTokenAddress,
-        };
+        const bettingTokenAddress = await contractInstance.bettingToken();
+        const tokenContract = new ethers.Contract(
+          bettingTokenAddress,
+          CONTRACT_ABI,
+          provider
+        );
         const [symbol, decimals] = await Promise.all([
-          readContract({
-            contract: tokenContract,
-            method: "function symbol() view returns (string)",
-            params: [],
-          }),
-          readContract({
-            contract: tokenContract,
-            method: "function decimals() view returns (uint8)",
-            params: [],
-          }),
+          tokenContract.symbol(),
+          tokenContract.decimals(),
         ]);
         setTokenSymbol(symbol);
-        setTokenDecimals(decimals);
+        setTokenDecimals(Number(decimals));
       } catch (err) {
         console.error("Failed to fetch token metadata:", err);
       }
@@ -137,34 +141,51 @@ export function VoteHistory() {
           const cache = loadCache();
           let newVotes = [...cache.votes];
           const marketInfoCache = { ...cache.marketInfo };
-          let fromBlock = BigInt(cache[LAST_BLOCK_KEY] || "29490017 "); // Deployment block
+          let fromBlock = BigInt(cache[LAST_BLOCK_KEY] || "29490017"); // Deployment block
 
-          // Fetch latest block number
-          const rpcClient = getRpcClient({
-            client: contract.client,
-            chain: base,
-          });
-          const latestBlock = await eth_blockNumber(rpcClient);
+          // Fetch latest block number using Alchemy RPC
+          const latestBlock = BigInt(await provider.getBlockNumber());
 
           // Fetch events incrementally
-          const blockRange = BigInt(500);
+          const blockRange = BigInt(10000);
           const allEvents: SharesPurchasedEvent[] = [];
+          const eventFilter = contractInstance.filters.SharesPurchased(
+            null,
+            accountAddress
+          );
+
           while (fromBlock <= latestBlock) {
             const toBlock =
               fromBlock + blockRange > latestBlock
                 ? latestBlock
                 : fromBlock + blockRange;
-            const events = await getContractEvents({
-              contract,
-              fromBlock,
-              toBlock,
-              events: [preparedEvent],
-            });
-            allEvents.push(...(events as SharesPurchasedEvent[]));
+            const events = await contractInstance.queryFilter(
+              eventFilter,
+              Number(fromBlock),
+              Number(toBlock)
+            );
+            // Assert that these are EventLogs for a named event, as we are filtering for 'SharesPurchased'
+            const typedEvents = events as ethers.EventLog[];
+
+            const formattedEventsInBatch = typedEvents.map(
+              (event: ethers.EventLog) => ({
+                // Now 'event' is known to be EventLog
+                args: {
+                  // event.args is of type ethers.Result which allows named access.
+                  // Values from Result are 'any' by default with human-readable ABI, so cast them to expected types.
+                  marketId: event.args.marketId as bigint,
+                  buyer: event.args.buyer as string,
+                  isOptionA: event.args.isOptionA as boolean,
+                  amount: event.args.amount as bigint,
+                },
+                blockNumber: BigInt(event.blockNumber!), // blockNumber should not be null for historical events
+              })
+            );
+            allEvents.push(...formattedEventsInBatch);
             fromBlock = toBlock + BigInt(1);
           }
 
-          // Filter user events
+          // Filter user events (already filtered by the event filter, but ensuring)
           const userEvents = allEvents.filter(
             (e) => e.args.buyer.toLowerCase() === accountAddress.toLowerCase()
           );
@@ -179,12 +200,9 @@ export function VoteHistory() {
 
           // Fetch market info in batch
           if (uncachedMarketIds.length > 0) {
-            const marketInfos = await readContract({
-              contract,
-              method:
-                "function getMarketInfoBatch(uint256[] _marketIds) view returns (string[] questions, string[] optionAs, string[] optionBs, uint256[] endTimes, uint8[] outcomes, uint256[] totalOptionASharesArray, uint256[] totalOptionBSharesArray, bool[] resolvedArray)",
-              params: [uncachedMarketIds.map(BigInt)],
-            });
+            const marketInfos = await contractInstance.getMarketInfoBatch(
+              uncachedMarketIds.map(BigInt)
+            );
 
             // Update market info cache
             uncachedMarketIds.forEach((marketId, i) => {
