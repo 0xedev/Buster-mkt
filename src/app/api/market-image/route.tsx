@@ -342,6 +342,8 @@ export async function GET(request: NextRequest) {
               fontSize: "14px",
               color: colors.text.light,
               marginBottom: "32px",
+              display: "flex", // Explicitly set display to flex
+              justifyContent: "flex-start",
             }}
           >
             ID: {marketId}
