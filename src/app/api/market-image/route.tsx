@@ -238,8 +238,8 @@ export async function GET(request: NextRequest) {
         style={{
           display: "flex",
           flexDirection: "column",
-          width: "695px",
-          height: "424px",
+          width: "600px", // Adjusted width for the main content box
+          height: "360px", // Adjusted height for the main content box
           backgroundColor: colors.background,
           color: colors.text.primary,
           fontFamily: '"Inter"',
@@ -254,7 +254,7 @@ export async function GET(request: NextRequest) {
             left: 0,
             width: "100%",
             height: "130px",
-            background: colors.gradient,
+            backgroundImage: colors.gradient, // Use backgroundImage for gradients
             zIndex: 0,
           }}
         />
@@ -262,12 +262,12 @@ export async function GET(request: NextRequest) {
           style={{
             display: "flex",
             margin: "40px",
-            padding: "40px",
+            padding: "30px", // Slightly reduced padding
             backgroundColor: colors.cardBg,
             borderRadius: "24px",
             boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
             flexDirection: "column",
-            height: "450px",
+            height: "calc(100% - 80px)", // Adjust height to fit within the new outer dimensions
             zIndex: 1,
           }}
         >
@@ -277,7 +277,7 @@ export async function GET(request: NextRequest) {
               justifyContent: "space-between",
               alignItems: "center",
               width: "100%",
-              marginBottom: "12px",
+              marginBottom: "8px", // Reduced margin
             }}
           >
             <div
@@ -290,7 +290,7 @@ export async function GET(request: NextRequest) {
               <div
                 style={{
                   display: "flex",
-                  fontSize: "28px",
+                  fontSize: "24px", // Reduced font size
                   fontWeight: 700,
                   color: colors.primary,
                 }}
@@ -304,7 +304,7 @@ export async function GET(request: NextRequest) {
                   color: "white",
                   padding: "6px 16px",
                   borderRadius: "16px",
-                  fontSize: "16px",
+                  fontSize: "14px", // Reduced font size
                   fontWeight: 500,
                 }}
               >
@@ -322,7 +322,7 @@ export async function GET(request: NextRequest) {
                 color: "white",
                 padding: "6px 16px",
                 borderRadius: "16px",
-                fontSize: "16px",
+                fontSize: "14px", // Reduced font size
                 fontWeight: 500,
               }}
             >
@@ -332,9 +332,9 @@ export async function GET(request: NextRequest) {
           <div
             style={{
               display: "flex",
-              fontSize: "14px",
+              fontSize: "12px", // Reduced font size
               color: colors.text.light,
-              marginBottom: "32px",
+              marginBottom: "24px", // Reduced margin
               justifyContent: "flex-start",
             }}
           >
@@ -347,16 +347,16 @@ export async function GET(request: NextRequest) {
               alignItems: "center",
               flexGrow: 1,
               justifyContent: "center",
-              padding: "0 40px",
+              padding: "0 20px", // Reduced padding
             }}
           >
             <h1
               style={{
                 display: "flex",
-                fontSize: "48px",
+                fontSize: "40px", // Reduced font size
                 fontWeight: 700,
                 textAlign: "center",
-                marginBottom: "60px",
+                marginBottom: "40px", // Reduced margin
                 lineHeight: 1.3,
                 color: colors.text.primary,
               }}
@@ -368,7 +368,7 @@ export async function GET(request: NextRequest) {
                 display: "flex",
                 width: "90%",
                 flexDirection: "column",
-                gap: "24px",
+                gap: "20px", // Reduced gap
               }}
             >
               <div
@@ -388,8 +388,8 @@ export async function GET(request: NextRequest) {
                   <div
                     style={{
                       display: "flex",
-                      fontSize: "22px",
-                      fontWeight: 500,
+                      fontSize: "20px", // Reduced font size
+                      fontWeight: 600, // Slightly bolder for options
                       color: optionAColor,
                     }}
                   >
@@ -398,8 +398,8 @@ export async function GET(request: NextRequest) {
                   <div
                     style={{
                       display: "flex",
-                      fontSize: "22px",
-                      fontWeight: 700,
+                      fontSize: "20px", // Reduced font size
+                      fontWeight: 600,
                       color: optionAColor,
                     }}
                   >
@@ -410,8 +410,8 @@ export async function GET(request: NextRequest) {
                   style={{
                     display: "flex",
                     width: "100%",
-                    height: "12px",
-                    backgroundColor: "#e2e8f0",
+                    height: "10px", // Reduced bar height
+                    backgroundColor: colors.border,
                     borderRadius: "6px",
                     overflow: "hidden",
                   }}
@@ -432,7 +432,7 @@ export async function GET(request: NextRequest) {
                       alignItems: "center",
                       gap: "8px",
                       color: colors.success,
-                      fontSize: "16px",
+                      fontSize: "14px", // Reduced font size
                       fontWeight: 500,
                     }}
                   >
@@ -469,8 +469,8 @@ export async function GET(request: NextRequest) {
                   <div
                     style={{
                       display: "flex",
-                      fontSize: "22px",
-                      fontWeight: 500,
+                      fontSize: "20px", // Reduced font size
+                      fontWeight: 600,
                       color: optionBColor,
                     }}
                   >
@@ -479,8 +479,8 @@ export async function GET(request: NextRequest) {
                   <div
                     style={{
                       display: "flex",
-                      fontSize: "22px",
-                      fontWeight: 700,
+                      fontSize: "20px", // Reduced font size
+                      fontWeight: 600,
                       color: optionBColor,
                     }}
                   >
@@ -491,8 +491,8 @@ export async function GET(request: NextRequest) {
                   style={{
                     display: "flex",
                     width: "100%",
-                    height: "12px",
-                    backgroundColor: "#e2e8f0",
+                    height: "10px", // Reduced bar height
+                    backgroundColor: colors.border,
                     borderRadius: "6px",
                     overflow: "hidden",
                   }}
@@ -513,7 +513,7 @@ export async function GET(request: NextRequest) {
                       alignItems: "center",
                       gap: "8px",
                       color: colors.success,
-                      fontSize: "16px",
+                      fontSize: "14px", // Reduced font size
                       fontWeight: 500,
                     }}
                   >
@@ -540,8 +540,8 @@ export async function GET(request: NextRequest) {
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              marginTop: "32px",
-              paddingTop: "20px",
+              marginTop: "24px", // Reduced margin
+              paddingTop: "16px", // Reduced padding
               borderTop: `1px solid ${colors.border}`,
             }}
           >
@@ -549,7 +549,7 @@ export async function GET(request: NextRequest) {
               style={{
                 display: "flex",
                 fontSize: "16px",
-                color: colors.text.light,
+                color: colors.text.secondary, // Slightly darker for better readability
                 alignItems: "center",
                 gap: "12px",
               }}
@@ -582,8 +582,8 @@ export async function GET(request: NextRequest) {
         </div>
       </div>,
       {
-        width: 1200,
-        height: 630,
+        width: 900, // Reduced overall image width
+        height: 523, // Adjusted height for ~1.91:1 aspect ratio
         fonts: [
           {
             name: "Inter",
