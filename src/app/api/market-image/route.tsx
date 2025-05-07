@@ -80,23 +80,20 @@ async function fetchMarketData(marketId: string): Promise<MarketImageData> {
   }
 }
 
-function formatEndTime(endTimeSeconds: bigint): string {
-  try {
-    const endDate = new Date(Number(endTimeSeconds) * 1000);
-    return `Ends ${format(endDate, "MMM d, yyyy '@' h:mm a 'UTC'")}`;
-  } catch (e) {
-    console.error("Error formatting time:", e);
-    return "Ends: Invalid Date";
-  }
-}
-
-function formatTimeRemaining(endTimeSeconds: bigint): string {
+function formatTimeStatus(endTimeSeconds: bigint): {
+  text: string;
+  isEnded: boolean;
+} {
   try {
     const endTimeMs = Number(endTimeSeconds) * 1000;
     const now = Date.now();
+    const isEnded = now > endTimeMs;
 
-    if (now > endTimeMs) {
-      return "Ended";
+    if (isEnded) {
+      return {
+        text: `Ended ${format(new Date(endTimeMs), "MMM d, yyyy")}`,
+        isEnded,
+      };
     }
 
     const diffMs = endTimeMs - now;
@@ -105,15 +102,22 @@ function formatTimeRemaining(endTimeSeconds: bigint): string {
       (diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
     );
 
+    // Format time display
     if (diffDays > 0) {
-      return `${diffDays}d ${diffHours}h remaining`;
+      return {
+        text: `${diffDays}d ${diffHours}h remaining`,
+        isEnded,
+      };
     } else {
       const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-      return `${diffHours}h ${diffMinutes}m remaining`;
+      return {
+        text: `${diffHours}h ${diffMinutes}m remaining`,
+        isEnded,
+      };
     }
   } catch (e) {
-    console.error("Error calculating time remaining:", e);
-    return "";
+    console.error("Error calculating time status:", e);
+    return { text: "Unknown time", isEnded: false };
   }
 }
 
@@ -161,6 +165,7 @@ const colors = {
     light: "#94a3b8",
   },
   border: "#e2e8f0",
+  gradient: "linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%)",
 };
 
 export async function GET(request: NextRequest) {
@@ -192,8 +197,7 @@ export async function GET(request: NextRequest) {
     const optionAPercentDisplay = optionAPercentNum.toFixed(1);
     const optionBPercentDisplay = optionBPercentNum.toFixed(1);
 
-    const formattedTime = formatEndTime(market.endTime);
-    const timeRemaining = formatTimeRemaining(market.endTime);
+    const timeStatus = formatTimeStatus(market.endTime);
 
     console.log(
       `Market Image API: Generating image for marketId ${marketId} with percentages: ${optionAPercentDisplay}% / ${optionBPercentDisplay}%`
@@ -205,17 +209,13 @@ export async function GET(request: NextRequest) {
       mediumFontDataPromise,
     ]);
 
-    const now = Date.now();
-    const endTimeMs = Number(market.endTime) * 1000;
-    const isEnded = now > endTimeMs;
-
     let statusText = "Active";
     let statusColor = colors.primary;
 
     if (market.resolved) {
       statusText = "Resolved";
       statusColor = colors.success;
-    } else if (isEnded) {
+    } else if (timeStatus.isEnded) {
       statusText = "Ended (Unresolved)";
       statusColor = colors.danger;
     }
@@ -254,7 +254,7 @@ export async function GET(request: NextRequest) {
             left: 0,
             width: "100%",
             height: "180px",
-            background: "linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%)",
+            background: colors.gradient,
             zIndex: 0,
           }}
         />
@@ -314,32 +314,19 @@ export async function GET(request: NextRequest) {
             <div
               style={{
                 display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-end",
+                alignItems: "center",
+                backgroundColor:
+                  !timeStatus.isEnded && !market.resolved
+                    ? colors.primary
+                    : colors.text.light,
+                color: "white",
+                padding: "6px 16px",
+                borderRadius: "16px",
+                fontSize: "16px",
+                fontWeight: 500,
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  fontSize: "18px",
-                  color: colors.text.secondary,
-                }}
-              >
-                {formattedTime}
-              </div>
-              {!isEnded && !market.resolved && (
-                <div
-                  style={{
-                    display: "flex",
-                    fontSize: "16px",
-                    color: colors.primary,
-                    fontWeight: 500,
-                    marginTop: "4px",
-                  }}
-                >
-                  {timeRemaining}
-                </div>
-              )}
+              {timeStatus.text}
             </div>
           </div>
           <div

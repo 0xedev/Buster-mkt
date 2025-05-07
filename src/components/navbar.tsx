@@ -8,8 +8,6 @@ import { createWallet } from "thirdweb/wallets";
 import { ClaimTokensButton } from "./ClaimTokensButton";
 import { WagmiConfig, createConfig, http } from "wagmi";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
-//eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { HelpCircle } from "lucide-react";
 
 const wagmiConfig = createConfig({
   chains: [base],
@@ -46,16 +44,16 @@ export function Navbar() {
   return (
     <WagmiConfig config={wagmiConfig}>
       {/* Desktop View */}
-      <div className="hidden md:flex justify-between items-center mb-6 px-4 py-3 bg-gradient-to-r from-rose-50 to-rose-100 rounded-lg shadow-sm">
-        <h1 className="text-2xl font-bold text-rose-600">Policast</h1>
+      <div className="hidden md:flex justify-between items-center mb-6 px-4 py-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg shadow-sm">
+        <h1 className="text-2xl font-bold text-gray-800">Policast</h1>
         <div className="flex items-center gap-4">
           <ClaimTokensButton />
           <ConnectButton
             client={client}
             theme={lightTheme({
               colors: {
-                accentText: "#f43f5e", // rose-500
-                accentButtonBg: "#f43f5e", // rose-500
+                accentText: "#374151", // gray-700
+                accentButtonBg: "#1f2937", // gray-800
                 accentButtonText: "white",
               },
             })}
@@ -86,15 +84,14 @@ export function Navbar() {
       </div>
 
       {/* Mobile View */}
-      <div className="md:hidden flex justify-between items-center mb-4 px-3 py-2 bg-gradient-to-r from-rose-50 to-rose-100 rounded-lg shadow-sm">
-        <div className="text-xl font-bold text-rose-600">Policast</div>
+      <div className="md:hidden flex justify-end items-center mb-4 px-3 py-2 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg shadow-sm">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowInfo(!showInfo)}
             className={`px-3 py-1 rounded-lg transition-colors text-sm font-medium ${
               showInfo
-                ? "bg-rose-500 text-white"
-                : "bg-white text-rose-500 border border-rose-300"
+                ? "bg-gray-800 text-white"
+                : "bg-white text-gray-700 border border-gray-300"
             }`}
           >
             About
@@ -103,8 +100,8 @@ export function Navbar() {
             client={client}
             theme={lightTheme({
               colors: {
-                accentText: "#f43f5e", // rose-500
-                accentButtonBg: "#f43f5e", // rose-500
+                accentText: "#374151", // gray-700
+                accentButtonBg: "#1f2937", // gray-800
                 accentButtonText: "white",
               },
             })}
@@ -139,10 +136,10 @@ export function Navbar() {
 
       {/* Info Panel */}
       {showInfo && (
-        <div className="md:hidden bg-white shadow-lg rounded-lg p-4 mb-6 border-l-4 border-rose-400">
+        <div className="md:hidden bg-white shadow-lg rounded-lg p-4 mb-6 border-l-4 border-gray-500">
           <div className="flex flex-col gap-3">
-            <div className="bg-rose-50 p-4 rounded-lg">
-              <h3 className="font-bold text-rose-700 text-lg mb-2">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-bold text-gray-800 text-lg mb-2">
                 Welcome to Policast!
               </h3>
               <p className="mb-3 text-gray-700">
@@ -158,7 +155,7 @@ export function Navbar() {
                 <li>Browse available predictions</li>
                 <li>Place your bets!</li>
               </ol>
-              <p className="text-rose-500 font-semibold">
+              <p className="text-gray-800 font-semibold">
                 Claim your tokens now to begin!
               </p>
             </div>
