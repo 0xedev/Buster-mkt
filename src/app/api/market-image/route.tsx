@@ -216,7 +216,7 @@ export async function GET(request: NextRequest) {
       statusText = "Resolved";
       statusColor = colors.success;
     } else if (timeStatus.isEnded) {
-      statusText = "Ended (Unresolved)";
+      statusText = "Unresolved";
       statusColor = colors.danger;
     }
 
