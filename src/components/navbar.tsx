@@ -46,7 +46,7 @@ export function Navbar() {
     <WagmiConfig config={wagmiConfig}>
       {/* Desktop View */}
       <div className="hidden md:flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Forecast</h1>
+        <h1 className="text-2xl font-bold">Policast</h1>
         <div className="flex items-center gap-3">
           <ClaimTokensButton />
           <ConnectButton
@@ -105,10 +105,9 @@ export function Navbar() {
         <div className="md:hidden bg-white shadow-lg rounded-lg p-4 mb-6">
           <div className="flex flex-col gap-3">
             <div className="bg-gray-50 p-3 rounded-lg text-sm">
-              <h3 className="font-bold mb-1">Welcome to Forecast!</h3>
+              <h3 className="font-bold mb-1">Welcome to Policast!</h3>
               <p className="mb-2">
-                Forecast is a prediction game where users can predict outcomes
-                of various events.
+              Policast is a prediction game where users can predict public sentiments.
               </p>
               <p className="mb-2">To start playing:</p>
               <ol className="list-decimal pl-5 mb-2">

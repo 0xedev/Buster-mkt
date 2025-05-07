@@ -4,10 +4,10 @@ import { OnboardingModal } from "@/components/OnboardingModal";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Forecast - Prediction Market",
-  description: "Forecast outcomes!",
+  title: "Policast",
+  description: "Political Prediction Market!",
   openGraph: {
-    title: "Forecast",
+    title: "Policast",
     images: ["/icon.jpg"],
   },
   other: {
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
         title: "Farcaster Prediction Market",
         action: {
           type: "launch_frame",
-          name: "Forecast",
+          name: "Policast",
           iconUrl: "https://buster-mkt.vercel.app/icon.jpg",
           url: "https://buster-mkt.vercel.app",
           splashImageUrl: "https://buster-mkt.vercel.app/icon.jpg",

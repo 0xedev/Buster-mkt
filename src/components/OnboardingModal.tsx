@@ -30,11 +30,11 @@ export function OnboardingModal() {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Forecast</DialogTitle>
+          <DialogTitle>Policast</DialogTitle>
         </DialogHeader>
         <p className="py-4 text-sm text-muted-foreground">
-          Bet BSTR tokens on outcomes like “Will it rain this afternoon?” on
-          Base. Claim tokens to start!
+          Bet BSTR tokens on public sentiments like “Will it trump sack elon
+          before his tenure ends?” on Base. Claim tokens to start!
         </p>
         <div className="flex gap-2">
           <ClaimTokensButton />
