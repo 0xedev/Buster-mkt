@@ -147,7 +147,7 @@ export function VoteHistory() {
           const latestBlock = await eth_blockNumber(rpcClient);
 
           // Fetch events incrementally
-          const blockRange = BigInt(700);
+          const blockRange = BigInt(500);
           const allEvents: SharesPurchasedEvent[] = [];
           while (fromBlock <= latestBlock) {
             const toBlock =

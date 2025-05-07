@@ -165,7 +165,7 @@ export async function GET() {
     const DEPLOYMENT_BLOCK = BigInt(29490017);
     const cachedBlock = cache.get<string>(LAST_BLOCK_KEY);
     let fromBlock = cachedBlock ? BigInt(cachedBlock) : DEPLOYMENT_BLOCK;
-    const blockRange = BigInt(700);
+    const blockRange = BigInt(500);
     const allEvents: ClaimedEvent[] = [];
 
     while (fromBlock <= latestBlock) {
