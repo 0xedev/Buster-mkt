@@ -8,6 +8,7 @@ import { createWallet } from "thirdweb/wallets";
 import { ClaimTokensButton } from "./ClaimTokensButton";
 import { WagmiConfig, createConfig, http } from "wagmi";
 import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
+//eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { HelpCircle } from "lucide-react";
 
 const wagmiConfig = createConfig({
