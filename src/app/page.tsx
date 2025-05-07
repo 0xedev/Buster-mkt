@@ -15,7 +15,7 @@ export const metadata: Metadata = {
       version: "next",
       imageUrl: "https://buster-mkt.vercel.app/icon.jpg",
       button: {
-        title: "Farcaster Prediction Market",
+        title: "Explore Markets🏪",
         action: {
           type: "launch_frame",
           name: "Policast",
