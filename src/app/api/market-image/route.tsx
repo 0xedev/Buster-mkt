@@ -264,7 +264,7 @@ export async function GET(request: NextRequest) {
             backgroundColor: colors.cardBg,
             borderRadius: "24px",
             boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-            display: "flex",
+            display: "flex", // Explicitly set display to flex
             flexDirection: "column",
             height: "550px",
             zIndex: 1,
@@ -272,7 +272,7 @@ export async function GET(request: NextRequest) {
         >
           <div
             style={{
-              display: "flex",
+              display: "flex", // Explicitly set display to flex
               justifyContent: "space-between",
               alignItems: "center",
               width: "100%",
@@ -281,7 +281,7 @@ export async function GET(request: NextRequest) {
           >
             <div
               style={{
-                display: "flex",
+                display: "flex", // Explicitly set display to flex
                 alignItems: "center",
                 gap: "12px",
               }}
@@ -310,7 +310,7 @@ export async function GET(request: NextRequest) {
             </div>
             <div
               style={{
-                display: "flex",
+                display: "flex", // Explicitly set display to flex
                 flexDirection: "column",
                 alignItems: "flex-end",
               }}
@@ -348,7 +348,7 @@ export async function GET(request: NextRequest) {
           </div>
           <div
             style={{
-              display: "flex",
+              display: "flex", // Explicitly set display to flex
               flexDirection: "column",
               alignItems: "center",
               flexGrow: 1,
@@ -371,21 +371,21 @@ export async function GET(request: NextRequest) {
             <div
               style={{
                 width: "90%",
-                display: "flex",
+                display: "flex", // Explicitly set display to flex
                 flexDirection: "column",
                 gap: "24px",
               }}
             >
               <div
                 style={{
-                  display: "flex",
+                  display: "flex", // Explicitly set display to flex
                   flexDirection: "column",
                   gap: "8px",
                 }}
               >
                 <div
                   style={{
-                    display: "flex",
+                    display: "flex", // Explicitly set display to flex
                     justifyContent: "space-between",
                     alignItems: "center",
                   }}
@@ -429,7 +429,7 @@ export async function GET(request: NextRequest) {
                 {market.resolved && market.outcome === 1 && (
                   <div
                     style={{
-                      display: "flex",
+                      display: "flex", // Explicitly set display to flex
                       alignItems: "center",
                       gap: "8px",
                       color: colors.success,
@@ -455,14 +455,14 @@ export async function GET(request: NextRequest) {
               </div>
               <div
                 style={{
-                  display: "flex",
+                  display: "flex", // Explicitly set display to flex
                   flexDirection: "column",
                   gap: "8px",
                 }}
               >
                 <div
                   style={{
-                    display: "flex",
+                    display: "flex", // Explicitly set display to flex
                     justifyContent: "space-between",
                     alignItems: "center",
                   }}
@@ -506,7 +506,7 @@ export async function GET(request: NextRequest) {
                 {market.resolved && market.outcome === 2 && (
                   <div
                     style={{
-                      display: "flex",
+                      display: "flex", // Explicitly set display to flex
                       alignItems: "center",
                       gap: "8px",
                       color: colors.success,
@@ -534,7 +534,7 @@ export async function GET(request: NextRequest) {
           </div>
           <div
             style={{
-              display: "flex",
+              display: "flex", // Explicitly set display to flex
               justifyContent: "center",
               alignItems: "center",
               marginTop: "32px",
@@ -546,7 +546,7 @@ export async function GET(request: NextRequest) {
               style={{
                 fontSize: "16px",
                 color: colors.text.light,
-                display: "flex",
+                display: "flex", // Explicitly set display to flex
                 alignItems: "center",
                 gap: "12px",
               }}
