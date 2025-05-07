@@ -90,6 +90,8 @@ export async function generateMetadata(
         type: "launch_frame" as const,
         name: market.question.substring(0, 30),
         url: marketUrl,
+        splashImageUrl: "https://buster-mkt.vercel.app/icon.jpg",
+        splashBackgroundColor: "#ffffff",
       },
     },
   };
