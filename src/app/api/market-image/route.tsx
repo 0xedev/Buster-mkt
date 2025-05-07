@@ -295,7 +295,7 @@ export async function GET(request: NextRequest) {
                   color: colors.primary,
                 }}
               >
-                Buster Market
+                POLICAST
               </div>
               <div
                 style={{
