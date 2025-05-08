@@ -267,7 +267,7 @@ export async function GET(request: NextRequest) {
             borderRadius: "24px",
             boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
             flexDirection: "column",
-            height: "calc(100% - 80px)", // Adjust height to fit within the new outer dimensions
+            height: "280px", // Adjust height to fit within the new outer dimensions
             zIndex: 1,
           }}
         >
