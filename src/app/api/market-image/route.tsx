@@ -152,20 +152,27 @@ const regularFontDataPromise = fs.readFile(regularFontPath);
 const boldFontDataPromise = fs.readFile(boldFontPath);
 const mediumFontDataPromise = fs.readFile(mediumFontPath).catch(() => null);
 
+// Enhanced color palette with more vibrant colors and additional options
 const colors = {
   background: "#ffffff",
-  cardBg: "#f8fafc",
-  primary: "#3b82f6",
-  secondary: "#8b5cf6",
-  success: "#10b981",
-  danger: "#ef4444",
+  cardBg: "#f9fafb",
+  primary: "#2563eb", // Slightly deeper blue
+  secondary: "#7c3aed", // Slightly deeper purple
+  success: "#059669", // Deeper green
+  danger: "#dc2626", // Deeper red
   text: {
-    primary: "#1e293b",
-    secondary: "#64748b",
-    light: "#94a3b8",
+    primary: "#111827",
+    secondary: "#4b5563",
+    light: "#9ca3af",
   },
-  border: "#e2e8f0",
-  gradient: "linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%)",
+  border: "#e5e7eb",
+  gradient: {
+    primary: "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)",
+    header: "linear-gradient(90deg, #1e40af 0%, #7e22ce 100%)",
+    footer:
+      "linear-gradient(90deg, rgba(37, 99, 235, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%)",
+  },
+  shadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
 };
 
 export async function GET(request: NextRequest) {
@@ -238,14 +245,31 @@ export async function GET(request: NextRequest) {
         style={{
           display: "flex",
           flexDirection: "column",
-          width: "600px", // Adjusted width for the main content box
-          height: "360px", // Adjusted height for the main content box
+          width: "780px", // Increased by 30%
+          height: "468px", // Increased by 30%
           backgroundColor: colors.background,
           color: colors.text.primary,
           fontFamily: '"Inter"',
           padding: "0px",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
+        {/* Background pattern for visual interest */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundImage:
+              "radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.05) 0%, transparent 30%), radial-gradient(circle at 90% 80%, rgba(124, 58, 237, 0.05) 0%, transparent 30%)",
+            zIndex: 0,
+          }}
+        />
+
+        {/* Header gradient */}
         <div
           style={{
             display: "flex",
@@ -253,46 +277,65 @@ export async function GET(request: NextRequest) {
             top: 0,
             left: 0,
             width: "100%",
-            height: "130px",
-            backgroundImage: colors.gradient, // Use backgroundImage for gradients
+            height: "180px", // Increased height
+            backgroundImage: colors.gradient.header,
             zIndex: 0,
           }}
         />
+
+        {/* Main card */}
         <div
           style={{
             display: "flex",
-            margin: "40px",
-            padding: "30px", // Slightly reduced padding
+            margin: "50px", // Increased margin
+            padding: "40px", // Increased padding
             backgroundColor: colors.cardBg,
-            borderRadius: "24px",
-            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+            borderRadius: "28px", // Increased border radius
+            boxShadow: colors.shadow, // Enhanced shadow
             flexDirection: "column",
-            height: "280px", // Adjust height to fit within the new outer dimensions
+            height: "368px", // Adjusted for 30% increase
             zIndex: 1,
+            position: "relative",
+            overflow: "hidden",
           }}
         >
+          {/* Subtle gradient overlay on the card */}
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "8px",
+              backgroundImage: colors.gradient.primary,
+              zIndex: 2,
+            }}
+          />
+
+          {/* Header section */}
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
               width: "100%",
-              marginBottom: "8px", // Reduced margin
+              marginBottom: "12px", // Increased margin
             }}
           >
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "12px",
+                gap: "16px", // Increased gap
               }}
             >
               <div
                 style={{
                   display: "flex",
-                  fontSize: "24px", // Reduced font size
-                  fontWeight: 700,
+                  fontSize: "31px", // Increased font size
+                  fontWeight: 800, // Bolder
                   color: colors.primary,
+                  letterSpacing: "-0.5px", // Better typography
                 }}
               >
                 POLICAST
@@ -302,10 +345,11 @@ export async function GET(request: NextRequest) {
                   display: "flex",
                   backgroundColor: statusColor,
                   color: "white",
-                  padding: "6px 16px",
-                  borderRadius: "16px",
-                  fontSize: "14px", // Reduced font size
-                  fontWeight: 500,
+                  padding: "8px 20px", // Increased padding
+                  borderRadius: "18px", // Increased border radius
+                  fontSize: "18px", // Increased font size
+                  fontWeight: 600, // Bolder
+                  boxShadow: `0 2px 4px ${statusColor}80`, // Add subtle shadow
                 }}
               >
                 {statusText}
@@ -320,26 +364,35 @@ export async function GET(request: NextRequest) {
                     ? colors.primary
                     : colors.text.light,
                 color: "white",
-                padding: "6px 16px",
-                borderRadius: "16px",
-                fontSize: "14px", // Reduced font size
-                fontWeight: 500,
+                padding: "8px 20px", // Increased padding
+                borderRadius: "18px", // Increased border radius
+                fontSize: "18px", // Increased font size
+                fontWeight: 600, // Bolder
+                boxShadow: `0 2px 4px ${
+                  !timeStatus.isEnded && !market.resolved
+                    ? `${colors.primary}80`
+                    : `${colors.text.light}80`
+                }`, // Add subtle shadow
               }}
             >
               {timeStatus.text}
             </div>
           </div>
+
+          {/* Market ID */}
           <div
             style={{
               display: "flex",
-              fontSize: "12px", // Reduced font size
+              fontSize: "16px", // Increased font size
               color: colors.text.light,
-              marginBottom: "24px", // Reduced margin
+              marginBottom: "30px", // Increased margin
               justifyContent: "flex-start",
             }}
           >
             ID: {marketId}
           </div>
+
+          {/* Main content */}
           <div
             style={{
               display: "flex",
@@ -347,35 +400,39 @@ export async function GET(request: NextRequest) {
               alignItems: "center",
               flexGrow: 1,
               justifyContent: "center",
-              padding: "0 20px", // Reduced padding
+              padding: "0 25px", // Increased padding
             }}
           >
             <h1
               style={{
                 display: "flex",
-                fontSize: "40px", // Reduced font size
-                fontWeight: 700,
+                fontSize: "52px", // Increased font size
+                fontWeight: 800, // Bolder for more impact
                 textAlign: "center",
-                marginBottom: "40px", // Reduced margin
-                lineHeight: 1.3,
+                marginBottom: "50px", // Increased margin
+                lineHeight: 1.2, // Tighter line height
                 color: colors.text.primary,
+                letterSpacing: "-0.03em", // Better typography
               }}
             >
               {market.question}
             </h1>
+
+            {/* Options section */}
             <div
               style={{
                 display: "flex",
-                width: "90%",
+                width: "95%", // Slightly wider
                 flexDirection: "column",
-                gap: "20px", // Reduced gap
+                gap: "26px", // Increased gap
               }}
             >
+              {/* Option A */}
               <div
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: "8px",
+                  gap: "12px", // Increased gap
                 }}
               >
                 <div
@@ -388,8 +445,8 @@ export async function GET(request: NextRequest) {
                   <div
                     style={{
                       display: "flex",
-                      fontSize: "20px", // Reduced font size
-                      fontWeight: 600, // Slightly bolder for options
+                      fontSize: "26px", // Increased font size
+                      fontWeight: 700, // Bolder
                       color: optionAColor,
                     }}
                   >
@@ -398,22 +455,25 @@ export async function GET(request: NextRequest) {
                   <div
                     style={{
                       display: "flex",
-                      fontSize: "20px", // Reduced font size
-                      fontWeight: 600,
+                      fontSize: "26px", // Increased font size
+                      fontWeight: 700, // Bolder
                       color: optionAColor,
                     }}
                   >
                     {optionAPercentDisplay}%
                   </div>
                 </div>
+
+                {/* Progress bar container */}
                 <div
                   style={{
                     display: "flex",
                     width: "100%",
-                    height: "10px", // Reduced bar height
-                    backgroundColor: colors.border,
-                    borderRadius: "6px",
+                    height: "14px", // Increased height
+                    backgroundColor: `${colors.border}`,
+                    borderRadius: "8px", // Increased border radius
                     overflow: "hidden",
+                    boxShadow: "inset 0 1px 2px rgba(0, 0, 0, 0.05)", // Inset shadow for depth
                   }}
                 >
                   <div
@@ -421,42 +481,50 @@ export async function GET(request: NextRequest) {
                       display: "flex",
                       width: `${optionAPercentNum}%`,
                       height: "100%",
-                      backgroundColor: optionAColor,
+                      backgroundImage:
+                        market.resolved && market.outcome === 1
+                          ? "linear-gradient(90deg, #059669 0%, #10b981 100%)"
+                          : "linear-gradient(90deg, #2563eb 0%, #3b82f6 100%)",
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.1)", // Shadow for depth
                     }}
                   />
                 </div>
+
+                {/* Winner badge */}
                 {market.resolved && market.outcome === 1 && (
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "8px",
+                      gap: "10px", // Increased gap
                       color: colors.success,
-                      fontSize: "14px", // Reduced font size
-                      fontWeight: 500,
+                      fontSize: "18px", // Increased font size
+                      fontWeight: 600, // Bolder
                     }}
                   >
                     <svg
-                      width="16"
-                      height="16"
+                      width="20" // Increased size
+                      height="20" // Increased size
                       viewBox="0 0 16 16"
                       fill="none"
                       xmlns="http://www.w3.org/2000/svg"
                     >
                       <path
                         d="M8 0C3.6 0 0 3.6 0 8C0 12.4 3.6 16 8 16C12.4 16 16 12.4 16 8C16 3.6 12.4 0 8 0ZM7 11.4L3.6 8L5 6.6L7 8.6L11 4.6L12.4 6L7 11.4Z"
-                        fill="#10b981"
+                        fill="#059669" // Updated color
                       />
                     </svg>
                     Winner
                   </div>
                 )}
               </div>
+
+              {/* Option B */}
               <div
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: "8px",
+                  gap: "12px", // Increased gap
                 }}
               >
                 <div
@@ -469,8 +537,8 @@ export async function GET(request: NextRequest) {
                   <div
                     style={{
                       display: "flex",
-                      fontSize: "20px", // Reduced font size
-                      fontWeight: 600,
+                      fontSize: "26px", // Increased font size
+                      fontWeight: 700, // Bolder
                       color: optionBColor,
                     }}
                   >
@@ -479,22 +547,25 @@ export async function GET(request: NextRequest) {
                   <div
                     style={{
                       display: "flex",
-                      fontSize: "20px", // Reduced font size
-                      fontWeight: 600,
+                      fontSize: "26px", // Increased font size
+                      fontWeight: 700, // Bolder
                       color: optionBColor,
                     }}
                   >
                     {optionBPercentDisplay}%
                   </div>
                 </div>
+
+                {/* Progress bar container */}
                 <div
                   style={{
                     display: "flex",
                     width: "100%",
-                    height: "10px", // Reduced bar height
-                    backgroundColor: colors.border,
-                    borderRadius: "6px",
+                    height: "14px", // Increased height
+                    backgroundColor: `${colors.border}`,
+                    borderRadius: "8px", // Increased border radius
                     overflow: "hidden",
+                    boxShadow: "inset 0 1px 2px rgba(0, 0, 0, 0.05)", // Inset shadow for depth
                   }}
                 >
                   <div
@@ -502,31 +573,37 @@ export async function GET(request: NextRequest) {
                       display: "flex",
                       width: `${optionBPercentNum}%`,
                       height: "100%",
-                      backgroundColor: optionBColor,
+                      backgroundImage:
+                        market.resolved && market.outcome === 2
+                          ? "linear-gradient(90deg, #059669 0%, #10b981 100%)"
+                          : "linear-gradient(90deg, #7c3aed 0%, #8b5cf6 100%)",
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.1)", // Shadow for depth
                     }}
                   />
                 </div>
+
+                {/* Winner badge */}
                 {market.resolved && market.outcome === 2 && (
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "8px",
+                      gap: "10px", // Increased gap
                       color: colors.success,
-                      fontSize: "14px", // Reduced font size
-                      fontWeight: 500,
+                      fontSize: "18px", // Increased font size
+                      fontWeight: 600, // Bolder
                     }}
                   >
                     <svg
-                      width="16"
-                      height="16"
+                      width="20" // Increased size
+                      height="20" // Increased size
                       viewBox="0 0 16 16"
                       fill="none"
                       xmlns="http://www.w3.org/2000/svg"
                     >
                       <path
                         d="M8 0C3.6 0 0 3.6 0 8C0 12.4 3.6 16 8 16C12.4 16 16 12.4 16 8C16 3.6 12.4 0 8 0ZM7 11.4L3.6 8L5 6.6L7 8.6L11 4.6L12.4 6L7 11.4Z"
-                        fill="#10b981"
+                        fill="#059669" // Updated color
                       />
                     </svg>
                     Winner
@@ -535,42 +612,45 @@ export async function GET(request: NextRequest) {
               </div>
             </div>
           </div>
+
+          {/* Footer */}
           <div
             style={{
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              marginTop: "24px", // Reduced margin
-              paddingTop: "16px", // Reduced padding
+              marginTop: "32px", // Increased margin
+              paddingTop: "20px", // Increased padding
               borderTop: `1px solid ${colors.border}`,
+              backgroundImage: colors.gradient.footer, // Subtle gradient
             }}
           >
             <div
               style={{
                 display: "flex",
-                fontSize: "16px",
-                color: colors.text.secondary, // Slightly darker for better readability
+                fontSize: "21px", // Increased font size
+                color: colors.text.secondary,
                 alignItems: "center",
-                gap: "12px",
+                gap: "14px", // Increased gap
               }}
             >
               <svg
-                width="18"
-                height="18"
+                width="24" // Increased size
+                height="24" // Increased size
                 viewBox="0 0 24 24"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
               >
                 <path
                   d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
-                  stroke="#94a3b8"
+                  stroke="#4b5563" // Updated color
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
                 <path
                   d="M12 6V12L16 14"
-                  stroke="#94a3b8"
+                  stroke="#4b5563" // Updated color
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -582,8 +662,8 @@ export async function GET(request: NextRequest) {
         </div>
       </div>,
       {
-        width: 900, // Reduced overall image width
-        height: 523, // Adjusted height for ~1.91:1 aspect ratio
+        width: 1170, // Increased by 30%
+        height: 680, // Increased by 30%
         fonts: [
           {
             name: "Inter",
@@ -611,13 +691,16 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    const pngBuffer = await sharp(Buffer.from(svg)).png().toBuffer();
+    // Enhance image quality with Sharp
+    const pngBuffer = await sharp(Buffer.from(svg))
+      .png({ quality: 90 })
+      .toBuffer();
 
     console.log(
       `Market Image API: Successfully generated PNG for marketId ${marketId}`
     );
 
-    return new NextResponse(pngBuffer, {
+    return new NextResponse(new Blob([new Uint8Array(pngBuffer)]), {
       status: 200,
       headers: {
         "Content-Type": "image/png",
