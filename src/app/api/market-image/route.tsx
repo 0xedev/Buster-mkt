@@ -245,8 +245,8 @@ export async function GET(request: NextRequest) {
         style={{
           display: "flex",
           flexDirection: "column",
-          width: "780px", // Increased by 30%
-          height: "468px", // Increased by 30%
+          width: "1170px", // Increased by 30%
+          height: "680px", // Increased by 30%
           backgroundColor: colors.background,
           color: colors.text.primary,
           fontFamily: '"Inter"',
@@ -293,7 +293,7 @@ export async function GET(request: NextRequest) {
             borderRadius: "28px", // Increased border radius
             boxShadow: colors.shadow, // Enhanced shadow
             flexDirection: "column",
-            height: "368px", // Adjusted for 30% increase
+            height: "536px", // Adjusted for 30% increase
             zIndex: 1,
             position: "relative",
             overflow: "hidden",
