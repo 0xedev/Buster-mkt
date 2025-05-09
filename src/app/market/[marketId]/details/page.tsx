@@ -77,7 +77,7 @@ export async function generateMetadata(
         type: "launch_frame" as const,
         name: market.question.substring(0, 30),
         url: marketUrl,
-        iconUrl: "https://buster-mkt.vercel.app/icon.jpg",
+        iconUrl: "https://buster-mkt.vercel.app/icon.png",
         splashImageUrl: "https://buster-mkt.vercel.app/icon.jpg",
         splashBackgroundColor: "#ffffff",
       },

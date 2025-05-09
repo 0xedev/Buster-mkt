@@ -19,7 +19,7 @@ export const metadata: Metadata = {
         action: {
           type: "launch_frame",
           name: "Policast",
-          iconUrl: "https://buster-mkt.vercel.app/icon.jpg",
+          iconUrl: "https://buster-mkt.vercel.app/icon.png",
           url: "https://buster-mkt.vercel.app",
           splashImageUrl: "https://buster-mkt.vercel.app/icon.jpg",
           splashBackgroundColor: "#ffffff",
