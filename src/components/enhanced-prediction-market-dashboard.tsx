@@ -228,11 +228,11 @@ export function EnhancedPredictionMarketDashboard() {
               Ended
             </TabsTrigger>
             <TabsTrigger value="leaderboard" className="text-xs px-2">
-              Top
+              Leaderboard
             </TabsTrigger>
             {showVoteHistory && (
               <TabsTrigger value="myvotes" className="text-xs px-2">
-                Votes
+                My Shares
               </TabsTrigger>
             )}
           </TabsList>
