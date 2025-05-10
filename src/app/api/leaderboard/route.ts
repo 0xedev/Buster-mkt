@@ -4,7 +4,7 @@ import { ethers } from "ethers";
 import NodeCache from "node-cache";
 
 // Initialize cache
-const cache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
+const cache = new NodeCache({ stdTTL: 500, checkperiod: 60 });
 const CACHE_KEY = "leaderboard";
 const LAST_BLOCK_KEY = "last_fetched_block";
 const NEYNAR_CACHE_KEY = "neynar_users";

@@ -152,13 +152,18 @@ export function VoteHistory() {
           const eventFilter = contractInstance.filters.SharesPurchased(
             null,
             accountAddress
-          );
+          ); // Filter for SharesPurchased events by the specific user
 
           while (fromBlock <= latestBlock) {
             const toBlock =
-              fromBlock + blockRange > latestBlock
+              // Ensure toBlock does not exceed latestBlock
+              // And that the range is at most blockRange
+              fromBlock + blockRange - BigInt(1) > latestBlock
                 ? latestBlock
-                : fromBlock + blockRange;
+                : fromBlock + blockRange - BigInt(1);
+
+            if (toBlock < fromBlock) break; // Stop if the range is invalid
+
             const events = await contractInstance.queryFilter(
               eventFilter,
               Number(fromBlock),
