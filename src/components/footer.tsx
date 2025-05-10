@@ -2,19 +2,27 @@
 
 import Link from "next/link";
 import { Home, Clock, Trophy, User, Info } from "lucide-react"; // Icons for tabs and About
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation"; // Import useSearchParams
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
 export function Footer() {
+  //eslint-disable-next-line @typescript-eslint/no-unused-vars
   const pathname = usePathname();
+  const searchParams = useSearchParams(); // Use the hook
   const [showInfo, setShowInfo] = useState(false);
+  const currentQueryTab = searchParams.get("tab");
 
   const navItems = [
-    { href: "/?tab=active", icon: Home, label: "Active" },
-    { href: "/?tab=ended", icon: Clock, label: "Ended" },
-    { href: "/?tab=leaderboard", icon: Trophy, label: "Leaderboard" },
-    { href: "/?tab=myvotes", icon: User, label: "My Shares" },
+    { hrefBase: "/", tabValue: "active", icon: Home, label: "Active" },
+    { hrefBase: "/", tabValue: "ended", icon: Clock, label: "Ended" },
+    {
+      hrefBase: "/",
+      tabValue: "leaderboard",
+      icon: Trophy,
+      label: "Leaderboard",
+    },
+    { hrefBase: "/", tabValue: "myvotes", icon: User, label: "My Shares" },
   ];
 
   return (
@@ -22,24 +30,30 @@ export function Footer() {
       <div className="container max-w-7xl mx-auto flex flex-col items-center justify-between gap-4 py-4 md:flex-row md:py-8">
         {/* Mobile Navigation with Icons */}
         <div className="flex w-full justify-around md:hidden">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex flex-col items-center p-2",
-                pathname.includes(item.href.split("?")[0]) &&
-                  new URLSearchParams(pathname).get("tab") ===
-                    item.label.toLowerCase()
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-primary"
-              )}
-              aria-label={item.label}
-            >
-              <item.icon className="h-6 w-6" />
-              <span className="text-xs mt-1">{item.label}</span>
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            const href = `${item.hrefBase}?tab=${item.tabValue}`;
+            // An item is active if its tabValue matches the currentQueryTab.
+            // If currentQueryTab is null (no tab in URL), 'active' is the default active tab.
+            const isActive =
+              (currentQueryTab === null && item.tabValue === "active") ||
+              currentQueryTab === item.tabValue;
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "flex flex-col items-center p-2",
+                  isActive
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-primary"
+                )}
+                aria-label={item.label}
+              >
+                <item.icon className="h-6 w-6" />
+                <span className="text-xs mt-1">{item.label}</span>
+              </Link>
+            );
+          })}
           <button
             onClick={() => setShowInfo(!showInfo)}
             className={cn(

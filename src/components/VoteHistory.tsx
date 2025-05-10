@@ -147,7 +147,7 @@ export function VoteHistory() {
           const latestBlock = BigInt(await provider.getBlockNumber());
 
           // Fetch events incrementally
-          const blockRange = BigInt(10000);
+          const blockRange = BigInt(500);
           const allEvents: SharesPurchasedEvent[] = [];
           const eventFilter = contractInstance.filters.SharesPurchased(
             null,

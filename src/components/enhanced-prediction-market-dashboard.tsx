@@ -8,7 +8,7 @@ import { Footer } from "./footer";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { sdk } from "@farcaster/frame-sdk";
 import { VoteHistory } from "./VoteHistory";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { MarketCardSkeleton } from "./market-card-skeleton";
 import { Navbar } from "./navbar";
 
@@ -23,7 +23,13 @@ type LeaderboardEntry = {
 export function EnhancedPredictionMarketDashboard() {
   const account = useActiveAccount();
   const searchParams = useSearchParams();
-  const defaultTab = searchParams.get("tab") || "active";
+  const router = useRouter();
+  const currentPathname = usePathname();
+
+  // State to control the active tab
+  const [activeTab, setActiveTab] = useState(
+    () => searchParams.get("tab") || "active"
+  );
 
   const { data: marketCount, isLoading: isLoadingMarketCount } =
     useReadContract({
@@ -132,24 +138,58 @@ export function EnhancedPredictionMarketDashboard() {
     }
     try {
       const res = await fetch("/api/leaderboard");
-      const data = await res.json();
+
       if (!res.ok) {
-        throw new Error(data.details || `HTTP error! status: ${res.status}`);
+        let errorDetails = `HTTP error! status: ${res.status}`;
+        try {
+          // Try to get a more specific error message from the server response
+          const errorText = await res.text();
+          // Avoid showing full HTML pages as error messages, keep it concise
+          if (
+            errorText &&
+            !errorText.toLowerCase().includes("<html") &&
+            !errorText.toLowerCase().includes("<!doctype html")
+          ) {
+            errorDetails =
+              errorText.length > 150
+                ? errorText.substring(0, 147) + "..."
+                : errorText;
+          }
+          //eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (e) {
+          // Ignore if reading text fails, stick with the status code message
+        }
+        throw new Error(errorDetails);
       }
+
+      // If res.ok is true, then we can safely try to parse JSON
+      const data = await res.json();
+
       if (Array.isArray(data)) {
         setLeaderboard(data as LeaderboardEntry[]);
       } else {
-        throw new Error("Received non-array data for leaderboard");
+        throw new Error(
+          "Received non-array data for leaderboard. Expected an array."
+        );
       }
     } catch (err) {
       console.error("Leaderboard fetch error:", err);
-      setLeaderboardError(
-        (err as Error).message.includes("NEYNAR_API_KEY")
-          ? "Server configuration error. Please try again later."
-          : (err as Error).message.includes("eth_getLogs")
-          ? "Unable to fetch leaderboard data due to blockchain query limits. Please try again later."
-          : "Failed to load leaderboard. Please try again later."
-      );
+      let displayError =
+        (err as Error).message ||
+        "Failed to load leaderboard. Please try again later.";
+
+      // You can still have specific overrides if needed
+      if (displayError.includes("NEYNAR_API_KEY")) {
+        displayError = "Server configuration error. Please try again later.";
+      } else if (displayError.includes("eth_getLogs")) {
+        displayError =
+          "Unable to fetch leaderboard data due to blockchain query limits. Please try again later.";
+      } else if (err instanceof SyntaxError) {
+        // Catch if res.ok was true but JSON was still malformed
+        displayError =
+          "Received malformed data from the server. Please try again later.";
+      }
+      setLeaderboardError(displayError);
       setLeaderboard([]);
     } finally {
       if (setLoading) {
@@ -164,6 +204,18 @@ export function EnhancedPredictionMarketDashboard() {
       hasFetchedInitially.current = true;
     }
   }, []);
+  // Effect to sync activeTab state with URL search parameter
+  useEffect(() => {
+    const tabFromUrl = searchParams.get("tab") || "active";
+    if (tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams, activeTab]); // Re-run if searchParams or activeTab changes
+
+  const handleTabChange = (newTabValue: string) => {
+    setActiveTab(newTabValue);
+    router.push(`${currentPathname}?tab=${newTabValue}`);
+  };
 
   useEffect(() => {
     const refreshInterval = 5 * 60 * 1000;
@@ -209,7 +261,11 @@ export function EnhancedPredictionMarketDashboard() {
     <div className="min-h-screen flex flex-col pb-20 md:pb-0">
       <Navbar />
       <div className="flex-grow container mx-auto p-4">
-        <Tabs defaultValue={defaultTab} className="w-full">
+        <Tabs
+          value={activeTab} // Controlled component: use value
+          onValueChange={handleTabChange} // Handler for when tab changes
+          className="w-full"
+        >
           <TabsList
             className={`grid w-full ${
               showVoteHistory ? "grid-cols-4" : "grid-cols-3"
