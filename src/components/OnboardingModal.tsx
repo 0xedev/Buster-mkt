@@ -1,5 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { sdk } from "@farcaster/frame-sdk";
+import { ClaimTokensButton } from "./ClaimTokensButton";
 import {
   Dialog,
   DialogContent,
@@ -7,41 +10,124 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ClaimTokensButton } from "@/components/ClaimTokensButton";
-import { sdk } from "@farcaster/frame-sdk";
-import { useEffect, useState } from "react";
 
 export function OnboardingModal() {
+  const [step, setStep] = useState<"add" | "claim" | "share" | "done">("add");
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    if (!localStorage.getItem("hasSeenOnboarding")) {
+    if (!localStorage.getItem("hasCompletedOnboarding")) {
       setIsOpen(true);
       sdk.actions.ready().catch((err) => console.error("Splash error:", err));
+
+      const checkAdded = async () => {
+        const client = await (await sdk.context).client;
+        if (client.added) {
+          setStep("claim");
+        }
+      };
+      checkAdded();
+
+      const handleFrameAdded = () => {
+        setStep("claim");
+      };
+      sdk.on("frameAdded", handleFrameAdded);
+      return () => {
+        sdk.removeListener("frameAdded", handleFrameAdded);
+      };
     }
   }, []);
 
+  const handleAddFrame = async () => {
+    try {
+      await sdk.actions.addFrame();
+    } catch (error) {
+      console.error("Failed to add frame:", error);
+    }
+  };
+
+  const handleClaimComplete = () => {
+    setStep("share");
+  };
+
+  const handleShare = async () => {
+    try {
+      await sdk.actions.composeCast({
+        text: "Just joined Policast! Predict public sentiments and earn BSTR tokens! 🚩",
+        embeds: ["https://buster-mkt.vercel.app"],
+      });
+      setStep("done");
+      setIsOpen(false);
+      localStorage.setItem("hasCompletedOnboarding", "true");
+    } catch (error) {
+      console.error("Failed to compose cast:", error);
+      setStep("done");
+      setIsOpen(false);
+      localStorage.setItem("hasCompletedOnboarding", "true");
+    }
+  };
+
   const handleClose = () => {
     setIsOpen(false);
-    localStorage.setItem("hasSeenOnboarding", "true");
+    localStorage.setItem("hasCompletedOnboarding", "true");
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Policast</DialogTitle>
+          <DialogTitle>
+            {step === "add" && "Welcome to Policast!"}
+            {step === "claim" && "Claim Your Tokens"}
+            {step === "share" && "Share Policast"}
+          </DialogTitle>
         </DialogHeader>
-        <p className="py-4 text-sm text-muted-foreground">
-          Bet BSTR tokens on public sentiments like “Will it trump sack elon
-          before his tenure ends?” on Base. Claim tokens to start!
-        </p>
-        <div className="flex gap-2">
-          <ClaimTokensButton />
-          <Button variant="outline" onClick={handleClose} className="w-full">
-            Close
-          </Button>
-        </div>
+        {step === "add" && (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-gray-600">
+              Add Policast to your Farcaster client to claim 5000 BSTR tokens
+              and start predicting!
+            </p>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleAddFrame}
+                className="bg-gray-800 text-white hover:bg-gray-900"
+              >
+                Add Policast
+              </Button>
+              <Button variant="outline" onClick={handleClose}>
+                Skip
+              </Button>
+            </div>
+          </div>
+        )}
+        {step === "claim" && (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-gray-600">
+              Great! Now claim your 5000 BSTR tokens to start playing.
+            </p>
+            <ClaimTokensButton onClaimComplete={handleClaimComplete} />
+          </div>
+        )}
+        {step === "share" && (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-gray-600">
+              Awesome! Share Policast with your friends on Farcaster to spread
+              the word.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleShare}
+                className="bg-gray-800 text-white hover:bg-gray-900"
+              >
+                Share to Farcaster
+              </Button>
+              <Button variant="outline" onClick={handleClose}>
+                Skip
+              </Button>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -1,6 +1,7 @@
 // src/app/page.tsx
 import { EnhancedPredictionMarketDashboard } from "@/components/enhanced-prediction-market-dashboard";
 import { OnboardingModal } from "@/components/OnboardingModal";
+import { Suspense } from "react";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -32,11 +33,16 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <>
-      {" "}
-      {/* <-- 2a. Wrap in a Fragment */}
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen flex-col items-center justify-center">
+          {/* You can put a more sophisticated loading skeleton here if you like */}
+          <p className="text-lg text-gray-600">Loading Dashboard...</p>
+        </div>
+      }
+    >
       <EnhancedPredictionMarketDashboard />
       <OnboardingModal /> {/* <-- 2b. Render the modal */}
-    </>
+    </Suspense>
   );
 }

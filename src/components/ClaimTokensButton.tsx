@@ -1,7 +1,6 @@
-// src/components/ClaimTokensButton.tsx
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useActiveAccount, useSendTransaction } from "thirdweb/react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -16,12 +15,17 @@ const contract = getContract({
   address: "0x55b04F15A1878fa5091D5E35ebceBC06A5EC2F31",
 });
 
-export function ClaimTokensButton() {
+interface ClaimTokensButtonProps {
+  onClaimComplete?: () => void;
+}
+
+export function ClaimTokensButton({ onClaimComplete }: ClaimTokensButtonProps) {
   const account = useActiveAccount();
   const [isClaimLoading, setIsClaimLoading] = useState(false);
   const { toast } = useToast();
   const { mutate: sendTransaction, isPending } = useSendTransaction();
   const [hasClaimed, setHasClaimed] = useState(false);
+
   const handleClaimTokens = async () => {
     if (!account) {
       toast({
@@ -44,9 +48,10 @@ export function ClaimTokensButton() {
         onSuccess: () => {
           toast({
             title: "Tokens Claimed!",
-            description: "You've claimed 5000 BUSTER tokens.",
+            description: "You've claimed 5000 BSTR tokens.",
           });
           setHasClaimed(true);
+          onClaimComplete?.();
         },
         onError: (error) => {
           let message = "Transaction failed.";
@@ -82,8 +87,7 @@ export function ClaimTokensButton() {
     <Button
       onClick={handleClaimTokens}
       disabled={isClaimLoading || isPending}
-      variant="outline"
-      className="px-3 py-1 text-sm"
+      className="bg-gray-800 text-white hover:bg-gray-900 px-3 py-1 text-sm"
     >
       {isClaimLoading || isPending ? (
         <>
@@ -91,7 +95,7 @@ export function ClaimTokensButton() {
           Claiming...
         </>
       ) : (
-        "Claim Tokens"
+        "Claim 5000 BSTR"
       )}
     </Button>
   );

@@ -132,18 +132,14 @@ export async function GET() {
     const neynar = new NeynarAPIClient({ apiKey: neynarApiKey });
     console.log("✅ Neynar client initialized.");
 
-    // Fetch latest block number and timestamp using Alchemy RPC
+    // Fetch latest block number
     console.log("🔗 Fetching latest block number...");
     const latestBlock = BigInt(
       await withRetry(() => provider.getBlockNumber())
     );
-    const blockInfo = await withRetry(() =>
-      provider.getBlock(Number(latestBlock))
-    );
-    const lastUpdated = Number(blockInfo?.timestamp || 0) * 1000; // Convert to ms
-    console.log(`🔢 Latest block: ${latestBlock}, Timestamp: ${lastUpdated}`);
+    console.log(`🔢 Latest block: ${latestBlock}`);
 
-    // Fetch bettingToken metadata using ethers.js
+    // Fetch bettingToken metadata
     const bettingTokenAddress = await withRetry(() =>
       contractInstance.bettingToken()
     );
@@ -158,12 +154,12 @@ export async function GET() {
     ]);
     console.log(`💸 Token: ${tokenSymbol}, Decimals: ${tokenDecimals}`);
 
-    // Fetch Claimed events using ethers.js
+    // Fetch Claimed events
     console.log("📦 Fetching Claimed events...");
     const DEPLOYMENT_BLOCK = BigInt(29490017);
     const cachedBlock = cache.get<string>(LAST_BLOCK_KEY);
     let fromBlock = cachedBlock ? BigInt(cachedBlock) : DEPLOYMENT_BLOCK;
-    const blockRange = BigInt(10000);
+    const blockRange = BigInt(500); // Alchemy limit
     const allEvents: ClaimedEvent[] = [];
     const eventFilter = contractInstance.filters.Claimed();
 
@@ -177,27 +173,37 @@ export async function GET() {
         break;
       }
       console.log(`📄 Fetching events from block ${fromBlock} to ${toBlock}`);
-      const events = await withRetry(() =>
-        contractInstance.queryFilter(
-          eventFilter,
-          Number(fromBlock),
-          Number(toBlock)
-        )
-      );
-      // Assert that these are EventLogs for a named event
-      const typedEvents = events as ethers.EventLog[];
+      try {
+        const events = await withRetry(() =>
+          contractInstance.queryFilter(
+            eventFilter,
+            Number(fromBlock),
+            Number(toBlock)
+          )
+        );
+        const typedEvents = events as ethers.EventLog[];
 
-      const formattedEvents = typedEvents.map((event: ethers.EventLog) => ({
-        args: {
-          // Cast named args to their expected types
-          marketId: event.args.marketId as bigint,
-          user: event.args.user as string,
-          amount: event.args.amount as bigint,
-        },
-        blockNumber: BigInt(event.blockNumber!), // blockNumber should not be null for historical events
-      }));
-      allEvents.push(...formattedEvents);
-      console.log(`✅ Fetched ${events.length} events in this batch.`);
+        const formattedEvents = typedEvents
+          .filter((event) => event.args && event.args.user && event.args.amount)
+          .map((event: ethers.EventLog) => ({
+            args: {
+              marketId: BigInt(event.args.marketId || 0),
+              user: String(event.args.user),
+              amount: BigInt(event.args.amount || 0),
+            },
+            blockNumber: BigInt(event.blockNumber || 0),
+          }));
+        allEvents.push(...formattedEvents);
+        console.log(
+          `✅ Fetched ${formattedEvents.length} events in this batch.`
+        );
+      } catch (error) {
+        console.error(
+          `❌ Error fetching events for block range ${fromBlock}-${toBlock}:`,
+          error
+        );
+        // Skip this range and continue
+      }
       fromBlock = toBlock + BigInt(1);
     }
 
@@ -207,16 +213,8 @@ export async function GET() {
     console.log("💰 Aggregating winnings...");
     const winnersMap = new Map<string, number>();
     for (const event of allEvents) {
-      if (
-        !event.args ||
-        typeof event.args.user !== "string" ||
-        typeof event.args.amount === "undefined"
-      ) {
-        console.warn("⚠️ Invalid event args:", JSON.stringify(event, null, 2));
-        continue;
-      }
       const user = event.args.user.toLowerCase();
-      const amountWei = BigInt(event.args.amount);
+      const amountWei = event.args.amount;
       const amountDecimal =
         Number(amountWei) / Math.pow(10, Number(tokenDecimals));
       winnersMap.set(user, (winnersMap.get(user) || 0) + amountDecimal);
@@ -252,14 +250,15 @@ export async function GET() {
             addressTypes: ["custody_address", "verified_address"],
           })
         );
-        // Transform raw users to NeynarUser
         const transformedUsersMap: Record<string, NeynarUser[]> = {};
         for (const [address, users] of Object.entries(newUsersMap)) {
-          transformedUsersMap[address] = users.map((user: NeynarRawUser) => ({
-            username: user.username,
-            fid: user.fid.toString(),
-            pfp_url: user.pfp_url || null,
-          }));
+          transformedUsersMap[address.toLowerCase()] = users.map(
+            (user: NeynarRawUser) => ({
+              username: user.username,
+              fid: user.fid.toString(),
+              pfp_url: user.pfp_url || null,
+            })
+          );
         }
         addressToUsersMap = { ...addressToUsersMap, ...transformedUsersMap };
         cache.set(NEYNAR_CACHE_KEY, addressToUsersMap);
@@ -270,16 +269,15 @@ export async function GET() {
         );
       } catch (neynarError) {
         console.error("❌ Neynar API error:", neynarError);
+        // Continue with cached data
       }
-    } else {
-      console.log("🤷 All addresses cached for Neynar.");
     }
 
     // Build leaderboard
     console.log("🧠 Building leaderboard...");
     const leaderboard: LeaderboardEntry[] = winners
       .map((winner) => {
-        const usersForAddress = addressToUsersMap[winner.address];
+        const usersForAddress = addressToUsersMap[winner.address.toLowerCase()];
         const user =
           usersForAddress && usersForAddress.length > 0
             ? usersForAddress[0]
@@ -302,16 +300,11 @@ export async function GET() {
     // Cache leaderboard and last block
     cache.set(CACHE_KEY, leaderboard);
     if (fromBlock > latestBlock) {
-      // This means the loop completed fully
       cache.set(LAST_BLOCK_KEY, latestBlock.toString());
     }
     console.log("✅ Cached leaderboard and last block");
 
-    return NextResponse.json({
-      leaderboard,
-      tokenSymbol,
-      lastUpdated,
-    });
+    return NextResponse.json(leaderboard);
   } catch (error) {
     console.error("❌ Leaderboard fetch error:", error);
     console.error((error as Error).stack);

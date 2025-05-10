@@ -355,6 +355,7 @@ export function VoteHistory() {
         <div className="divide-y divide-gray-200">
           <div className="grid grid-cols-4 gap-4 px-4 py-2 bg-gray-100 text-xs font-medium text-gray-700">
             <button
+              role="columnheader"
               onClick={() => handleSort("marketId")}
               className="flex items-center gap-1 hover:text-gray-900"
               aria-sort={getAriaSort("marketId")}
@@ -364,6 +365,7 @@ export function VoteHistory() {
               <ArrowUpDown className="h-4 w-4" />
             </button>
             <button
+              role="columnheader"
               onClick={() => handleSort("marketName")}
               className="flex items-center gap-1 hover:text-gray-900"
               aria-sort={getAriaSort("marketName")}
@@ -373,6 +375,7 @@ export function VoteHistory() {
               <ArrowUpDown className="h-4 w-4" />
             </button>
             <button
+              role="columnheader"
               onClick={() => handleSort("option")}
               className="flex items-center gap-1 hover:text-gray-900"
               aria-sort={getAriaSort("option")}
@@ -382,6 +385,7 @@ export function VoteHistory() {
               <ArrowUpDown className="h-4 w-4" />
             </button>
             <button
+              role="columnheader"
               onClick={() => handleSort("amount")}
               className="flex items-center gap-1 hover:text-gray-900 text-right"
               aria-sort={getAriaSort("amount")}
