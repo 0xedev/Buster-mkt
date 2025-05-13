@@ -12,7 +12,7 @@
     "@farcaster/auth-kit": "^0.6.0",
     "@farcaster/core": "^0.16.0",
     "@farcaster/frame-node": "^0.0.23",
-    "@farcaster/frame-sdk": "^0.0.39",
+    "@farcaster/frame-sdk": "^0.0.34",
     "@farcaster/frame-wagmi-connector": "^0.0.22",
     "@neynar/nodejs-sdk": "^2.37.0",
     "@radix-ui/react-dialog": "^1.1.11",
