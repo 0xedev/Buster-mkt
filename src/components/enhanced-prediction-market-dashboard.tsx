@@ -1,7 +1,7 @@
 "use client";
 
-import { useReadContract, useActiveAccount } from "thirdweb/react";
-import { contract } from "@/constants/contract";
+import { useReadContract, useAccount } from "wagmi";
+import { contract, contractAbi } from "@/constants/contract";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarketCard, Market } from "./marketCard";
 import { Footer } from "./footer";
@@ -21,32 +21,39 @@ type LeaderboardEntry = {
 };
 
 export function EnhancedPredictionMarketDashboard() {
-  const account = useActiveAccount();
+  const { address } = useAccount();
   const searchParams = useSearchParams();
   const router = useRouter();
   const currentPathname = usePathname();
 
-  // State to control the active tab
-  const [activeTab, setActiveTab] = useState(
-    () => searchParams.get("tab") || "active"
-  );
+  // Initialize with a fixed default. Will be updated from URL after client mount.
+  const [activeTab, setActiveTab] = useState("active");
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    // This effect runs only on the client, after the initial render
+    setIsClient(true);
+    const tabFromUrl = searchParams.get("tab") || "active";
+    setActiveTab(tabFromUrl);
+  }, [searchParams]); // Re-run if searchParams change after initial mount
 
   const { data: marketCount, isLoading: isLoadingMarketCount } =
     useReadContract({
-      contract,
-      method: "function getMarketCount() view returns (uint256)",
-      params: [],
+      address: contract.address,
+      abi: contractAbi,
+      functionName: "getMarketCount",
+      args: [],
     });
 
   const { data: marketInfos, isLoading: isLoadingMarketInfos } =
     useReadContract({
-      contract,
-      method:
-        "function getMarketInfoBatch(uint256[] _marketIds) view returns (string[] questions, string[] optionAs, string[] optionBs, uint256[] endTimes, uint8[] outcomes, uint256[] totalOptionASharesArray, uint256[] totalOptionBSharesArray, bool[] resolvedArray)",
-      params: [
+      address: contract.address,
+      abi: contractAbi,
+      functionName: "getMarketInfoBatch",
+      args: [
         Array.from({ length: Number(marketCount || 0) }, (_, i) => BigInt(i)),
       ],
-      queryOptions: { enabled: !!marketCount && marketCount > 0n },
+      query: { enabled: !!marketCount && marketCount > 0n },
     });
 
   const processedMarkets = useMemo(() => {
@@ -66,7 +73,16 @@ export function EnhancedPredictionMarketDashboard() {
       totalOptionASharesArray,
       totalOptionBSharesArray,
       resolvedArray,
-    ] = marketInfos;
+    ] = marketInfos as [
+      string[],
+      string[],
+      string[],
+      bigint[],
+      number[],
+      bigint[],
+      bigint[],
+      boolean[]
+    ];
 
     for (let i = 0; i < count; i++) {
       if (
@@ -142,9 +158,7 @@ export function EnhancedPredictionMarketDashboard() {
       if (!res.ok) {
         let errorDetails = `HTTP error! status: ${res.status}`;
         try {
-          // Try to get a more specific error message from the server response
           const errorText = await res.text();
-          // Avoid showing full HTML pages as error messages, keep it concise
           if (
             errorText &&
             !errorText.toLowerCase().includes("<html") &&
@@ -155,14 +169,12 @@ export function EnhancedPredictionMarketDashboard() {
                 ? errorText.substring(0, 147) + "..."
                 : errorText;
           }
-          //eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (e) {
-          // Ignore if reading text fails, stick with the status code message
+        } catch {
+          // Ignore if reading text fails
         }
         throw new Error(errorDetails);
       }
 
-      // If res.ok is true, then we can safely try to parse JSON
       const data = await res.json();
 
       if (Array.isArray(data)) {
@@ -178,14 +190,12 @@ export function EnhancedPredictionMarketDashboard() {
         (err as Error).message ||
         "Failed to load leaderboard. Please try again later.";
 
-      // You can still have specific overrides if needed
       if (displayError.includes("NEYNAR_API_KEY")) {
         displayError = "Server configuration error. Please try again later.";
       } else if (displayError.includes("eth_getLogs")) {
         displayError =
           "Unable to fetch leaderboard data due to blockchain query limits. Please try again later.";
       } else if (err instanceof SyntaxError) {
-        // Catch if res.ok was true but JSON was still malformed
         displayError =
           "Received malformed data from the server. Please try again later.";
       }
@@ -204,13 +214,6 @@ export function EnhancedPredictionMarketDashboard() {
       hasFetchedInitially.current = true;
     }
   }, []);
-  // Effect to sync activeTab state with URL search parameter
-  useEffect(() => {
-    const tabFromUrl = searchParams.get("tab") || "active";
-    if (tabFromUrl !== activeTab) {
-      setActiveTab(tabFromUrl);
-    }
-  }, [searchParams, activeTab]); // Re-run if searchParams or activeTab changes
 
   const handleTabChange = (newTabValue: string) => {
     setActiveTab(newTabValue);
@@ -255,20 +258,21 @@ export function EnhancedPredictionMarketDashboard() {
     </div>
   );
 
-  const showVoteHistory = !!account;
+  // Determine showVoteHistory based on isClient and address
+  const actualShowVoteHistory = isClient && !!address;
 
   return (
     <div className="min-h-screen flex flex-col pb-20 md:pb-0">
       <Navbar />
       <div className="flex-grow container mx-auto p-4">
         <Tabs
-          value={activeTab} // Controlled component: use value
-          onValueChange={handleTabChange} // Handler for when tab changes
+          value={activeTab}
+          onValueChange={handleTabChange}
           className="w-full"
         >
           <TabsList
             className={`grid w-full ${
-              showVoteHistory ? "grid-cols-4" : "grid-cols-3"
+              actualShowVoteHistory ? "grid-cols-4" : "grid-cols-3"
             } overflow-x-auto whitespace-nowrap hidden md:grid`}
           >
             <TabsTrigger value="active" className="text-xs px-2">
@@ -280,7 +284,7 @@ export function EnhancedPredictionMarketDashboard() {
             <TabsTrigger value="leaderboard" className="text-xs px-2">
               Leaderboard
             </TabsTrigger>
-            {showVoteHistory && (
+            {actualShowVoteHistory && (
               <TabsTrigger value="myvotes" className="text-xs px-2">
                 My Shares
               </TabsTrigger>
@@ -360,7 +364,7 @@ export function EnhancedPredictionMarketDashboard() {
                           <MarketCard
                             key={`resolved-${index}`}
                             index={processedMarkets.findIndex(
-                              (m) =>
+                              (m: Market) =>
                                 m.question === market.question &&
                                 m.endTime === market.endTime
                             )}
@@ -386,21 +390,27 @@ export function EnhancedPredictionMarketDashboard() {
                     </h3>
                   </div>
                   {isLoadingLeaderboard ? (
-                    <div className="divide-y divide-gray-200">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="p-4 animate-pulse">
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center">
-                              <div className="h-8 w-8 bg-gray-200 rounded-full mr-3"></div>
-                              <div>
-                                <div className="h-4 bg-gray-200 rounded w-32 mb-1"></div>
-                                <div className="h-3 bg-gray-100 rounded w-16"></div>
-                              </div>
-                            </div>
-                            <div className="h-5 bg-gray-200 rounded w-20"></div>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="flex justify-center items-center p-10">
+                      <svg
+                        className="animate-spin h-8 w-8 text-blue-500"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
                     </div>
                   ) : leaderboardError ? (
                     <div className="p-4 text-center text-red-600">
@@ -477,7 +487,7 @@ export function EnhancedPredictionMarketDashboard() {
                 </div>
               </TabsContent>
 
-              {showVoteHistory && (
+              {actualShowVoteHistory && (
                 <TabsContent value="myvotes" className="mt-6">
                   <VoteHistory />
                 </TabsContent>

@@ -1,5 +1,5 @@
 import { Badge } from "./ui/badge";
-import { toEther } from "thirdweb";
+import { formatEther } from "viem";
 import { useEffect, useState, useCallback } from "react";
 import { toFixed } from "@/lib/utils";
 
@@ -27,7 +27,7 @@ export function MarketSharesDisplay({
 
   const calculateWinnings = useCallback(
     (option: "A" | "B") => {
-      if (!sharesBalance || !market) return BigInt(0); // market is a dependency
+      if (!sharesBalance || !market) return BigInt(0);
 
       const userShares =
         option === "A"
@@ -40,45 +40,37 @@ export function MarketSharesDisplay({
 
       if (totalSharesForOption === BigInt(0)) return BigInt(0);
 
-      // Calculate user's proportion of the winning side
       const userProportion =
-        (userShares * BigInt(1000000)) / totalSharesForOption; // Multiply by 1M for precision
-
-      // Calculate their share of the losing side's shares
+        (userShares * BigInt(1000000)) / totalSharesForOption;
       const winningsFromLosingShares =
         (totalLosingShares * userProportion) / BigInt(1000000);
 
-      // Total winnings is their original shares plus their proportion of losing shares
       return userShares + winningsFromLosingShares;
     },
     [sharesBalance, market]
-  ); // Add sharesBalance and market as dependencies for useCallback
+  );
 
   useEffect(() => {
-    // calculateWinnings already checks for sharesBalance and market
-
     const newWinnings = {
-      A: calculateWinnings("A"), // calculateWinnings is a dependency
+      A: calculateWinnings("A"),
       B: calculateWinnings("B"),
     };
 
-    // Only update if values actually changed
     if (newWinnings.A !== winnings.A || newWinnings.B !== winnings.B) {
-      // winnings is a dependency
       setWinnings(newWinnings);
     }
-  }, [calculateWinnings, winnings]); // Add calculateWinnings and winnings to useEffect deps
+  }, [calculateWinnings, winnings]);
 
-  const displayWinningsA = toFixed(Number(toEther(winnings.A)), 2);
-  const displayWinningsB = toFixed(Number(toEther(winnings.B)), 2);
+  const displayWinningsA = toFixed(Number(formatEther(winnings.A)), 2);
+  const displayWinningsB = toFixed(Number(formatEther(winnings.B)), 2);
 
   return (
     <div className="flex flex-col gap-2">
       <div className="w-full text-sm text-muted-foreground">
         Your shares: {market.optionA} -{" "}
-        {Math.floor(parseInt(toEther(sharesBalance?.optionAShares)))},{" "}
+        {Math.floor(parseInt(formatEther(sharesBalance?.optionAShares)))},{" "}
         {market.optionB} -{" "}
-        {Math.floor(parseInt(toEther(sharesBalance?.optionBShares)))}
+        {Math.floor(parseInt(formatEther(sharesBalance?.optionBShares)))}
       </div>
       {(winnings.A > 0 || winnings.B > 0) && (
         <div className="flex flex-col gap-1">

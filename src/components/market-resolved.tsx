@@ -1,5 +1,5 @@
-import { useActiveAccount, useReadContract } from "thirdweb/react";
-import { contract } from "@/constants/contract";
+import { useAccount, useReadContract } from "wagmi";
+import { contractAddress, contractAbi } from "@/constants/contract";
 
 interface MarketResolvedProps {
   marketId: number;
@@ -14,19 +14,24 @@ export function MarketResolved({
   optionA,
   optionB,
 }: MarketResolvedProps) {
-  const account = useActiveAccount();
+  const { address: accountAddress, isConnected } = useAccount();
 
   // Only fetch claimed status if account is connected
   const { data: claimedStatus, isLoading } = useReadContract({
-    contract,
-    method:
-      "function getUserClaimedStatus(uint256 _marketId, address _user) view returns (bool)",
-    params: [BigInt(marketId), account?.address || "0x0"],
-    queryOptions: { enabled: !!account }, // Disabled query if no account
+    abi: contractAbi,
+    address: contractAddress,
+    functionName: "getUserClaimedStatus",
+    args: [
+      BigInt(marketId),
+      accountAddress || "0x0000000000000000000000000000000000000000",
+    ], // Use a zero address if not connected
+    query: {
+      enabled: isConnected && !!accountAddress, // Query only if connected and address is available
+    },
   });
 
   // Determine distribution message
-  const distributionMessage = !account
+  const distributionMessage = !isConnected
     ? "Connect wallet to view reward status"
     : isLoading
     ? "Checking reward status..."

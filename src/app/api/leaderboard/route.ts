@@ -1,71 +1,28 @@
 import { NextResponse } from "next/server";
 import { NeynarAPIClient } from "@neynar/nodejs-sdk";
-import { ethers } from "ethers";
 import NodeCache from "node-cache";
+import {
+  publicClient,
+  contractAddress,
+  contractAbi,
+  tokenAddress as defaultTokenAddress,
+  tokenAbi as defaultTokenAbi,
+} from "@/constants/contract";
+import { Address, parseAbiItem } from "viem";
 
 // Initialize cache
-const cache = new NodeCache({ stdTTL: 500, checkperiod: 60 });
+const cache = new NodeCache({ stdTTL: 3600, checkperiod: 120 }); // 1-hour TTL
+const EVENT_CACHE_KEY = "claimed_events";
 const CACHE_KEY = "leaderboard";
 const LAST_BLOCK_KEY = "last_fetched_block";
 const NEYNAR_CACHE_KEY = "neynar_users";
-
-// Alchemy RPC URL
-const ALCHEMY_RPC_URL =
-  "https://base-mainnet.g.alchemy.com/v2/4tJqy59Y_Axu4yjgRuVf1ejipJKPbuh2";
-
-// Initialize ethers provider
-const provider = new ethers.JsonRpcProvider(ALCHEMY_RPC_URL);
-
-// Contract address and ABI
-const CONTRACT_ADDRESS = "0xc703856dc56576800F9bc7DfD6ac15e92Ac2d7D6";
-const CONTRACT_ABI = [
-  {
-    type: "event",
-    name: "Claimed",
-    inputs: [
-      { indexed: true, name: "marketId", type: "uint256" },
-      { indexed: true, name: "user", type: "address" },
-      { indexed: false, name: "amount", type: "uint256" },
-    ],
-    anonymous: false,
-  },
-  {
-    type: "function",
-    name: "bettingToken",
-    inputs: [],
-    outputs: [{ name: "", type: "address" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "symbol",
-    inputs: [],
-    outputs: [{ name: "", type: "string" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "decimals",
-    inputs: [],
-    outputs: [{ name: "", type: "uint8" }],
-    stateMutability: "view",
-  },
-];
-
-// Initialize contract instance
-const contractInstance = new ethers.Contract(
-  CONTRACT_ADDRESS,
-  CONTRACT_ABI,
-  provider
-);
+const MAX_CONCURRENT_REQUESTS = 1; // Reduced to 1 to avoid rate limits
 
 // Define types
 interface ClaimedEvent {
-  args: {
-    marketId: bigint;
-    user: string;
-    amount: bigint;
-  };
+  marketId: bigint;
+  user: Address;
+  amount: bigint;
   blockNumber: bigint;
 }
 
@@ -89,34 +46,90 @@ interface LeaderboardEntry {
   address: string;
 }
 
-// Retry utility
+// Enhanced retry with 429 handling
 async function withRetry<T>(
   fn: () => Promise<T>,
   retries = 3,
-  delay = 1000
+  baseDelay = 2000 // Increased base delay
 ): Promise<T> {
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
-    } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
       if (i === retries - 1) throw error;
+      let delay = baseDelay * Math.pow(2, i); // Exponential backoff
       console.warn(`Retry ${i + 1}/${retries} failed:`, error);
+
+      // Handle 429 Too Many Requests
+      if (error?.status === 429) {
+        delay = Math.max(delay, 10000); // Wait 10s for rate limit
+        console.warn(`Rate limit hit, waiting ${delay}ms`);
+      }
+
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
   throw new Error("Max retries reached");
 }
 
+// Batch utility for Neynar calls
+async function batchFetchNeynarUsers(
+  neynar: NeynarAPIClient,
+  addresses: string[],
+  batchSize = 25
+): Promise<Record<string, NeynarUser[]>> {
+  const result: Record<string, NeynarUser[]> = {};
+  for (let i = 0; i < addresses.length; i += batchSize) {
+    const batch = addresses.slice(i, i + batchSize);
+    try {
+      const usersMap = await withRetry(() =>
+        neynar.fetchBulkUsersByEthOrSolAddress({
+          addresses: batch,
+          addressTypes: ["custody_address", "verified_address"],
+        })
+      );
+      for (const [address, users] of Object.entries(usersMap)) {
+        result[address.toLowerCase()] = users.map((user: NeynarRawUser) => ({
+          username: user.username,
+          fid: user.fid.toString(),
+          pfp_url: user.pfp_url || null,
+        }));
+      }
+    } catch (error) {
+      console.error(
+        `Failed to fetch Neynar batch ${i / batchSize + 1}:`,
+        error
+      );
+    }
+  }
+  return result;
+}
+
+// Throttle concurrent requests
+async function throttleRequests<T>(
+  tasks: (() => Promise<T>)[],
+  maxConcurrent: number
+): Promise<T[]> {
+  const results: T[] = [];
+  for (let i = 0; i < tasks.length; i += maxConcurrent) {
+    const batch = tasks.slice(i, i + maxConcurrent);
+    const batchResults = await Promise.all(batch.map((task) => task()));
+    results.push(...batchResults);
+  }
+  return results;
+}
+
 export async function GET() {
+  // Return cached leaderboard immediately if available
+  const cachedLeaderboard = cache.get<LeaderboardEntry[]>(CACHE_KEY);
+  if (cachedLeaderboard) {
+    console.log("✅ Serving from cache");
+    return NextResponse.json(cachedLeaderboard);
+  }
+
   try {
     console.log("🚀 Starting leaderboard fetch...");
-
-    // Check cache
-    const cachedLeaderboard = cache.get<LeaderboardEntry[]>(CACHE_KEY);
-    if (cachedLeaderboard) {
-      console.log("✅ Serving from cache");
-      return NextResponse.json(cachedLeaderboard);
-    }
 
     // Validate environment variables
     const neynarApiKey = process.env.NEYNAR_API_KEY;
@@ -134,23 +147,34 @@ export async function GET() {
 
     // Fetch latest block number
     console.log("🔗 Fetching latest block number...");
-    const latestBlock = BigInt(
-      await withRetry(() => provider.getBlockNumber())
-    );
+    const latestBlock = await withRetry(() => publicClient.getBlockNumber());
     console.log(`🔢 Latest block: ${latestBlock}`);
 
-    // Fetch bettingToken metadata
-    const bettingTokenAddress = await withRetry(() =>
-      contractInstance.bettingToken()
-    );
-    const tokenContract = new ethers.Contract(
-      bettingTokenAddress,
-      CONTRACT_ABI,
-      provider
-    );
-    const [tokenSymbol, tokenDecimals] = await Promise.all([
-      withRetry(() => tokenContract.symbol()),
-      withRetry(() => tokenContract.decimals()),
+    // Fetch token metadata using multicall
+    const [tokenSymbol, tokenDecimals] = await withRetry(() =>
+      publicClient.multicall({
+        contracts: [
+          {
+            address: contractAddress,
+            abi: contractAbi,
+            functionName: "bettingToken",
+          },
+          {
+            address: defaultTokenAddress,
+            abi: defaultTokenAbi,
+            functionName: "symbol",
+          },
+          {
+            address: defaultTokenAddress,
+            abi: defaultTokenAbi,
+            functionName: "decimals",
+          },
+        ],
+      })
+    ).then((results) => [
+      (results[0].result as Address) || defaultTokenAddress,
+      results[1].result as string,
+      Number(results[2].result),
     ]);
     console.log(`💸 Token: ${tokenSymbol}, Decimals: ${tokenDecimals}`);
 
@@ -159,62 +183,83 @@ export async function GET() {
     const DEPLOYMENT_BLOCK = BigInt(29490017);
     const cachedBlock = cache.get<string>(LAST_BLOCK_KEY);
     let fromBlock = cachedBlock ? BigInt(cachedBlock) : DEPLOYMENT_BLOCK;
-    const blockRange = BigInt(500); // Alchemy limit
-    const allEvents: ClaimedEvent[] = [];
-    const eventFilter = contractInstance.filters.Claimed();
+    const blockRange = BigInt(500); // Alchemy's limit
+    const cachedEvents = cache.get<ClaimedEvent[]>(EVENT_CACHE_KEY) || [];
+    const allEvents: ClaimedEvent[] = [...cachedEvents];
+    const fetchTasks: (() => Promise<void>)[] = [];
 
     while (fromBlock <= latestBlock) {
       const toBlock =
-        fromBlock + blockRange - BigInt(1) > latestBlock
+        fromBlock + blockRange - 1n > latestBlock
           ? latestBlock
-          : fromBlock + blockRange - BigInt(1);
-      if (toBlock < fromBlock) {
-        console.log(`🏁 Reached end of blocks to scan.`);
-        break;
-      }
-      console.log(`📄 Fetching events from block ${fromBlock} to ${toBlock}`);
-      try {
-        const events = await withRetry(() =>
-          contractInstance.queryFilter(
-            eventFilter,
-            Number(fromBlock),
-            Number(toBlock)
-          )
-        );
-        const typedEvents = events as ethers.EventLog[];
+          : fromBlock + blockRange - 1n;
+      if (toBlock < fromBlock) break;
 
-        const formattedEvents = typedEvents
-          .filter((event) => event.args && event.args.user && event.args.amount)
-          .map((event: ethers.EventLog) => ({
-            args: {
-              marketId: BigInt(event.args.marketId || 0),
-              user: String(event.args.user),
-              amount: BigInt(event.args.amount || 0),
-            },
-            blockNumber: BigInt(event.blockNumber || 0),
-          }));
-        allEvents.push(...formattedEvents);
-        console.log(
-          `✅ Fetched ${formattedEvents.length} events in this batch.`
-        );
-      } catch (error) {
-        console.error(
-          `❌ Error fetching events for block range ${fromBlock}-${toBlock}:`,
-          error
-        );
-        // Skip this range and continue
-      }
-      fromBlock = toBlock + BigInt(1);
+      fetchTasks.push(async () => {
+        console.log(`📄 Fetching events from block ${fromBlock} to ${toBlock}`);
+        try {
+          const logs = await withRetry(() =>
+            publicClient.getLogs({
+              address: contractAddress,
+              event: parseAbiItem(
+                "event Claimed(uint256 indexed marketId, address indexed user, uint256 amount)"
+              ),
+              fromBlock,
+              toBlock,
+            })
+          );
+          const formattedEvents = logs
+            .filter((log) => log.args.user && log.args.amount)
+            .map((log) => ({
+              marketId: log.args.marketId!,
+              user: log.args.user!,
+              amount: log.args.amount!,
+              blockNumber: log.blockNumber,
+            }));
+          allEvents.push(...formattedEvents);
+          console.log(
+            `✅ Fetched ${formattedEvents.length} events from ${fromBlock} to ${toBlock}`
+          );
+        } catch (error) {
+          console.error(
+            `❌ Error fetching events for block range ${fromBlock}-${toBlock}:`,
+            error
+          );
+          throw error; // Let retry handle this
+        }
+      });
+
+      fromBlock = toBlock + 1n;
     }
 
+    // Throttle requests to avoid rate limits
+    await throttleRequests(
+      fetchTasks.map((task) => async () => {
+        await task();
+      }),
+      MAX_CONCURRENT_REQUESTS
+    );
+
     console.log(`🧾 Total Claimed events fetched: ${allEvents.length}`);
+
+    // Deduplicate and sort events
+    const uniqueEvents = Array.from(
+      new Map(
+        allEvents.map((e) => [`${e.user}-${e.marketId}-${e.blockNumber}`, e])
+      ).values()
+    ).sort((a, b) => Number(a.blockNumber - b.blockNumber));
+
+    // Cache events
+    cache.set(EVENT_CACHE_KEY, uniqueEvents, 0); // No TTL for immutable data
+    cache.set(LAST_BLOCK_KEY, latestBlock.toString());
+    console.log("✅ Cached events and last block");
 
     // Aggregate winnings
     console.log("💰 Aggregating winnings...");
     const winnersMap = new Map<string, number>();
-    for (const event of allEvents) {
-      const user = event.args.user.toLowerCase();
-      const amountWei = event.args.amount;
+    for (const event of uniqueEvents) {
+      const user = event.user.toLowerCase();
+      const amountWei = event.amount;
       const amountDecimal =
         Number(amountWei) / Math.pow(10, Number(tokenDecimals));
       winnersMap.set(user, (winnersMap.get(user) || 0) + amountDecimal);
@@ -243,34 +288,14 @@ export async function GET() {
       console.log(
         `📬 Requesting Neynar for ${addressesToFetch.length} addresses`
       );
-      try {
-        const newUsersMap = await withRetry(() =>
-          neynar.fetchBulkUsersByEthOrSolAddress({
-            addresses: addressesToFetch,
-            addressTypes: ["custody_address", "verified_address"],
-          })
-        );
-        const transformedUsersMap: Record<string, NeynarUser[]> = {};
-        for (const [address, users] of Object.entries(newUsersMap)) {
-          transformedUsersMap[address.toLowerCase()] = users.map(
-            (user: NeynarRawUser) => ({
-              username: user.username,
-              fid: user.fid.toString(),
-              pfp_url: user.pfp_url || null,
-            })
-          );
-        }
-        addressToUsersMap = { ...addressToUsersMap, ...transformedUsersMap };
-        cache.set(NEYNAR_CACHE_KEY, addressToUsersMap);
-        console.log(
-          `✅ Neynar responded. Found users for ${
-            Object.keys(transformedUsersMap).length
-          } addresses.`
-        );
-      } catch (neynarError) {
-        console.error("❌ Neynar API error:", neynarError);
-        // Continue with cached data
-      }
+      const newUsersMap = await batchFetchNeynarUsers(neynar, addressesToFetch);
+      addressToUsersMap = { ...addressToUsersMap, ...newUsersMap };
+      cache.set(NEYNAR_CACHE_KEY, addressToUsersMap, 86400); // 1-day TTL
+      console.log(
+        `✅ Neynar responded. Found users for ${
+          Object.keys(newUsersMap).length
+        } addresses.`
+      );
     }
 
     // Build leaderboard
@@ -297,23 +322,28 @@ export async function GET() {
 
     console.log("🏆 Final Leaderboard:", leaderboard);
 
-    // Cache leaderboard and last block
+    // Cache leaderboard
     cache.set(CACHE_KEY, leaderboard);
-    if (fromBlock > latestBlock) {
-      cache.set(LAST_BLOCK_KEY, latestBlock.toString());
-    }
-    console.log("✅ Cached leaderboard and last block");
+    console.log("✅ Cached leaderboard");
 
     return NextResponse.json(leaderboard);
   } catch (error) {
     console.error("❌ Leaderboard fetch error:", error);
     console.error((error as Error).stack);
+
+    // Fallback to cached leaderboard
+    const cachedLeaderboard = cache.get<LeaderboardEntry[]>(CACHE_KEY);
+    if (cachedLeaderboard) {
+      console.log("✅ Serving cached leaderboard due to error");
+      return NextResponse.json(cachedLeaderboard);
+    }
+
     return NextResponse.json(
       {
         error: "Failed to fetch leaderboard",
-        details: (error as Error).message || "Unknown error",
+        details: "Rate limit exceeded. Please try again later.",
       },
-      { status: 500 }
+      { status: 429 } // Return 429 instead of 500
     );
   }
 }

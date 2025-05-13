@@ -9,8 +9,8 @@ import {
   CardTitle,
 } from "./ui/card";
 import { Button } from "./ui/button";
-import { useActiveAccount, useReadContract } from "thirdweb/react";
-import { contract } from "@/constants/contract";
+import { useAccount, useReadContract } from "wagmi";
+import { contract, contractAbi } from "@/constants/contract";
 import { MarketProgress } from "./market-progress";
 import MarketTime from "./market-time";
 import { MarketResolved } from "./market-resolved";
@@ -18,7 +18,6 @@ import { MarketPending } from "./market-pending";
 import { MarketBuyInterface } from "./market-buy-interface";
 import { MarketSharesDisplay } from "./market-shares-display";
 
-// Interface for market data
 export interface Market {
   question: string;
   optionA: string;
@@ -30,29 +29,27 @@ export interface Market {
   resolved: boolean;
 }
 
-// Interface for shares balance
 interface SharesBalance {
   optionAShares: bigint;
   optionBShares: bigint;
 }
 
-// Props for the MarketCard component
 interface MarketCardProps {
   index: number;
   market: Market;
 }
 
 export function MarketCard({ index, market }: MarketCardProps) {
-  const account = useActiveAccount();
+  const { address } = useAccount();
 
   const marketData = market;
 
   const { data: sharesBalanceData } = useReadContract({
-    contract,
-    method:
-      "function getShareBalance(uint256 _marketId, address _user) view returns (uint256 optionAShares, uint256 optionBShares)",
-    params: [BigInt(index), account?.address as string],
-    queryOptions: { enabled: !!account?.address && !!marketData },
+    address: contract.address,
+    abi: contractAbi,
+    functionName: "getShareBalance",
+    args: [BigInt(index), address as `0x${string}`],
+    query: { enabled: !!address && !!marketData },
   });
 
   const sharesBalance: SharesBalance | undefined = sharesBalanceData

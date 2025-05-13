@@ -14,11 +14,16 @@ import { Button } from "@/components/ui/button";
 export function OnboardingModal() {
   const [step, setStep] = useState<"add" | "claim" | "share" | "done">("add");
   const [isOpen, setIsOpen] = useState(false);
+  // To track if the modal was opened by the onboarding logic in the current session
+  const [onboardingTriggered, setOnboardingTriggered] = useState(false);
 
   useEffect(() => {
     if (!localStorage.getItem("hasCompletedOnboarding")) {
       setIsOpen(true);
-      sdk.actions.ready().catch((err) => console.error("Splash error:", err));
+      setOnboardingTriggered(true); // Mark that onboarding logic tried to open the modal
+      sdk.actions
+        .ready()
+        .catch((err) => console.error("SDK ready error:", err));
 
       const checkAdded = async () => {
         const client = await (await sdk.context).client;
@@ -72,8 +77,22 @@ export function OnboardingModal() {
     localStorage.setItem("hasCompletedOnboarding", "true");
   };
 
+  const handleDialogOpeChange = (open: boolean) => {
+    setIsOpen(open);
+    // If the dialog is being closed, and it was opened by the onboarding logic,
+    // and the user hasn't explicitly completed/skipped (which would have already set localStorage),
+    // then set the flag to prevent it from showing again.
+    if (
+      !open &&
+      onboardingTriggered &&
+      !localStorage.getItem("hasCompletedOnboarding")
+    ) {
+      localStorage.setItem("hasCompletedOnboarding", "true");
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleDialogOpeChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>

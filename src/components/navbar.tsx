@@ -1,139 +1,170 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ConnectButton, lightTheme } from "thirdweb/react";
-import { client } from "@/app/client";
-import { base } from "wagmi/chains";
-import { createWallet } from "thirdweb/wallets";
-import { WagmiConfig, createConfig, http } from "wagmi";
-import { farcasterFrame } from "@farcaster/frame-wagmi-connector";
+import { useEffect, useState, Fragment } from "react";
 import { sdk } from "@farcaster/frame-sdk";
-
-const wagmiConfig = createConfig({
-  chains: [base],
-  transports: { [base.id]: http() },
-  connectors: [farcasterFrame()],
-});
-
-const wallets = [
-  createWallet("io.metamask"),
-  createWallet("com.coinbase.wallet"),
-  createWallet("me.rainbow"),
-  createWallet("io.rabby"),
-  createWallet("io.zerion.wallet"),
-];
-
-const customBase = {
-  id: base.id,
-  name: base.name,
-  nativeCurrency: base.nativeCurrency,
-  rpc: "https://base-mainnet.g.alchemy.com/v2/jprc9bb4eoqJdv5K71YUZdhKyf20gILa",
-  blockExplorers: [
-    {
-      name: "Basescan",
-      url: "https://basescan.org",
-      apiUrl: "https://api-basescan.org/api",
-    },
-  ],
-  network: "base",
-};
+import Image from "next/image";
+import { useConnect, useAccount, useDisconnect, Connector } from "wagmi";
 
 export function Navbar() {
   const [username, setUsername] = useState<string | null>(null);
+  const [pfpUrl, setPfpUrl] = useState<string | null>(null);
+  const { connect, connectors } = useConnect();
+  const { isConnected: isAccountConnected } = useAccount();
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const user = await (await sdk.context).user;
-        setUsername(user.username || "player");
+        const context = await sdk.context;
+        setUsername(context.user.username || "player");
+        setPfpUrl(context.user.pfpUrl || null);
       } catch {
         setUsername("player");
+        setPfpUrl(null);
       }
     };
     fetchUser();
   }, []);
 
+  useEffect(() => {
+    const autoConnectInMiniApp = async () => {
+      try {
+        const inMiniApp = await sdk.isInMiniApp();
+        if (inMiniApp && !isAccountConnected) {
+          const farcasterConnector = connectors.find(
+            (c) => c.id === "farcasterFrame"
+          );
+          if (farcasterConnector) {
+            connect({ connector: farcasterConnector });
+          }
+        }
+      } catch (error) {
+        console.error("Error during auto-connect:", error);
+      }
+    };
+    autoConnectInMiniApp();
+  }, [isAccountConnected, connect, connectors]);
+
+  const WalletButton = () => {
+    const {
+      address,
+      isConnected: wagmiIsConnected,
+      isConnecting: wagmiIsConnecting,
+    } = useAccount(); // Use isConnecting from useAccount
+    const { connect: wagmiConnect, connectors: wagmiConnectors } = useConnect();
+    const { disconnect: wagmiDisconnect } = useDisconnect();
+
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+      setIsClient(true);
+    }, []);
+
+    if (!isClient) {
+      return (
+        <div className="px-3 py-1 rounded-full text-sm font-medium text-green-900 animate-pulse">
+          Connecting...
+        </div>
+      );
+    }
+
+    const isValidConnector = (c: unknown): c is Connector =>
+      !!c && typeof c === "object" && "id" in c && "connect" in c;
+
+    const validConnectors = wagmiConnectors.filter(isValidConnector);
+
+    const primaryConnector =
+      validConnectors.find((c) => c.id === "farcasterFrame") ||
+      (validConnectors.length > 0 ? validConnectors[0] : undefined);
+
+    if (wagmiIsConnected && address) {
+      // Connected state
+      return (
+        <div className="flex items-center gap-2">
+          {/* Desktop View: Address + Separate Disconnect Button */}
+          <span className="text-sm font-medium text-gray-700 hidden md:inline">
+            {`${address.slice(0, 6)}...${address.slice(-4)}`}
+          </span>
+          <button
+            onClick={() => wagmiDisconnect()}
+            className="blueGray-500 hover:bg-green-900 text-white px-3 py-1 rounded-full text-sm font-medium transition-colors duration-200"
+          >
+            Disconnect
+          </button>
+
+          {/* Mobile View: Single Button with Address, acts as Disconnect */}
+          <div className="md:hidden">
+            <button
+              onClick={() => wagmiDisconnect()}
+              className="bg-green-800 text-white px-3 py-1 rounded-full text-sm font-medium transition-colors duration-200 whitespace-nowrap"
+            >
+              {`${address.slice(0, 4)}...${address.slice(-3)}`}{" "}
+            </button>
+          </div>
+        </div>
+      );
+    } else if (wagmiIsConnecting) {
+      // Connecting state
+      return (
+        <div className="px-3 py-1 rounded-full text-sm font-medium text-gray-400 animate-pulse">
+          Connecting...
+        </div>
+      );
+    } else {
+      return (
+        <div>
+          {primaryConnector && (
+            <button
+              key={primaryConnector.id}
+              onClick={() => wagmiConnect({ connector: primaryConnector })}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded-full text-sm font-medium transition-colors duration-200 whitespace-nowrap"
+            >
+              Connect Wallet
+            </button>
+          )}
+        </div>
+      );
+    }
+  };
+
   return (
-    <WagmiConfig config={wagmiConfig}>
+    <>
       {/* Desktop View */}
       <div className="hidden md:flex justify-between items-center mb-6 px-4 py-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg shadow-sm">
-        <div className="text-xl font-bold text-gray-800">
-          Welcome {username}
+        <div className="flex items-center gap-3">
+          {pfpUrl && (
+            <Image
+              src={pfpUrl}
+              alt="PFP"
+              width={40}
+              height={40}
+              className="rounded-full"
+            />
+          )}
+          <div className="text-xl font-bold text-gray-800">
+            Welcome {username || "Player"}
+          </div>
         </div>
-        <ConnectButton
-          client={client}
-          theme={lightTheme({
-            colors: {
-              accentText: "#374151",
-              accentButtonBg: "#1f2937",
-              accentButtonText: "white",
-            },
-          })}
-          chain={customBase}
-          wallets={wallets}
-          autoConnect={true}
-          connectModal={{ size: "compact" }}
-          connectButton={{
-            style: {
-              fontSize: "0.875rem",
-              height: "2.75rem",
-              borderRadius: "0.5rem",
-              fontWeight: "600",
-            },
-            label: "Sign In",
-          }}
-          detailsButton={{
-            displayBalanceToken: {
-              [base.id]: "0x55b04F15A1878fa5091D5E35ebceBC06A5EC2F31",
-            },
-            style: {
-              borderRadius: "0.5rem",
-              fontWeight: "600",
-            },
-          }}
-        />
+        <WalletButton />
       </div>
+
       {/* Mobile View */}
-      <div className="md:hidden flex justify-between items-center mb-4 px-3 py-2 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg shadow-sm">
-        <div className="text-sm font-medium text-gray-800">
-          Welcome {username}
+      <div className="md:hidden flex justify-between items-center mb-4 px-3 py-2 bg-gradient-to-r from-green-50 to-green-100 rounded-lg shadow-sm">
+        <div className="flex items-center gap-2">
+          {pfpUrl && (
+            <Image
+              src={pfpUrl}
+              alt="PFP"
+              width={32}
+              height={32}
+              className="rounded-full"
+            />
+          )}
+          <div className="text-sm font-medium text-gray-800">
+            Welcome {username || "Player"}
+          </div>
         </div>
-        <ConnectButton
-          client={client}
-          theme={lightTheme({
-            colors: {
-              accentText: "#374151",
-              accentButtonBg: "#1f2937",
-              accentButtonText: "white",
-            },
-          })}
-          chain={customBase}
-          wallets={wallets}
-          autoConnect={true}
-          connectModal={{ size: "compact" }}
-          connectButton={{
-            style: {
-              fontSize: "0.75rem",
-              height: "2.25rem",
-              padding: "0 0.75rem",
-              borderRadius: "0.5rem",
-              fontWeight: "600",
-            },
-            label: "Sign In",
-          }}
-          detailsButton={{
-            displayBalanceToken: {
-              [base.id]: "0x55b04F15A1878fa5091D5E35ebceBC06A5EC2F31",
-            },
-            style: {
-              fontSize: "0.65rem",
-              height: "2.25rem",
-              borderRadius: "0.5rem",
-              fontWeight: "600",
-            },
-          }}
-        />
+        <WalletButton />
       </div>
-    </WagmiConfig>
+    </>
   );
 }

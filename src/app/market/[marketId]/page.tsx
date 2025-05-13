@@ -1,23 +1,26 @@
-import { readContract } from "thirdweb";
-import { contract } from "@/constants/contract";
+import { contract, contractAbi, publicClient } from "@/constants/contract";
 import { Metadata, ResolvingMetadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 async function fetchMarketData(marketId: string) {
-  const marketData = await readContract({
-    contract,
-    method:
-      "function getMarketInfo(uint256 _marketId) view returns (string question, string optionA, string optionB, uint256 endTime, uint8 outcome, uint256 totalOptionAShares, uint256 totalOptionBShares, bool resolved)",
-    params: [BigInt(marketId)],
+  if (!process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL) {
+    throw new Error("NEXT_PUBLIC_ALCHEMY_RPC_URL is not set");
+  }
+
+  const marketData = await publicClient.readContract({
+    address: contract.address,
+    abi: contractAbi,
+    functionName: "getMarketInfo",
+    args: [BigInt(marketId)],
   });
   return marketData;
 }
 
 export async function generateMetadata(
   { params }: { params: Promise<{ marketId: string }> },
-  //eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   try {

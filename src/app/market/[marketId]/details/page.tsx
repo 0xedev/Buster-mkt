@@ -1,11 +1,12 @@
-import { readContract } from "thirdweb";
-import { contract } from "@/constants/contract";
+import { createPublicClient, http } from "viem";
+import { contract, contractAbi } from "@/constants/contract";
 import { notFound } from "next/navigation";
 import { Metadata, ResolvingMetadata } from "next";
-import { MarketDetailsClient } from "@/components/MarketDetailsClient"; // Import the new client component
+import { MarketDetailsClient } from "@/components/MarketDetailsClient";
 
-//eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { MarketSharesDisplay } from "@/components/market-shares-display";
+import { customBase } from "@/constants/chains";
 
 type MarketInfoContractReturn = readonly [
   string,
@@ -36,11 +37,16 @@ export async function generateMetadata(
     };
   }
 
-  const marketData = (await readContract({
-    contract,
-    method:
-      "function getMarketInfo(uint256 _marketId) view returns (string question, string optionA, string optionB, uint256 endTime, uint8 outcome, uint256 totalOptionAShares, uint256 totalOptionBShares, bool resolved)",
-    params: [BigInt(marketId)],
+  const publicClient = createPublicClient({
+    chain: customBase,
+    transport: http(process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL),
+  });
+
+  const marketData = (await publicClient.readContract({
+    address: contract.address,
+    abi: contractAbi,
+    functionName: "getMarketInfo",
+    args: [BigInt(marketId)],
   })) as MarketInfoContractReturn;
 
   const market = {
@@ -58,8 +64,6 @@ export async function generateMetadata(
     process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app";
   const imageUrl = `${baseUrl}/api/market-image?marketId=${marketId}`;
 
-  //eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  // const postUrl = `${baseUrl}/api/frame-action`;
   const marketUrl = `${baseUrl}/market/${marketId}/details`;
 
   const total = market.totalOptionAShares + market.totalOptionBShares;
@@ -94,7 +98,7 @@ export async function generateMetadata(
     description: `View market: ${market.question} - ${market.optionA}: ${yesPercent}%`,
     other: {
       ...otherParentData, // Spread parent's other metadata first
-      [fcFrameKey]: JSON.stringify(miniAppEmbed), //
+      [fcFrameKey]: JSON.stringify(miniAppEmbed),
     },
     metadataBase: new URL(baseUrl),
     openGraph: {
@@ -124,11 +128,16 @@ export default async function MarketDetailsPage({ params }: Props) {
 
   let marketData: MarketInfoContractReturn;
   try {
-    marketData = (await readContract({
-      contract,
-      method:
-        "function getMarketInfo(uint256 _marketId) view returns (string question, string optionA, string optionB, uint256 endTime, uint8 outcome, uint256 totalOptionAShares, uint256 totalOptionBShares, bool resolved)",
-      params: [BigInt(marketId)],
+    const publicClient = createPublicClient({
+      chain: customBase,
+      transport: http(process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL),
+    });
+
+    marketData = (await publicClient.readContract({
+      address: contract.address,
+      abi: contractAbi,
+      functionName: "getMarketInfo",
+      args: [BigInt(marketId)],
     })) as MarketInfoContractReturn;
   } catch (error) {
     console.error(`Failed to fetch market ${marketId}:`, error);

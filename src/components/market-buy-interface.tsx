@@ -2,10 +2,20 @@
 
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { useState, useRef, useEffect } from "react";
-import { useActiveAccount, useSendAndConfirmTransaction } from "thirdweb/react";
-import { prepareContractCall, readContract } from "thirdweb";
-import { contract, tokenContract } from "@/constants/contract";
+import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  useAccount,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  type BaseError,
+} from "wagmi";
+import {
+  contractAddress,
+  contractAbi,
+  tokenAddress,
+  tokenAbi,
+} from "@/constants/contract";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
@@ -40,8 +50,20 @@ export function MarketBuyInterface({
   marketId,
   market,
 }: MarketBuyInterfaceProps) {
-  const account = useActiveAccount();
-  const { mutateAsync: mutateTransaction } = useSendAndConfirmTransaction();
+  const { address: accountAddress, isConnected } = useAccount();
+  const {
+    data: hash,
+    writeContractAsync,
+    isPending: isWritePending,
+    error: writeError,
+  } = useWriteContract();
+  const {
+    isLoading: isConfirmingTx,
+    isSuccess: isTxConfirmed,
+    error: txError,
+  } = useWaitForTransactionReceipt({
+    hash,
+  });
   const { toast } = useToast();
 
   const [isBuying, setIsBuying] = useState(false);
@@ -56,47 +78,81 @@ export function MarketBuyInterface({
   const [isApproving, setIsApproving] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tokenSymbol, setTokenSymbol] = useState<string>("BUSTER");
-  const [tokenDecimals, setTokenDecimals] = useState<number>(18);
-  const [balance, setBalance] = useState<bigint>(0n);
+  // Wagmi hooks for reading token data
+  const { data: tokenSymbolData, error: tokenSymbolError } = useReadContract({
+    address: tokenAddress,
+    abi: tokenAbi,
+    functionName: "symbol",
+  });
+  const tokenSymbol = (tokenSymbolData as string) || "TOKEN";
 
-  // Fetch token metadata and balance
+  const { data: tokenDecimalsData, error: tokenDecimalsError } =
+    useReadContract({
+      address: tokenAddress,
+      abi: tokenAbi,
+      functionName: "decimals",
+    });
+  const tokenDecimals = (tokenDecimalsData as number | undefined) ?? 18;
+
+  const {
+    data: balanceData,
+    error: balanceError,
+    refetch: refetchBalance,
+  } = useReadContract({
+    address: tokenAddress,
+    abi: tokenAbi,
+    functionName: "balanceOf",
+    args: [accountAddress || "0x0000000000000000000000000000000000000000"],
+    query: {
+      enabled: isConnected && !!accountAddress,
+    },
+  });
+  const balance = (balanceData as bigint | undefined) ?? 0n;
+
+  const {
+    data: allowanceData,
+    error: allowanceError,
+    refetch: refetchAllowance,
+  } = useReadContract({
+    address: tokenAddress,
+    abi: tokenAbi,
+    functionName: "allowance",
+    args: [
+      accountAddress || "0x0000000000000000000000000000000000000000",
+      contractAddress,
+    ],
+    query: {
+      enabled: isConnected && !!accountAddress,
+    },
+  });
+  const userAllowance = (allowanceData as bigint | undefined) ?? 0n;
+
   useEffect(() => {
-    const fetchTokenData = async () => {
-      try {
-        const [symbol, decimals, userBalance] = await Promise.all([
-          readContract({
-            contract: tokenContract,
-            method: "function symbol() view returns (string)",
-            params: [],
-          }),
-          readContract({
-            contract: tokenContract,
-            method: "function decimals() view returns (uint8)",
-            params: [],
-          }),
-          account
-            ? readContract({
-                contract: tokenContract,
-                method: "function balanceOf(address) view returns (uint256)",
-                params: [account.address],
-              })
-            : 0n,
-        ]);
-        setTokenSymbol(symbol);
-        setTokenDecimals(decimals);
-        setBalance(userBalance);
-      } catch (error) {
-        console.error("Failed to fetch token data", error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch token information",
-          variant: "destructive",
-        });
-      }
-    };
-    fetchTokenData();
-  }, [account, toast]);
+    if (
+      tokenSymbolError ||
+      tokenDecimalsError ||
+      balanceError ||
+      allowanceError
+    ) {
+      console.error("Failed to fetch token data:", {
+        tokenSymbolError,
+        tokenDecimalsError,
+        balanceError,
+        allowanceError,
+      });
+      toast({
+        title: "Error",
+        description: "Failed to fetch token information. Please refresh.",
+        variant: "destructive",
+      });
+    }
+  }, [
+    tokenSymbolError,
+    tokenDecimalsError,
+    balanceError,
+    allowanceError,
+    toast,
+  ]);
 
   // Update container height
   useEffect(() => {
@@ -136,7 +192,7 @@ export function MarketBuyInterface({
     }, 200);
   };
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setIsVisible(false);
     setTimeout(() => {
       setIsBuying(false);
@@ -146,7 +202,14 @@ export function MarketBuyInterface({
       setError(null);
       setIsVisible(true);
     }, 200);
-  };
+  }, [
+    setIsVisible,
+    setIsBuying,
+    setBuyingStep,
+    setSelectedOption,
+    setAmount,
+    setError,
+  ]);
 
   const checkApproval = async () => {
     const numAmount = Number(amount);
@@ -164,7 +227,7 @@ export function MarketBuyInterface({
     }
 
     try {
-      if (!account) {
+      if (!isConnected || !accountAddress) {
         toast({
           title: "Wallet Connection Required",
           description: "Please connect your wallet to continue",
@@ -185,14 +248,6 @@ export function MarketBuyInterface({
         return;
       }
 
-      // Check allowance
-      const userAllowance = await readContract({
-        contract: tokenContract,
-        method:
-          "function allowance(address owner, address spender) view returns (uint256)",
-        params: [account.address, contract.address],
-      });
-
       // Proceed based on allowance
       setBuyingStep(amountInUnits > userAllowance ? "allowance" : "confirm");
       setError(null);
@@ -207,7 +262,7 @@ export function MarketBuyInterface({
   };
 
   const handleSetApproval = async () => {
-    if (!account) {
+    if (!isConnected || !accountAddress) {
       toast({
         title: "Wallet Connection Required",
         description: "Please connect your wallet to continue",
@@ -220,30 +275,24 @@ export function MarketBuyInterface({
     try {
       // Using prepareContractCall instead of the approve function
       // This is the ERC20 approval method
-      const tx = await prepareContractCall({
-        contract: tokenContract,
-        method:
-          "function approve(address spender, uint256 amount) returns (bool)",
-        params: [
-          contract.address,
+      await writeContractAsync({
+        address: tokenAddress,
+        abi: tokenAbi,
+        functionName: "approve",
+        args: [
+          contractAddress,
           BigInt(
             "115792089237316195423570985008687907853269984665640564039457584007913129639935"
           ), // Max uint256
         ],
       });
 
-      // Send the transaction and wait for confirmation
-      await mutateTransaction(tx);
-
-      // If successful, move to the next step
-      setBuyingStep("confirm");
-
       toast({
         title: "Approval Successful",
-        description: `You've approved ${tokenSymbol} for trading`,
+        description: `Approval transaction sent. Waiting for confirmation...`,
         duration: 3000,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Approval error:", error);
       // More descriptive error message
       let errorMessage =
@@ -253,7 +302,8 @@ export function MarketBuyInterface({
         if (error.message.includes("user rejected")) {
           errorMessage = "Transaction was rejected in your wallet";
         } else if (error.message.includes("insufficient funds")) {
-          errorMessage = "Insufficient funds for gas";
+          errorMessage =
+            (error as BaseError)?.shortMessage || "Insufficient funds for gas";
         }
       }
 
@@ -273,7 +323,7 @@ export function MarketBuyInterface({
       return;
     }
 
-    if (!account) {
+    if (!isConnected || !accountAddress) {
       toast({
         title: "Wallet Connection Required",
         description: "Please connect your wallet to continue",
@@ -294,17 +344,17 @@ export function MarketBuyInterface({
 
     setIsConfirming(true);
     try {
-      const tx = await prepareContractCall({
-        contract,
-        method:
-          "function buyShares(uint256 _marketId, bool _isOptionA, uint256 _amount)",
-        params: [
+      await writeContractAsync({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: "buyShares",
+        args: [
           BigInt(marketId),
           selectedOption === "A",
           toUnits(amount, tokenDecimals),
         ],
       });
-      await mutateTransaction(tx);
+
       toast({
         title: "Purchase Successful!",
         description: `You bought ${amount} ${
@@ -312,11 +362,11 @@ export function MarketBuyInterface({
         } shares`,
         duration: 5000,
       });
-      handleCancel();
     } catch (error: unknown) {
       console.error("Purchase error:", error);
       let errorMessage = "Failed to process purchase. Check your wallet.";
       if (error instanceof Error) {
+        errorMessage = (error as BaseError)?.shortMessage || errorMessage;
         if (error.message.includes("user rejected")) {
           errorMessage = "Transaction was rejected in your wallet";
         } else if (error.message.includes("Market trading period has ended")) {
@@ -334,6 +384,48 @@ export function MarketBuyInterface({
       setIsConfirming(false);
     }
   };
+  // Effect to handle transaction confirmation
+  useEffect(() => {
+    if (isTxConfirmed) {
+      toast({
+        title: "Transaction Confirmed!",
+        description: `Your ${
+          buyingStep === "allowance" ? "approval" : "purchase"
+        } was successful.`,
+        duration: 5000,
+      });
+      if (buyingStep === "allowance") {
+        refetchAllowance(); // Refetch allowance after successful approval
+        setBuyingStep("confirm");
+      } else if (buyingStep === "confirm") {
+        refetchBalance(); // Refetch balance after successful purchase
+        handleCancel(); // Reset UI
+      }
+      setIsApproving(false);
+      setIsConfirming(false);
+    }
+    if (txError || writeError) {
+      const errorToShow = txError || writeError;
+      toast({
+        title: "Transaction Failed",
+        description:
+          (errorToShow as BaseError)?.shortMessage ||
+          "An unknown error occurred.",
+        variant: "destructive",
+      });
+      setIsApproving(false);
+      setIsConfirming(false);
+    }
+  }, [
+    isTxConfirmed,
+    txError,
+    writeError,
+    buyingStep,
+    toast,
+    handleCancel,
+    refetchAllowance,
+    refetchBalance,
+  ]);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -389,7 +481,7 @@ export function MarketBuyInterface({
                 className="flex-1 min-w-[120px] bg-green-600 hover:bg-green-700"
                 onClick={() => handleBuy("A")}
                 aria-label={`Buy ${market.optionA} shares for "${market.question}"`}
-                disabled={!account}
+                disabled={!isConnected}
               >
                 {market.optionA} ({yesOdds.toFixed(2)}x)
               </Button>
@@ -397,12 +489,12 @@ export function MarketBuyInterface({
                 className="flex-1 min-w-[120px] bg-red-600 hover:bg-red-700"
                 onClick={() => handleBuy("B")}
                 aria-label={`Buy ${market.optionB} shares for "${market.question}"`}
-                disabled={!account}
+                disabled={!isConnected}
               >
                 {market.optionB} ({noOdds.toFixed(2)}x)
               </Button>
             </div>
-            {account && (
+            {accountAddress && (
               <p className="text-xs text-gray-500 text-center">
                 Available:{" "}
                 {(Number(balance) / Math.pow(10, tokenDecimals)).toFixed(2)}{" "}
@@ -494,9 +586,9 @@ export function MarketBuyInterface({
                   <Button
                     onClick={handleSetApproval}
                     className="min-w-[120px]"
-                    disabled={isApproving}
+                    disabled={isApproving || isWritePending || isConfirmingTx}
                   >
-                    {isApproving ? (
+                    {isApproving || isWritePending || isConfirmingTx ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Approving...
@@ -509,7 +601,7 @@ export function MarketBuyInterface({
                     onClick={handleCancel}
                     variant="outline"
                     className="min-w-[120px]"
-                    disabled={isApproving}
+                    disabled={isApproving || isWritePending || isConfirmingTx}
                   >
                     Cancel
                   </Button>
@@ -530,9 +622,9 @@ export function MarketBuyInterface({
                   <Button
                     onClick={handleConfirm}
                     className="min-w-[120px]"
-                    disabled={isConfirming}
+                    disabled={isConfirming || isWritePending || isConfirmingTx}
                   >
-                    {isConfirming ? (
+                    {isConfirming || isWritePending || isConfirmingTx ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Confirming...
@@ -545,7 +637,7 @@ export function MarketBuyInterface({
                     onClick={handleCancel}
                     variant="outline"
                     className="min-w-[120px]"
-                    disabled={isConfirming}
+                    disabled={isConfirming || isWritePending || isConfirmingTx}
                   >
                     Cancel
                   </Button>
