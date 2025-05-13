@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useAccount, useReadContract as useWagmiReadContract } from "wagmi";
+import { useState, useEffect, useCallback } from "react";
+import { useAccount, useReadContract } from "wagmi";
 import { type Address } from "viem";
-import { debounce } from "lodash";
 import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
@@ -16,44 +15,23 @@ import {
   tokenAbi as defaultTokenAbi,
 } from "@/constants/contract";
 
-// Cache keys for local storage
-const CACHE_KEY = "vote_history_cache_v3";
-const LAST_BLOCK_KEY = "last_fetched_block_v3";
-
-const DEPLOYMENT_BLOCK = 29490017n;
-const MAX_CONCURRENT_REQUESTS = 2; // Limit concurrent getLogs calls
-
-interface SharesPurchasedEvent {
-  args: {
-    marketId: bigint;
-    buyer: Address;
-    isOptionA: boolean;
-    amount: bigint;
-  };
-  marketId: bigint;
-  buyer: Address;
-  isOptionA: boolean;
-  amount: bigint;
-  blockNumber: bigint;
-  transactionHash: `0x${string}`;
-  logIndex: number;
-}
-
-interface SharesPurchasedLogArgs {
-  marketId: bigint;
-  buyer: Address;
-  isOptionA: boolean;
-  amount: bigint;
-}
+const CACHE_KEY = "vote_history_cache_v5";
+const CACHE_TTL = 60 * 60; // 1 hour in seconds
+const PAGE_SIZE = 50; // Votes per contract call
 
 interface Vote {
+  marketId: number;
+  isOptionA: boolean;
+  amount: bigint;
+  timestamp: bigint;
+}
+
+interface DisplayVote {
   marketId: number;
   option: string;
   amount: bigint;
   marketName: string;
-  blockNumber: bigint;
-  transactionHash: `0x${string}`;
-  logIndex: number;
+  timestamp: bigint;
 }
 
 interface MarketInfo {
@@ -64,51 +42,47 @@ interface MarketInfo {
 }
 
 interface CacheData {
-  votes: Vote[];
+  votes: DisplayVote[];
   marketInfo: Record<number, MarketInfo>;
-  [LAST_BLOCK_KEY]: string;
+  timestamp: number;
 }
 
-type SortKey = "marketId" | "marketName" | "option" | "amount";
+type SortKey = "marketId" | "marketName" | "option" | "amount" | "timestamp";
 type SortDirection = "asc" | "desc";
 
 export function VoteHistory() {
   const { address: accountAddress, isConnected } = useAccount();
   const { toast } = useToast();
-  const [votes, setVotes] = useState<Vote[]>([]);
+  const [votes, setVotes] = useState<DisplayVote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [tokenSymbol, setTokenSymbol] = useState<string>("BSTR");
   const [tokenDecimals, setTokenDecimals] = useState<number>(18);
   const [search, setSearch] = useState<string>("");
-  const [sortKey, setSortKey] = useState<SortKey>("marketId");
+  const [sortKey, setSortKey] = useState<SortKey>("timestamp");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const isFetchingRef = useRef(false);
 
   // Fetch betting token address
-  const { data: bettingTokenAddrFromContract } = useWagmiReadContract({
+  const { data: bettingTokenAddr } = useReadContract({
     address: contractAddress,
     abi: contractAbi,
     functionName: "bettingToken",
-    query: { refetchOnWindowFocus: false }, // Disable refetch on focus
   });
 
-  const actualTokenAddress =
-    (bettingTokenAddrFromContract as Address | undefined) ||
-    defaultTokenAddress;
+  const tokenAddress = (bettingTokenAddr as Address) || defaultTokenAddress;
 
   // Fetch token metadata
-  const { data: symbolData } = useWagmiReadContract({
-    address: actualTokenAddress,
+  const { data: symbolData } = useReadContract({
+    address: tokenAddress,
     abi: defaultTokenAbi,
     functionName: "symbol",
-    query: { enabled: !!actualTokenAddress, refetchOnWindowFocus: false },
+    query: { enabled: !!tokenAddress },
   });
 
-  const { data: decimalsData } = useWagmiReadContract({
-    address: actualTokenAddress,
+  const { data: decimalsData } = useReadContract({
+    address: tokenAddress,
     abi: defaultTokenAbi,
     functionName: "decimals",
-    query: { enabled: !!actualTokenAddress, refetchOnWindowFocus: false },
+    query: { enabled: !!tokenAddress },
   });
 
   useEffect(() => {
@@ -116,27 +90,19 @@ export function VoteHistory() {
     if (decimalsData) setTokenDecimals(Number(decimalsData));
   }, [symbolData, decimalsData]);
 
-  // Load cache from local storage
+  // Load cache
   const loadCache = useCallback((): CacheData => {
     try {
       const cached = localStorage.getItem(CACHE_KEY);
       return cached
         ? JSON.parse(cached)
-        : {
-            votes: [],
-            marketInfo: {},
-            [LAST_BLOCK_KEY]: DEPLOYMENT_BLOCK.toString(),
-          };
+        : { votes: [], marketInfo: {}, timestamp: 0 };
     } catch {
-      return {
-        votes: [],
-        marketInfo: {},
-        [LAST_BLOCK_KEY]: DEPLOYMENT_BLOCK.toString(),
-      };
+      return { votes: [], marketInfo: {}, timestamp: 0 };
     }
   }, []);
 
-  // Save cache to local storage
+  // Save cache
   const saveCache = useCallback((data: CacheData) => {
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(data));
@@ -145,275 +111,134 @@ export function VoteHistory() {
     }
   }, []);
 
-  // Enhanced retry with 429 handling
-  async function withRetry<T>(
-    fn: () => Promise<T>,
-    retries = 3,
-    baseDelay = 1000
-  ): Promise<T> {
-    type RetryableError = Error & {
-      status?: number;
-      details?: { code?: number; message?: string };
-    };
-
-    for (let i = 0; i < retries; i++) {
-      try {
-        return await fn();
-      } catch (error: unknown) {
-        if (i === retries - 1) throw error;
-        let delay = baseDelay * Math.pow(2, i); // Exponential backoff
-        console.warn(`Retry ${i + 1}/${retries} failed:`, error);
-
-        // Handle 429 Too Many Requests
-        if ((error as RetryableError)?.status === 429) {
-          delay = Math.max(delay, 5000); // Wait longer for rate limit
-          console.warn(`Rate limit hit, waiting ${delay}ms`);
-        }
-        // Handle Alchemy block range error
-        else if (
-          (error as RetryableError)?.details?.code === -32600 &&
-          (error as RetryableError)?.details?.message?.includes(
-            "up to a 500 block range"
-          )
-        ) {
-          const match = (error as RetryableError).details!.message!.match(
-            /\[0x([0-9a-f]+), 0x([0-9a-f]+)\]/
-          );
-          if (match) {
-            const suggestedRange =
-              parseInt(match[2], 16) - parseInt(match[1], 16) + 1;
-            console.log(`Adjusting block range to ${suggestedRange}`);
-            // Block range is already 500, so just retry
-          }
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-    }
-    throw new Error("Max retries reached");
-  }
-
-  // Throttle concurrent requests
-  async function throttleRequests<T>(
-    tasks: (() => Promise<T>)[],
-    maxConcurrent: number
-  ): Promise<T[]> {
-    const results: T[] = [];
-    for (let i = 0; i < tasks.length; i += maxConcurrent) {
-      const batch = tasks.slice(i, i + maxConcurrent);
-      const batchResults = await Promise.all(batch.map((task) => task()));
-      results.push(...batchResults);
-    }
-    return results;
-  }
-
   // Fetch votes
   const fetchVotes = useCallback(
-    (currentAccountAddress: Address | undefined) => {
-      const debouncedFetch = debounce(async () => {
-        if (!currentAccountAddress || isFetchingRef.current) {
-          setVotes([]);
+    async (address: Address | undefined) => {
+      if (!address) {
+        setVotes([]);
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const cache = loadCache();
+        const now = Math.floor(Date.now() / 1000);
+
+        // Use cache if fresh
+        if (cache.votes.length > 0 && now - cache.timestamp < CACHE_TTL) {
+          setVotes(cache.votes);
           setIsLoading(false);
           return;
         }
 
-        isFetchingRef.current = true;
-        setIsLoading(true);
-        try {
-          // Load cache
-          const cache = loadCache();
-          let newVotes = [...cache.votes];
-          const marketInfoCache = { ...cache.marketInfo };
-          let fromBlock = BigInt(
-            cache[LAST_BLOCK_KEY] || DEPLOYMENT_BLOCK.toString()
-          );
+        // Check vote count
+        const voteCount = (await publicClient.readContract({
+          address: contractAddress,
+          abi: contractAbi,
+          functionName: "getVoteHistoryCount",
+          args: [address],
+        })) as bigint;
 
-          const latestBlock = await withRetry(() =>
-            publicClient.getBlockNumber()
-          );
-
-          // Fetch events incrementally
-          const blockRange = 500n; // Alchemy's limit
-          const allEvents: SharesPurchasedEvent[] = [];
-          const fetchTasks: (() => Promise<void>)[] = [];
-
-          while (fromBlock <= latestBlock) {
-            const toBlock =
-              fromBlock + blockRange - 1n > latestBlock
-                ? latestBlock
-                : fromBlock + blockRange - 1n;
-
-            if (toBlock < fromBlock) break;
-
-            fetchTasks.push(async () => {
-              try {
-                const logs = await withRetry(() =>
-                  publicClient.getLogs({
-                    address: contractAddress,
-                    event: {
-                      type: "event",
-                      name: "SharesPurchased",
-                      inputs: [
-                        { name: "marketId", type: "uint256", indexed: true },
-                        { name: "buyer", type: "address", indexed: true },
-                        { name: "isOptionA", type: "bool", indexed: false },
-                        { name: "amount", type: "uint256", indexed: false },
-                      ],
-                    },
-                    args: {
-                      buyer: currentAccountAddress,
-                    },
-                    fromBlock,
-                    toBlock,
-                  })
-                );
-
-                const formattedEvents = logs.map((log) => ({
-                  // Cast log.args to our defined interface
-                  args: log.args as SharesPurchasedLogArgs,
-                  // Access properties directly after casting
-                  marketId: (log.args as SharesPurchasedLogArgs).marketId,
-                  buyer: (log.args as SharesPurchasedLogArgs).buyer,
-                  isOptionA: (log.args as SharesPurchasedLogArgs).isOptionA,
-                  amount: (log.args as SharesPurchasedLogArgs).amount,
-                  blockNumber: log.blockNumber as bigint,
-                  transactionHash: log.transactionHash,
-                  logIndex: log.logIndex,
-                }));
-                allEvents.push(...formattedEvents);
-              } catch (batchError) {
-                console.error(
-                  `Error fetching logs from block ${fromBlock} to ${toBlock}:`,
-                  batchError
-                );
-                // Skip this range to avoid infinite retries
-              }
-            });
-
-            fromBlock = toBlock + 1n;
-          }
-
-          // Throttle requests to avoid rate limits
-          await throttleRequests(
-            fetchTasks.map((task) => async () => {
-              await task();
-            }),
-            MAX_CONCURRENT_REQUESTS
-          );
-
-          // Get unique market IDs
-          const marketIds = [
-            ...new Set(allEvents.map((e) => Number(e.marketId))),
-          ];
-          const uncachedMarketIds = marketIds.filter(
-            (id) => !marketInfoCache[id]
-          );
-
-          // Fetch market info in batch
-          if (uncachedMarketIds.length > 0) {
-            try {
-              const marketInfosResult = (await withRetry(() =>
-                publicClient.readContract({
-                  address: contractAddress,
-                  abi: contractAbi,
-                  functionName: "getMarketInfoBatch",
-                  args: [uncachedMarketIds.map(BigInt)],
-                })
-              )) as [
-                string[],
-                string[],
-                string[],
-                bigint[],
-                number[],
-                bigint[],
-                bigint[],
-                boolean[]
-              ];
-
-              const [
-                questions,
-                optionAs,
-                optionBs /* endTimes, outcomes, totalAShares, totalBShares, resolved */,
-              ] = marketInfosResult;
-
-              uncachedMarketIds.forEach((marketId, i) => {
-                marketInfoCache[marketId] = {
-                  marketId,
-                  question: questions[i],
-                  optionA: optionAs[i],
-                  optionB: optionBs[i],
-                };
-              });
-            } catch (marketInfoError) {
-              console.error(
-                "Failed to fetch batch market info:",
-                marketInfoError
-              );
-              toast({
-                title: "Error",
-                description: "Could not load details for some markets.",
-                variant: "destructive",
-              });
-            }
-          }
-
-          // Map events to votes
-          const newUserVotes = allEvents
-            .map((e) => {
-              const market = marketInfoCache[Number(e.marketId)];
-              if (!market) return null;
-              return {
-                marketId: Number(e.args.marketId),
-                option: e.args.isOptionA ? market.optionA : market.optionB,
-                amount: e.args.amount,
-                marketName: market.question,
-                blockNumber: e.blockNumber,
-                transactionHash: e.transactionHash,
-                logIndex: e.logIndex,
-              };
-            })
-            .filter((vote): vote is Vote => vote !== null);
-
-          // Merge new votes with cached votes, avoiding duplicates
-          const voteMap = new Map<string, Vote>();
-          [...cache.votes, ...newUserVotes].forEach((vote) => {
-            const key = `${vote.marketId}-${vote.transactionHash}-${vote.logIndex}`;
-            voteMap.set(key, vote);
-          });
-          newVotes = Array.from(voteMap.values());
-
-          // Update cache
-          saveCache({
-            votes: newVotes,
-            marketInfo: marketInfoCache,
-            [LAST_BLOCK_KEY]: latestBlock.toString(),
-          });
-
-          setVotes(newVotes);
-        } catch (error) {
-          console.error("Vote history error:", error);
-          toast({
-            title: "Error",
-            description:
-              "Failed to load vote history due to rate limits. Please try again later.",
-            variant: "destructive",
-          });
+        if (voteCount === 0n) {
           setVotes([]);
-        } finally {
+          saveCache({
+            votes: [],
+            marketInfo: cache.marketInfo,
+            timestamp: now,
+          });
           setIsLoading(false);
-          isFetchingRef.current = false;
+          return;
         }
-      }, 500);
 
-      debouncedFetch();
-      return debouncedFetch.cancel;
+        const allVotes: Vote[] = [];
+        let start = 0;
+
+        // Paginate vote history
+        while (start < Number(voteCount)) {
+          const voteBatch = (await publicClient.readContract({
+            address: contractAddress,
+            abi: contractAbi,
+            functionName: "getVoteHistory",
+            args: [address, BigInt(start), BigInt(PAGE_SIZE)],
+          })) as unknown as Vote[];
+
+          if (voteBatch.length === 0) break;
+          allVotes.push(...voteBatch);
+          start += PAGE_SIZE;
+        }
+
+        // Fetch market info
+        const marketIds = [...new Set(allVotes.map((v) => Number(v.marketId)))];
+        const marketInfoCache = { ...cache.marketInfo };
+        const uncachedMarketIds = marketIds.filter(
+          (id) => !marketInfoCache[id]
+        );
+
+        if (uncachedMarketIds.length > 0) {
+          const marketInfos = (await publicClient.readContract({
+            address: contractAddress,
+            abi: contractAbi,
+            functionName: "getMarketInfoBatch",
+            args: [uncachedMarketIds.map(BigInt)],
+          })) as [
+            string[],
+            string[],
+            string[],
+            bigint[],
+            number[],
+            bigint[],
+            bigint[],
+            boolean[]
+          ];
+
+          const [questions, optionAs, optionBs] = marketInfos;
+          uncachedMarketIds.forEach((id, i) => {
+            marketInfoCache[id] = {
+              marketId: id,
+              question: questions[i],
+              optionA: optionAs[i],
+              optionB: optionBs[i],
+            };
+          });
+        }
+
+        // Map votes
+        const displayVotes = allVotes.map((vote) => ({
+          marketId: Number(vote.marketId),
+          option: vote.isOptionA
+            ? marketInfoCache[Number(vote.marketId)].optionA
+            : marketInfoCache[Number(vote.marketId)].optionB,
+          amount: vote.amount,
+          marketName: marketInfoCache[Number(vote.marketId)].question,
+          timestamp: vote.timestamp,
+        }));
+
+        // Update cache
+        const newCache = {
+          votes: displayVotes,
+          marketInfo: marketInfoCache,
+          timestamp: now,
+        };
+        saveCache(newCache);
+        setVotes(displayVotes);
+      } catch (error) {
+        console.error("Vote history error:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load vote history.",
+          variant: "destructive",
+        });
+        setVotes([]);
+      } finally {
+        setIsLoading(false);
+      }
     },
     [loadCache, saveCache, toast]
   );
 
   useEffect(() => {
-    const cancel = fetchVotes(accountAddress);
-    return () => cancel();
+    fetchVotes(accountAddress);
   }, [accountAddress, fetchVotes]);
 
   // Handle sorting
@@ -426,7 +251,6 @@ export function VoteHistory() {
     }
   };
 
-  // Map SortDirection to aria-sort values
   const getAriaSort = (key: SortKey): "none" | "ascending" | "descending" => {
     if (key !== sortKey) return "none";
     return sortDirection === "asc" ? "ascending" : "descending";
@@ -450,6 +274,8 @@ export function VoteHistory() {
           return a.option.localeCompare(b.option) * multiplier;
         case "amount":
           return Number(a.amount - b.amount) * multiplier;
+        case "timestamp":
+          return Number(a.timestamp - b.timestamp) * multiplier;
         default:
           return 0;
       }
@@ -501,7 +327,7 @@ export function VoteHistory() {
 
       {filteredVotes.length > 0 ? (
         <div className="divide-y divide-gray-200">
-          <div className="grid grid-cols-4 gap-4 px-4 py-2 bg-gray-100 text-xs font-medium text-gray-700">
+          <div className="grid grid-cols-5 gap-4 px-4 py-2 bg-gray-100 text-xs font-medium text-gray-700">
             <button
               role="columnheader"
               onClick={() => handleSort("marketId")}
@@ -542,11 +368,21 @@ export function VoteHistory() {
               Amount
               <ArrowUpDown className="h-4 w-4" />
             </button>
+            <button
+              role="columnheader"
+              onClick={() => handleSort("timestamp")}
+              className="flex items-center gap-1 hover:text-gray-900 text-right"
+              aria-sort={getAriaSort("timestamp")}
+              aria-label="Sort by Date"
+            >
+              Date
+              <ArrowUpDown className="h-4 w-4" />
+            </button>
           </div>
           {filteredVotes.map((vote, idx) => (
             <div
               key={idx}
-              className="grid grid-cols-4 gap-4 px-4 py-3 hover:bg-gray-50 transition-colors"
+              className="grid grid-cols-5 gap-4 px-4 py-3 hover:bg-gray-50 transition-colors"
               role="button"
               tabIndex={0}
               aria-label={`Vote on ${vote.marketName} for ${vote.option}`}
@@ -579,6 +415,9 @@ export function VoteHistory() {
                   maximumFractionDigits: 2,
                 })}{" "}
                 {tokenSymbol}
+              </div>
+              <div className="text-sm text-gray-500 text-right">
+                {new Date(Number(vote.timestamp) * 1000).toLocaleDateString()}
               </div>
             </div>
           ))}

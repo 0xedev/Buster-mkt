@@ -7,18 +7,14 @@ export const publicClient = createPublicClient({
   transport: http(process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL),
 });
 
-export const contractAddress = "0xc703856dc56576800F9bc7DfD6ac15e92Ac2d7D6";
+export const contractAddress = "0xE82b18aE4003769C0353700751C95Df536c044e0";
 export const tokenAddress = "0x55b04F15A1878fa5091D5E35ebceBC06A5EC2F31";
 
 export const contractAbi = [
   {
     type: "constructor",
     inputs: [
-      {
-        name: "_bettingToken",
-        type: "address",
-        internalType: "address",
-      },
+      { name: "_bettingToken", type: "address", internalType: "address" },
     ],
     stateMutability: "nonpayable",
   },
@@ -41,6 +37,13 @@ export const contractAbi = [
     name: "QUESTION_RESOLVE_ROLE",
     inputs: [],
     outputs: [{ name: "", type: "bytes32", internalType: "bytes32" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "allParticipants",
+    inputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+    outputs: [{ name: "", type: "address", internalType: "address" }],
     stateMutability: "view",
   },
   {
@@ -85,9 +88,37 @@ export const contractAbi = [
   },
   {
     type: "function",
+    name: "getAllParticipantsCount",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "getBettingToken",
     inputs: [],
     outputs: [{ name: "", type: "address", internalType: "address" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getLeaderboard",
+    inputs: [
+      { name: "start", type: "uint256", internalType: "uint256" },
+      { name: "limit", type: "uint256", internalType: "uint256" },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "tuple[]",
+        internalType: "struct PolicastMarket.LeaderboardEntry[]",
+        components: [
+          { name: "user", type: "address", internalType: "address" },
+          { name: "totalWinnings", type: "uint256", internalType: "uint256" },
+          { name: "voteCount", type: "uint256", internalType: "uint256" },
+        ],
+      },
+    ],
     stateMutability: "view",
   },
   {
@@ -109,18 +140,10 @@ export const contractAbi = [
       {
         name: "outcome",
         type: "uint8",
-        internalType: "enum SimplePredictionMarket.MarketOutcome",
+        internalType: "enum PolicastMarket.MarketOutcome",
       },
-      {
-        name: "totalOptionAShares",
-        type: "uint256",
-        internalType: "uint256",
-      },
-      {
-        name: "totalOptionBShares",
-        type: "uint256",
-        internalType: "uint256",
-      },
+      { name: "totalOptionAShares", type: "uint256", internalType: "uint256" },
+      { name: "totalOptionBShares", type: "uint256", internalType: "uint256" },
       { name: "resolved", type: "bool", internalType: "bool" },
     ],
     stateMutability: "view",
@@ -129,25 +152,17 @@ export const contractAbi = [
     type: "function",
     name: "getMarketInfoBatch",
     inputs: [
-      {
-        name: "_marketIds",
-        type: "uint256[]",
-        internalType: "uint256[]",
-      },
+      { name: "_marketIds", type: "uint256[]", internalType: "uint256[]" },
     ],
     outputs: [
       { name: "questions", type: "string[]", internalType: "string[]" },
       { name: "optionAs", type: "string[]", internalType: "string[]" },
       { name: "optionBs", type: "string[]", internalType: "string[]" },
-      {
-        name: "endTimes",
-        type: "uint256[]",
-        internalType: "uint256[]",
-      },
+      { name: "endTimes", type: "uint256[]", internalType: "uint256[]" },
       {
         name: "outcomes",
         type: "uint8[]",
-        internalType: "enum SimplePredictionMarket.MarketOutcome[]",
+        internalType: "enum PolicastMarket.MarketOutcome[]",
       },
       {
         name: "totalOptionASharesArray",
@@ -178,16 +193,8 @@ export const contractAbi = [
       { name: "_user", type: "address", internalType: "address" },
     ],
     outputs: [
-      {
-        name: "optionAShares",
-        type: "uint256",
-        internalType: "uint256",
-      },
-      {
-        name: "optionBShares",
-        type: "uint256",
-        internalType: "uint256",
-      },
+      { name: "optionAShares", type: "uint256", internalType: "uint256" },
+      { name: "optionBShares", type: "uint256", internalType: "uint256" },
     ],
     stateMutability: "view",
   },
@@ -199,6 +206,36 @@ export const contractAbi = [
       { name: "_user", type: "address", internalType: "address" },
     ],
     outputs: [{ name: "", type: "bool", internalType: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getVoteHistory",
+    inputs: [
+      { name: "user", type: "address", internalType: "address" },
+      { name: "start", type: "uint256", internalType: "uint256" },
+      { name: "limit", type: "uint256", internalType: "uint256" },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "tuple[]",
+        internalType: "struct PolicastMarket.Vote[]",
+        components: [
+          { name: "marketId", type: "uint256", internalType: "uint256" },
+          { name: "isOptionA", type: "bool", internalType: "bool" },
+          { name: "amount", type: "uint256", internalType: "uint256" },
+          { name: "timestamp", type: "uint256", internalType: "uint256" },
+        ],
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getVoteHistoryCount",
+    inputs: [{ name: "user", type: "address", internalType: "address" }],
+    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
     stateMutability: "view",
   },
   {
@@ -252,20 +289,12 @@ export const contractAbi = [
       {
         name: "outcome",
         type: "uint8",
-        internalType: "enum SimplePredictionMarket.MarketOutcome",
+        internalType: "enum PolicastMarket.MarketOutcome",
       },
       { name: "optionA", type: "string", internalType: "string" },
       { name: "optionB", type: "string", internalType: "string" },
-      {
-        name: "totalOptionAShares",
-        type: "uint256",
-        internalType: "uint256",
-      },
-      {
-        name: "totalOptionBShares",
-        type: "uint256",
-        internalType: "uint256",
-      },
+      { name: "totalOptionAShares", type: "uint256", internalType: "uint256" },
+      { name: "totalOptionBShares", type: "uint256", internalType: "uint256" },
       { name: "resolved", type: "bool", internalType: "bool" },
       { name: "payoutIndex", type: "uint256", internalType: "uint256" },
     ],
@@ -283,11 +312,7 @@ export const contractAbi = [
     name: "renounceRole",
     inputs: [
       { name: "role", type: "bytes32", internalType: "bytes32" },
-      {
-        name: "callerConfirmation",
-        type: "address",
-        internalType: "address",
-      },
+      { name: "callerConfirmation", type: "address", internalType: "address" },
     ],
     outputs: [],
     stateMutability: "nonpayable",
@@ -300,7 +325,7 @@ export const contractAbi = [
       {
         name: "_outcome",
         type: "uint8",
-        internalType: "enum SimplePredictionMarket.MarketOutcome",
+        internalType: "enum PolicastMarket.MarketOutcome",
       },
     ],
     outputs: [],
@@ -331,6 +356,35 @@ export const contractAbi = [
     stateMutability: "view",
   },
   {
+    type: "function",
+    name: "totalSharesPurchased",
+    inputs: [{ name: "", type: "address", internalType: "address" }],
+    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "totalWinnings",
+    inputs: [{ name: "", type: "address", internalType: "address" }],
+    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "voteHistory",
+    inputs: [
+      { name: "", type: "address", internalType: "address" },
+      { name: "", type: "uint256", internalType: "uint256" },
+    ],
+    outputs: [
+      { name: "marketId", type: "uint256", internalType: "uint256" },
+      { name: "isOptionA", type: "bool", internalType: "bool" },
+      { name: "amount", type: "uint256", internalType: "uint256" },
+      { name: "timestamp", type: "uint256", internalType: "uint256" },
+    ],
+    stateMutability: "view",
+  },
+  {
     type: "event",
     name: "Claimed",
     inputs: [
@@ -340,12 +394,7 @@ export const contractAbi = [
         indexed: true,
         internalType: "uint256",
       },
-      {
-        name: "user",
-        type: "address",
-        indexed: true,
-        internalType: "address",
-      },
+      { name: "user", type: "address", indexed: true, internalType: "address" },
       {
         name: "amount",
         type: "uint256",
@@ -406,7 +455,44 @@ export const contractAbi = [
         name: "outcome",
         type: "uint8",
         indexed: false,
-        internalType: "enum SimplePredictionMarket.MarketOutcome",
+        internalType: "enum PolicastMarket.MarketOutcome",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "MarketResolvedDetailed",
+    inputs: [
+      {
+        name: "marketId",
+        type: "uint256",
+        indexed: true,
+        internalType: "uint256",
+      },
+      {
+        name: "outcome",
+        type: "uint8",
+        indexed: false,
+        internalType: "enum PolicastMarket.MarketOutcome",
+      },
+      {
+        name: "totalOptionAShares",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
+      {
+        name: "totalOptionBShares",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
+      {
+        name: "participantsLength",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
       },
     ],
     anonymous: false,
@@ -460,12 +546,7 @@ export const contractAbi = [
     type: "event",
     name: "RoleAdminChanged",
     inputs: [
-      {
-        name: "role",
-        type: "bytes32",
-        indexed: true,
-        internalType: "bytes32",
-      },
+      { name: "role", type: "bytes32", indexed: true, internalType: "bytes32" },
       {
         name: "previousAdminRole",
         type: "bytes32",
@@ -485,12 +566,7 @@ export const contractAbi = [
     type: "event",
     name: "RoleGranted",
     inputs: [
-      {
-        name: "role",
-        type: "bytes32",
-        indexed: true,
-        internalType: "bytes32",
-      },
+      { name: "role", type: "bytes32", indexed: true, internalType: "bytes32" },
       {
         name: "account",
         type: "address",
@@ -510,12 +586,7 @@ export const contractAbi = [
     type: "event",
     name: "RoleRevoked",
     inputs: [
-      {
-        name: "role",
-        type: "bytes32",
-        indexed: true,
-        internalType: "bytes32",
-      },
+      { name: "role", type: "bytes32", indexed: true, internalType: "bytes32" },
       {
         name: "account",
         type: "address",
@@ -547,12 +618,7 @@ export const contractAbi = [
         indexed: true,
         internalType: "address",
       },
-      {
-        name: "isOptionA",
-        type: "bool",
-        indexed: false,
-        internalType: "bool",
-      },
+      { name: "isOptionA", type: "bool", indexed: false, internalType: "bool" },
       {
         name: "amount",
         type: "uint256",
