@@ -119,7 +119,7 @@ export function MarketDetailsClient({
   return (
     <div className="flex flex-col min-h-screen mt-6 bg-gray-50">
       <Navbar />
-      <main className="flex-grow container mx-auto p-4 md:p-6">
+      <main className="flex-grow container mx-auto px-4 pt-4 pb-24 md:p-6">
         <div className="flex items-center text-sm text-gray-600 mb-4">
           <Button asChild variant="outline" size="sm" className="mr-2">
             <Link href="/">Home</Link>
