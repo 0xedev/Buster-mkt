@@ -143,13 +143,6 @@ export function Navbar() {
         </div>
         <div className="flex items-center gap-4">
           <WalletButton />
-          <Link
-            href="/farnews"
-            className="flex items-center text-gray-800 hover:text-primary text-sm font-medium"
-          >
-            <Newspaper className="h-5 w-5 mr-1" />
-            FarNews
-          </Link>
         </div>
       </div>
 
