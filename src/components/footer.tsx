@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Home, Clock, Trophy, User, Info, Newspaper } from "lucide-react"; // Add Newspaper
+import { Home, Clock, Trophy, User, Info, Newspaper } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -14,7 +14,6 @@ export function Footer() {
 
   const navItems = [
     { hrefBase: "/", tabValue: "active", icon: Home, label: "Active" },
-    { hrefBase: "/", tabValue: "active", icon: Home, label: "Active" },
     { hrefBase: "/", tabValue: "ended", icon: Clock, label: "Ended" },
     {
       hrefBase: "/",
@@ -24,17 +23,15 @@ export function Footer() {
     },
     { hrefBase: "/", tabValue: "myvotes", icon: User, label: "My Shares" },
     {
-      hrefBase: "/farnews",
-      tabValue: "News",
+      hrefBase: "https://news-agg-zeta.vercel.app?referrer=policast",
+      tabValue: "farnews",
       icon: Newspaper,
-      label: "News",
-    }, // New FarNews tab
+      label: "FarNews",
+    },
   ];
 
   const handleNavClick = () => {
-    if (showInfo) {
-      setShowInfo(false);
-    }
+    if (showInfo) setShowInfo(false);
   };
 
   return (
@@ -61,7 +58,10 @@ export function Footer() {
               </ol>
               <p className="text-gray-700">
                 Check out{" "}
-                <Link href="/farnews" className="text-primary underline">
+                <Link
+                  href="https://news-agg-zeta.vercel.app?referrer=policast"
+                  className="text-primary underline"
+                >
                   FarNews
                 </Link>{" "}
                 for the latest news!
@@ -73,7 +73,6 @@ export function Footer() {
 
       <footer className="w-full border-t bg-background fixed bottom-0 left-0 z-50 md:static">
         <div className="container max-w-7xl mx-auto flex flex-col items-center justify-between gap-4 py-4 md:flex-row md:py-8">
-          {/* Mobile Navigation with Icons */}
           <div className="flex w-full justify-around md:hidden">
             {navItems.map((item) => {
               const href =
@@ -83,7 +82,8 @@ export function Footer() {
               const isActive =
                 (currentQueryTab === null && item.tabValue === "active") ||
                 currentQueryTab === item.tabValue ||
-                (item.tabValue === "farnews" && pathname === "/farnews");
+                (item.tabValue === "farnews" &&
+                  pathname.includes("news-agg-zeta"));
               return (
                 <Link
                   key={href}
@@ -97,7 +97,7 @@ export function Footer() {
                   aria-label={item.label}
                   onClick={handleNavClick}
                 >
-                  <item.icon className="h-6 w-6" />
+                  <item.icon className="h-5 w-5" />
                   <span className="text-xs mt-1">{item.label}</span>
                 </Link>
               );
@@ -112,12 +112,11 @@ export function Footer() {
               )}
               aria-label="About"
             >
-              <Info className="h-6 w-6" />
+              <Info className="h-5 w-5" />
               <span className="text-xs mt-1">About</span>
             </button>
           </div>
 
-          {/* Desktop Footer Content */}
           <div className="hidden md:flex flex-col items-center gap-4 px-8 md:flex-row md:gap-2 md:px-0">
             <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
               Built by{" "}
@@ -131,7 +130,7 @@ export function Footer() {
               </Link>
               .{" "}
               <Link
-                href="/farnews"
+                href="https://news-agg-zeta.vercel.app?referrer=policast"
                 className="font-medium underline underline-offset-4"
               >
                 Visit FarNews
