@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { sdk } from "@farcaster/frame-sdk";
 import Image from "next/image";
-import Link from "next/link";
-import { Newspaper } from "lucide-react";
+// import Link from "next/link";
+// import { Newspaper } from "lucide-react";
 import { useConnect, useAccount, useDisconnect, Connector } from "wagmi";
 
 export function Navbar() {
