@@ -14,6 +14,7 @@ export function Footer() {
 
   const navItems = [
     { hrefBase: "/", tabValue: "active", icon: Home, label: "Active" },
+    { hrefBase: "/", tabValue: "active", icon: Home, label: "Active" },
     { hrefBase: "/", tabValue: "ended", icon: Clock, label: "Ended" },
     {
       hrefBase: "/",
@@ -24,9 +25,9 @@ export function Footer() {
     { hrefBase: "/", tabValue: "myvotes", icon: User, label: "My Shares" },
     {
       hrefBase: "/farnews",
-      tabValue: "farnews",
+      tabValue: "News",
       icon: Newspaper,
-      label: "FarNews",
+      label: "News",
     }, // New FarNews tab
   ];
 
