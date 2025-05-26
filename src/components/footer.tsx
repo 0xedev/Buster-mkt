@@ -1,15 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Home, Clock, Trophy, User, Info } from "lucide-react"; // Icons for tabs and About
-import { usePathname, useSearchParams } from "next/navigation"; // Import useSearchParams
+import { Home, Clock, Trophy, User, Info, Newspaper } from "lucide-react"; // Add Newspaper
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
 export function Footer() {
-  //eslint-disable-next-line @typescript-eslint/no-unused-vars
   const pathname = usePathname();
-  const searchParams = useSearchParams(); // Use the hook
+  const searchParams = useSearchParams();
   const [showInfo, setShowInfo] = useState(false);
   const currentQueryTab = searchParams.get("tab");
 
@@ -23,9 +22,14 @@ export function Footer() {
       label: "Leaderboard",
     },
     { hrefBase: "/", tabValue: "myvotes", icon: User, label: "My Shares" },
+    {
+      hrefBase: "/farnews",
+      tabValue: "farnews",
+      icon: Newspaper,
+      label: "FarNews",
+    }, // New FarNews tab
   ];
 
-  // Close info panel when clicking on any navigation item
   const handleNavClick = () => {
     if (showInfo) {
       setShowInfo(false);
@@ -34,7 +38,6 @@ export function Footer() {
 
   return (
     <div className="relative">
-      {/* About Panel for Mobile - positioned absolutely above the footer */}
       {showInfo && (
         <div className="md:hidden bg-white shadow-lg rounded-t-lg p-4 border-l-4 border-gray-500 w-full fixed bottom-16 left-0 z-40 animate-slide-up">
           <div className="flex flex-col gap-3">
@@ -55,6 +58,13 @@ export function Footer() {
                 <li>Browse available predictions</li>
                 <li>Place your bets!</li>
               </ol>
+              <p className="text-gray-700">
+                Check out{" "}
+                <Link href="/farnews" className="text-primary underline">
+                  FarNews
+                </Link>{" "}
+                for the latest news!
+              </p>
             </div>
           </div>
         </div>
@@ -65,12 +75,14 @@ export function Footer() {
           {/* Mobile Navigation with Icons */}
           <div className="flex w-full justify-around md:hidden">
             {navItems.map((item) => {
-              const href = `${item.hrefBase}?tab=${item.tabValue}`;
-              // An item is active if its tabValue matches the currentQueryTab.
-              // If currentQueryTab is null (no tab in URL), 'active' is the default active tab.
+              const href =
+                item.tabValue === "farnews"
+                  ? item.hrefBase
+                  : `${item.hrefBase}?tab=${item.tabValue}`;
               const isActive =
                 (currentQueryTab === null && item.tabValue === "active") ||
-                currentQueryTab === item.tabValue;
+                currentQueryTab === item.tabValue ||
+                (item.tabValue === "farnews" && pathname === "/farnews");
               return (
                 <Link
                   key={href}
@@ -116,7 +128,13 @@ export function Footer() {
               >
                 Politics
               </Link>
-              .
+              .{" "}
+              <Link
+                href="/farnews"
+                className="font-medium underline underline-offset-4"
+              >
+                Visit FarNews
+              </Link>
             </p>
           </div>
         </div>

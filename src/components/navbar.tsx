@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState } from "react";
 import { sdk } from "@farcaster/frame-sdk";
 import Image from "next/image";
+import Link from "next/link";
+import { Newspaper } from "lucide-react";
 import { useConnect, useAccount, useDisconnect, Connector } from "wagmi";
 
 export function Navbar() {
@@ -49,7 +51,7 @@ export function Navbar() {
       address,
       isConnected: wagmiIsConnected,
       isConnecting: wagmiIsConnecting,
-    } = useAccount(); // Use isConnecting from useAccount
+    } = useAccount();
     const { connect: wagmiConnect, connectors: wagmiConnectors } = useConnect();
     const { disconnect: wagmiDisconnect } = useDisconnect();
 
@@ -77,33 +79,28 @@ export function Navbar() {
       (validConnectors.length > 0 ? validConnectors[0] : undefined);
 
     if (wagmiIsConnected && address) {
-      // Connected state
       return (
         <div className="flex items-center gap-2">
-          {/* Desktop View: Address + Separate Disconnect Button */}
           <span className="text-sm font-medium text-gray-700 hidden md:inline">
             {`${address.slice(0, 6)}...${address.slice(-4)}`}
           </span>
           <button
             onClick={() => wagmiDisconnect()}
-            className="blueGray-500 hover:bg-green-900 text-white px-3 py-1 rounded-full text-sm font-medium transition-colors duration-200"
+            className="bg-blueGray-500 hover:bg-green-900 text-white px-3 py-1 rounded-full text-sm font-medium transition-colors duration-200"
           >
             Disconnect
           </button>
-
-          {/* Mobile View: Single Button with Address, acts as Disconnect */}
           <div className="md:hidden">
             <button
               onClick={() => wagmiDisconnect()}
               className="bg-green-800 text-white px-3 py-1 rounded-full text-sm font-medium transition-colors duration-200 whitespace-nowrap"
             >
-              {`${address.slice(0, 4)}...${address.slice(-3)}`}{" "}
+              {`${address.slice(0, 4)}...${address.slice(-3)}`}
             </button>
           </div>
         </div>
       );
     } else if (wagmiIsConnecting) {
-      // Connecting state
       return (
         <div className="px-3 py-1 rounded-full text-sm font-medium text-gray-400 animate-pulse">
           Connecting...
@@ -144,7 +141,16 @@ export function Navbar() {
             Welcome {username || "Player"}
           </div>
         </div>
-        <WalletButton />
+        <div className="flex items-center gap-4">
+          <WalletButton />
+          <Link
+            href="/farnews"
+            className="flex items-center text-gray-800 hover:text-primary text-sm font-medium"
+          >
+            <Newspaper className="h-5 w-5 mr-1" />
+            FarNews
+          </Link>
+        </div>
       </div>
 
       {/* Mobile View */}
@@ -163,7 +169,16 @@ export function Navbar() {
             Welcome {username || "Player"}
           </div>
         </div>
-        <WalletButton />
+        <div className="flex items-center gap-2">
+          <WalletButton />
+          <Link
+            href="/farnews"
+            className="flex items-center text-gray-800 hover:text-primary text-xs font-medium"
+          >
+            <Newspaper className="h-4 w-4 mr-1" />
+            FarNews
+          </Link>
+        </div>
       </div>
     </>
   );
