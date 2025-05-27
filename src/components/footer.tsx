@@ -91,10 +91,7 @@ export function Footer() {
     // Handle navigation
     if (tabValue === "news") {
       // External link
-      window.open(
-        "https://news-agg-zeta.vercel.app?referrer=policast",
-        "_blank"
-      );
+      window.open("https://news-agg-zeta.vercel.app?referrer=policast");
     } else {
       // Internal navigation
       router.push(`/?tab=${tabValue}`);
@@ -321,9 +318,7 @@ export function Footer() {
                 <p className="text-white/90 text-xs leading-relaxed">
                   Built with ❤️ by{" "}
                   <a
-                    href="https://warpcast.com/~/channel/politics"
-                    target="_blank"
-                    rel="noreferrer"
+                    href="https://news-agg-zeta.vercel.app?referrer=policast"
                     className="font-semibold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent hover:from-cyan-300 hover:to-blue-300 transition-all duration-300"
                   >
                     Politics
