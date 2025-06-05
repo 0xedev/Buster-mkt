@@ -27,7 +27,8 @@ import {
   Users,
   ArrowRight,
 } from "lucide-react";
-
+import { toast } from "sonner";
+import sdk from "@farcaster/frame-sdk";
 export interface Market {
   question: string;
   optionA: string;
@@ -89,11 +90,27 @@ export function MarketCard({ index, market }: MarketCardProps) {
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app";
   const marketPageUrl = `${appUrl}/market/${index}/details`;
+  //eslint-disable-next-line @typescript-eslint/no-unused-vars
   const warpcastShareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(
     `Check out this market on Buster Market: ${
       marketData?.question || `Market ${index}`
     }`
   )}&embeds[]=${encodeURIComponent(marketPageUrl)}`;
+
+  const handleShareMarket = async () => {
+    const shareText = `Check out this market on Buster Market!\n${
+      marketData?.question || `Market #${index}`
+    }\nJoin here:`;
+    const shareUrl = `${appUrl}/market/${index}/details`;
+    try {
+      // Replace sdk.actions.composeCast with your actual SDK method
+      await sdk.actions.composeCast({ text: shareText, embeds: [shareUrl] });
+      console.log(shareText, shareUrl);
+    } catch (error) {
+      console.error("Failed to compose cast for sharing market:", error);
+      toast.error("Could not open Farcaster composer to share.");
+    }
+  };
 
   // Status badge component
   const StatusBadge = () => {
@@ -205,16 +222,10 @@ export function MarketCard({ index, market }: MarketCardProps) {
                   variant="outline"
                   size="sm"
                   className="bg-white/80 backdrop-blur-sm border-slate-200 hover:bg-white hover:border-slate-300 hover:shadow-md transition-all duration-200 rounded-xl px-4 py-2 group/btn"
+                  onClick={handleShareMarket}
                 >
-                  <a
-                    href={warpcastShareUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center space-x-1.5"
-                  >
-                    <Share2 className="w-3.5 h-3.5 group-hover/btn:rotate-12 transition-transform duration-200" />
-                    <span className="font-medium">Share</span>
-                  </a>
+                  <Share2 className="w-3.5 h-3.5 group-hover/btn:rotate-12 transition-transform duration-200" />
+                  <span className="font-medium">Share</span>
                 </Button>
               </div>
 

@@ -13,6 +13,26 @@
     "buttonTitle": "Explore Markets🏪",
     "splashImageUrl": "https://buster-mkt.vercel.app/icon.jpg",
     "splashBackgroundColor": "#ffffff",
-    "webhookUrl": "https://buster-mkt.vercel.app/api/webhook"
+    "webhookUrl": "https://buster-mkt.vercel.app/api/webhook",
+    "subtitle": "Prediction Market",
+    "description": "Participate in prediction markets with POLICAST",
+    "primaryCategory": "games",
+    "tags": ["polymarket", "prediction", "games", "airdrop", "farcaster"],
+    "tagline": "Predict and Win",
+    "ogTitle": "POLICAST PREDICTION MARKET",
+    "ogDescription": "Participate in prediction markets with POLICAST",
+    "ogImage": "https://buster-mkt.vercel.app/icon.jpg",
+    "noindex": false,
+    "permissions": ["cast:read"],
+    "notifications": {
+      "enabled": true,
+      "categories": [
+        {
+          "id": "welcome",
+          "name": "Welcome Messages"
+        }
+      ]
+    },
+    "author": "Oxdev.base.eth"
   }
 }
