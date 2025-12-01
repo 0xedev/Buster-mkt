@@ -9,7 +9,7 @@ import {
   publicClient,
   contractAddress,
   contractAbi,
-  tokenAddress as defaultTokenAddress,
+  tokenAddress as defaultTokenAdd,
   tokenAbi as defaultTokenAbi,
   V2contractAddress,
   V2contractAbi,
