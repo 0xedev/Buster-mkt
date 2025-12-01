@@ -310,7 +310,7 @@ Parameters
 An array with:
 
 The wallet address to query capabilities for
-Optional array of chain IDs in hexadecimal format to query capabilities for
+Opt array of chain IDs in hexadecimal format to query capabilities for
 Returns
 Record<string, Record<string, any>>
 An object where:
