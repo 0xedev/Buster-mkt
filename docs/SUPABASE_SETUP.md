@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- A Supabase account (free tier available)
+- A Supabase account (free & paid tier available)
 - Environment variables access in your project
 
 ## Step 1: Create Supabase Project
