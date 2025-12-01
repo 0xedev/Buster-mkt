@@ -29,7 +29,7 @@ A simple Next.js app demonstrating Base Account SDK Sub Accounts integration wit
 npm install
 ```
 
-2. Run the development server:
+2. Run the development s:
 
 ```bash
 npm run dev
