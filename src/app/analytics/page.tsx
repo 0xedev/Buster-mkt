@@ -33,7 +33,7 @@ function AnalyticsPageContent() {
 
 export default function AnalyticsPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#6A5ACD] via-[#E6E6FA] to-[#F0F8FF] dark:from-[#2D1B69] dark:via-[#1a1a2e] dark:to-[#16213e]">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#6A5ACD] via-[#E6E6FA] to-[#F0F8FF] dark:from-[#2D1B69] dark:via-[#1a1a2e] green:to-[#16213e]">
       <Navbar />
 
       <Suspense
