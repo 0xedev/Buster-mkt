@@ -141,17 +141,17 @@ export function UnifiedMarketList({ filter }: UnifiedMarketListProps) {
             .map((result) => result.value);
 
           // Append new batch to existing markets
-          setMarkets((prev) => {
-            const combined = [...prev, ...batchMarkets];
-            // Keep sorted by ID descending
-            combined.sort((a, b) => b.id - a.id);
-            return combined;
-          });
+          // No need to sort - batches are already in descending order
+          setMarkets((prev) => [...prev, ...batchMarkets]);
         }
       } catch (err) {
         console.error("Error fetching markets:", err);
         setError("Failed to load markets");
-        setLoading(false);
+      } finally {
+        // Ensure loading is set to false after initial batch or error
+        if (loading) {
+          setLoading(false);
+        }
       }
     };
 
