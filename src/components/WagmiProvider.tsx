@@ -103,7 +103,17 @@ export const config = createConfig({
   ],
 });
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // 1 minute - data is fresh for 1 minute
+      gcTime: 5 * 60 * 1000, // 5 minutes - keep unused data in cache
+      refetchOnWindowFocus: false, // Don't refetch on window focus for better UX
+      refetchOnReconnect: true, // Refetch when reconnecting
+      retry: 1, // Only retry failed requests once
+    },
+  },
+});
 
 // Wrapper component that provides Coinbase Wallet auto-connection and wallet context
 function WalletProvider({ children }: { children: React.ReactNode }) {

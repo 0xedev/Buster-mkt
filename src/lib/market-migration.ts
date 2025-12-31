@@ -15,10 +15,20 @@ import {
   MarketOption,
 } from "@/types/types";
 
+// Simple in-memory cache for market version detection
+const versionCache = new Map<number, { version: "v1" | "v2"; timestamp: number }>();
+const VERSION_CACHE_TTL = 60 * 60 * 1000; // 1 hour - market versions don't change
+
 // Determine if a market is V1 (binary) or V2 (multi-option)
 export async function detectMarketVersion(
   marketId: number
 ): Promise<"v1" | "v2"> {
+  // Check cache first
+  const cached = versionCache.get(marketId);
+  if (cached && Date.now() - cached.timestamp < VERSION_CACHE_TTL) {
+    return cached.version;
+  }
+
   try {
     // Try both V1 and V2 in parallel
     const [v1Result, v2Result] = await Promise.allSettled([
@@ -39,13 +49,15 @@ export async function detectMarketVersion(
     const v1Exists = v1Result.status === "fulfilled";
     const v2Exists = v2Result.status === "fulfilled";
 
-    // If only one version exists, return that one
-    if (v1Exists && !v2Exists) return "v1";
-    if (v2Exists && !v1Exists) return "v2";
+    let version: "v1" | "v2";
 
-    // If both exist, we need to decide which one to prioritize
-    if (v1Exists && v2Exists) {
-      // Check if markets are active/ended to decide priority
+    // If only one version exists, return that one
+    if (v1Exists && !v2Exists) {
+      version = "v1";
+    } else if (v2Exists && !v1Exists) {
+      version = "v2";
+    } else if (v1Exists && v2Exists) {
+      // If both exist, we need to decide which one to prioritize
       const v1Data = v1Result.value as unknown as any[];
       const v2Data = v2Result.value as unknown as any[];
 
@@ -69,23 +81,26 @@ export async function detectMarketVersion(
 
       if (v2Active && !v1Active) {
         console.log(`Market ${marketId}: V2 active, V1 ended - choosing V2`);
-        return "v2";
-      }
-      if (v1Active && !v2Active) {
+        version = "v2";
+      } else if (v1Active && !v2Active) {
         console.log(`Market ${marketId}: V1 active, V2 ended - choosing V1`);
-        return "v1";
+        version = "v1";
+      } else {
+        // If both have same status, prefer V2 (newer contract)
+        console.log(
+          `Market ${marketId}: Both versions exist with same status - preferring V2`
+        );
+        version = "v2";
       }
-
-      // If both have same status, prefer V2 (newer contract)
-      console.log(
-        `Market ${marketId}: Both versions exist with same status - preferring V2`
-      );
-      return "v2";
+    } else {
+      // If neither exists, fallback to V1
+      console.log(`Market ${marketId}: Neither version found - defaulting to V1`);
+      version = "v1";
     }
 
-    // If neither exists, fallback to V1
-    console.log(`Market ${marketId}: Neither version found - defaulting to V1`);
-    return "v1";
+    // Cache the result
+    versionCache.set(marketId, { version, timestamp: Date.now() });
+    return version;
   } catch (error) {
     console.error(`Error detecting market version for ${marketId}:`, error);
     return "v1";
