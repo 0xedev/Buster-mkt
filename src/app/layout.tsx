@@ -10,11 +10,15 @@ const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
   weight: "100 900",
+  display: "swap",
+  preload: true,
 });
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
   weight: "100 900",
+  display: "swap",
+  preload: true,
 });
 
 export const metadata: Metadata = {
@@ -96,6 +100,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <StructuredData metadata={metadata} />
+        {/* DNS prefetch for critical third-party domains */}
+        <link rel="dns-prefetch" href="https://base.rpc.url" />
+        <link rel="dns-prefetch" href="https://imagedelivery.net" />
+        {/* Preconnect to RPC endpoints for faster blockchain calls */}
+        <link rel="preconnect" href={process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || "https://base.rpc.url"} crossOrigin="anonymous" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

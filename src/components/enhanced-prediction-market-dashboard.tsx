@@ -4,7 +4,7 @@ import { useAccount } from "wagmi";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Footer } from "./footer";
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { sdk } from "@farcaster/miniapp-sdk";
 import { UserStats } from "./UserStats";
 import { useRouter, usePathname } from "next/navigation";
@@ -16,11 +16,12 @@ import { useUserRoles } from "@/hooks/useUserRoles";
 import { Wallet } from "lucide-react";
 import Link from "next/link";
 
-import { VoteHistory } from "./VoteHistory";
 import { useFarcasterUser } from "@/hooks/useFarcasterUser";
 
-import { ModernAdminDashboard } from "./ModernAdminDashboard";
-import LeaderboardComponent from "./LeaderboardComponent";
+// Lazy load heavy components that aren't immediately visible
+const VoteHistory = lazy(() => import("./VoteHistory").then(mod => ({ default: mod.VoteHistory })));
+const ModernAdminDashboard = lazy(() => import("./ModernAdminDashboard").then(mod => ({ default: mod.ModernAdminDashboard })));
+const LeaderboardComponent = lazy(() => import("./LeaderboardComponent"));
 
 export function EnhancedPredictionMarketDashboard() {
   const { address, isConnected } = useAccount();
@@ -193,7 +194,9 @@ export function EnhancedPredictionMarketDashboard() {
 
           <TabsContent value="leaderboard" className="mt-6">
             <div className="bg-[#433952]/50 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden border border-[#544863]">
-              <LeaderboardComponent onTabChange={handleTabChange} />
+              <Suspense fallback={<div className="p-8 text-center text-gray-400">Loading leaderboard...</div>}>
+                <LeaderboardComponent onTabChange={handleTabChange} />
+              </Suspense>
             </div>
           </TabsContent>
 
@@ -207,7 +210,9 @@ export function EnhancedPredictionMarketDashboard() {
 
                 {/* Vote History Section */}
                 <div className="lg:col-span-2">
-                  <VoteHistory />
+                  <Suspense fallback={<div className="p-8 text-center text-gray-400">Loading vote history...</div>}>
+                    <VoteHistory />
+                  </Suspense>
                 </div>
               </div>
             ) : (
@@ -239,7 +244,9 @@ export function EnhancedPredictionMarketDashboard() {
           {/* Admin Tab Content */}
           {(hasCreatorAccess || hasResolverAccess || isAdmin) && (
             <TabsContent value="admin" className="mt-6">
-              <ModernAdminDashboard />
+              <Suspense fallback={<div className="p-8 text-center text-gray-400">Loading admin dashboard...</div>}>
+                <ModernAdminDashboard />
+              </Suspense>
             </TabsContent>
           )}
         </Tabs>

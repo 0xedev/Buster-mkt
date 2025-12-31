@@ -78,7 +78,53 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  webpack: (config: any) => {
+  // Performance optimizations
+  compress: true,
+  poweredByHeader: false,
+  // Security and performance headers
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on'
+          },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains' // 1 year, removed preload for safety
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN'
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin'
+          },
+        ],
+      },
+    ];
+  },
+  // Enable experimental features for better performance
+  experimental: {
+    optimizePackageImports: [
+      '@radix-ui/react-avatar',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-select',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-toast',
+      'lucide-react',
+      '@heroicons/react',
+      'recharts',
+    ],
+  },
+  webpack: (config: any, { isServer }) => {
     config.externals.push("pino-pretty", "lokijs", "encoding");
 
     // Ignore React Native dependencies that aren't needed in web
@@ -89,6 +135,43 @@ const nextConfig: NextConfig = {
 
     // Suppress the warning for optional dependencies
     config.ignoreWarnings = [{ module: /node_modules\/@metamask\/sdk/ }];
+
+    // Optimize bundle size
+    if (!isServer) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            default: false,
+            vendors: false,
+            // Vendor chunk for node_modules
+            vendor: {
+              name: 'vendor',
+              chunks: 'all',
+              test: /node_modules/,
+              priority: 20,
+            },
+            // Separate wallet and web3 libraries
+            web3: {
+              name: 'web3',
+              test: /[\\/]node_modules[\\/](wagmi|viem|@wagmi|@reown|@walletconnect|ethers)[\\/]/,
+              chunks: 'all',
+              priority: 30,
+            },
+            // Common UI components
+            common: {
+              name: 'common',
+              minChunks: 2,
+              chunks: 'all',
+              priority: 10,
+              reuseExistingChunk: true,
+              enforce: true,
+            },
+          },
+        },
+      };
+    }
 
     return config;
   },
