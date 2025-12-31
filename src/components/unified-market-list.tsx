@@ -70,7 +70,7 @@ export function UnifiedMarketList({ filter }: UnifiedMarketListProps) {
         // For now, prioritize V2 markets and show some V1 markets
         const marketPromises: Promise<MarketWithVersion>[] = [];
 
-        // Fetch V2 markets (if any)
+        // Fetch V2 markets in parallel
         for (let i = 0; i < counts.v2Count; i++) {
           marketPromises.push(
             fetchMarketData(i).then(({ version, market }) => ({
@@ -84,7 +84,7 @@ export function UnifiedMarketList({ filter }: UnifiedMarketListProps) {
           );
         }
 
-        // Fetch recent V1 markets (up to 20)
+        // Fetch recent V1 markets (up to 20) in parallel
         const v1MarketsToFetch = Math.min(counts.v1Count, 20);
         for (
           let i = Math.max(0, counts.v1Count - v1MarketsToFetch);
