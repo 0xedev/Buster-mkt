@@ -70,8 +70,18 @@ function getMarketStatus(
   }
 }
 
+// Cache for validation status to avoid repeated checks
+const validationCache = new Map<number, { validated: boolean; timestamp: number }>();
+const VALIDATION_CACHE_TTL = 60000; // 60 seconds
+
 // Check if a V2 market is validated by attempting a purchase call
 async function checkMarketValidation(marketId: number): Promise<boolean> {
+  // Check cache first
+  const cached = validationCache.get(marketId);
+  if (cached && Date.now() - cached.timestamp < VALIDATION_CACHE_TTL) {
+    return cached.validated;
+  }
+
   try {
     // We'll try to simulate a purchase to see if it throws MarketNotValidated
     // This is a workaround since there's no direct validation getter
@@ -84,18 +94,23 @@ async function checkMarketValidation(marketId: number): Promise<boolean> {
       args: [BigInt(marketId), BigInt(0), BigInt(1), BigInt(1000000)], // Try to buy 1 share of option 0 with max price 1000000
       account: "0x0000000000000000000000000000000000000001", // Dummy account
     });
+    
+    // Cache the result
+    validationCache.set(marketId, { validated: true, timestamp: Date.now() });
     return true; // If no error, market is validated
   } catch (error: any) {
     // Check if the error is specifically MarketNotValidated
-    if (
+    const isNotValidated = 
       error?.message?.includes("MarketNotValidated") ||
       error?.shortMessage?.includes("MarketNotValidated") ||
-      error?.details?.includes("MarketNotValidated")
-    ) {
-      return false;
-    }
+      error?.details?.includes("MarketNotValidated");
+    
     // For other errors (like insufficient funds, invalid option, etc.), assume validated
-    return true;
+    const validated = !isNotValidated;
+    
+    // Cache the result
+    validationCache.set(marketId, { validated, timestamp: Date.now() });
+    return validated;
   }
 }
 
@@ -124,10 +139,9 @@ export function ValidatedMarketList({
         const allMarketData: MarketWithVersion[] = [];
 
         // Fetch markets in batches to avoid rate limiting
-        const BATCH_SIZE = 5; // Process 5 markets at a time
-        const BATCH_DELAY = 500; // 500ms delay between batches
+        const BATCH_SIZE = 10; // Process 10 markets at a time
 
-        // Helper function to fetch a batch with delay
+        // Helper function to fetch a batch
         const fetchBatch = async (
           startIdx: number,
           endIdx: number,
@@ -179,11 +193,6 @@ export function ValidatedMarketList({
 
           // Update UI progressively
           setMarkets([...allMarketData].sort((a, b) => b.id - a.id));
-
-          // Add delay between batches (except for last batch)
-          if (endIdx < counts.v2Count) {
-            await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY));
-          }
         }
 
         // Fetch recent V1 markets (up to 20) in batches
@@ -197,11 +206,6 @@ export function ValidatedMarketList({
 
           // Update UI progressively
           setMarkets([...allMarketData].sort((a, b) => b.id - a.id));
-
-          // Add delay between batches (except for last batch)
-          if (endIdx < counts.v1Count) {
-            await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY));
-          }
         }
 
         // Final sort

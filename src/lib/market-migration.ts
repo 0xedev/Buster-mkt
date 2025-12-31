@@ -126,94 +126,77 @@ export async function fetchV1Market(marketId: number): Promise<Market> {
 
 // Fetch V2 market data
 export async function fetchV2Market(marketId: number): Promise<MarketV2> {
-  // Primary: read basic info from V2 contract
-  let basicInfo: any = null;
-  try {
-    basicInfo = await publicClient.readContract({
+  // Fetch all contract data in parallel for better performance
+  const [basicInfo, extendedMeta, viewInfo] = await Promise.allSettled([
+    publicClient.readContract({
       address: V2contractAddress,
       abi: V2contractAbi,
       functionName: "getMarketBasicInfo",
       args: [BigInt(marketId)],
-    });
-  } catch (err) {
-    // Fallback: try PolicastViews.getMarketInfo if basic info isn't available
-    console.warn(
-      `getMarketBasicInfo failed for ${marketId}, falling back:`,
-      err
-    );
-  }
-
-  // Extended meta (contains validated / creator / earlyResolutionAllowed)
-  let extendedMeta: any = null;
-  try {
-    extendedMeta = await publicClient.readContract({
+    }),
+    publicClient.readContract({
       address: V2contractAddress,
       abi: V2contractAbi,
       functionName: "getMarketExtendedMeta",
       args: [BigInt(marketId)],
-    });
-  } catch (err) {
-    console.warn(`getMarketExtendedMeta failed for ${marketId}:`, err);
-  }
-
-  // Also attempt to read the view-based getMarketInfo as a last resort to
-  // populate question/description/endTime when available.
-  let viewInfo: any = null;
-  try {
-    viewInfo = await publicClient.readContract({
+    }),
+    publicClient.readContract({
       address: PolicastViews,
       abi: PolicastViewsAbi,
       functionName: "getMarketInfo",
       args: [BigInt(marketId)],
-    });
-  } catch (err) {
-    // ignore - we'll use whatever we managed to fetch
-  }
+    }),
+  ]);
+
+  // Extract values from settled promises
+  const basicInfoData = basicInfo.status === "fulfilled" ? basicInfo.value : null;
+  const extendedMetaData = extendedMeta.status === "fulfilled" ? extendedMeta.value : null;
+  const viewInfoData = viewInfo.status === "fulfilled" ? viewInfo.value : null;
 
   // Map fields from available responses with safe fallbacks
   const question = String(
-    (viewInfo && viewInfo[0]) || (basicInfo && basicInfo[0]) || ""
+    (viewInfoData && viewInfoData[0]) || (basicInfoData && basicInfoData[0]) || ""
   );
   const description = String(
-    (viewInfo && viewInfo[1]) || (basicInfo && basicInfo[1]) || ""
+    (viewInfoData && viewInfoData[1]) || (basicInfoData && basicInfoData[1]) || ""
   );
   const endTime: bigint = BigInt(
-    (viewInfo && viewInfo[2]) || (basicInfo && basicInfo[2]) || 0n
+    (viewInfoData && viewInfoData[2]) || (basicInfoData && basicInfoData[2]) || 0n
   );
   const category: MarketCategory = Number(
-    (viewInfo && viewInfo[3]) || (basicInfo && basicInfo[3]) || 0
+    (viewInfoData && viewInfoData[3]) || (basicInfoData && basicInfoData[3]) || 0
   ) as MarketCategory;
 
-  const optionCount: bigint = basicInfo
-    ? BigInt(basicInfo[4] ?? 0n)
-    : BigInt((viewInfo && viewInfo[4]) ?? 0n);
+  const optionCount: bigint = basicInfoData
+    ? BigInt(basicInfoData[4] ?? 0n)
+    : BigInt((viewInfoData && viewInfoData[4]) ?? 0n);
   const resolved = Boolean(
-    (basicInfo && basicInfo[5]) || (viewInfo && viewInfo[5])
+    (basicInfoData && basicInfoData[5]) || (viewInfoData && viewInfoData[5])
   );
   const marketTypeValue = Number(
-    (basicInfo && basicInfo[6]) || (viewInfo && viewInfo[4]) || 0
+    (basicInfoData && basicInfoData[6]) || (viewInfoData && viewInfoData[4]) || 0
   );
   const invalidated = Boolean(
-    (basicInfo && basicInfo[7]) || (viewInfo && viewInfo[6])
+    (basicInfoData && basicInfoData[7]) || (viewInfoData && viewInfoData[6])
   );
-  const totalVolume: bigint = basicInfo
-    ? BigInt(basicInfo[8] ?? 0n)
-    : BigInt((viewInfo && viewInfo[9]) ?? 0n);
+  const totalVolume: bigint = basicInfoData
+    ? BigInt(basicInfoData[8] ?? 0n)
+    : BigInt(0n);  // viewInfo doesn't have totalVolume at index 9
 
-  const winningOptionId: bigint = extendedMeta
-    ? BigInt(extendedMeta[0] ?? 0n)
+  const winningOptionId: bigint = extendedMetaData
+    ? BigInt(extendedMetaData[0] ?? 0n)
     : BigInt(0n);
-  const disputed = extendedMeta ? Boolean(extendedMeta[1]) : false;
-  const validated = extendedMeta ? Boolean(extendedMeta[2]) : false;
+  const disputed = extendedMetaData ? Boolean(extendedMetaData[1]) : false;
+  const validated = extendedMetaData ? Boolean(extendedMetaData[2]) : false;
   // Use nullish coalescing consistently to avoid mixing '||' and '??' which
   // TypeScript disallows without parentheses. Prefer `??` because zero/false
   // could be valid values for some fields but here we want non-null defaults.
-  const creator = extendedMeta
-    ? String(extendedMeta[3] ?? (basicInfo && basicInfo[11]) ?? "")
-    : String((basicInfo && basicInfo[11]) ?? "");
-  const earlyResolutionAllowed = extendedMeta
-    ? Boolean(extendedMeta[4])
-    : Boolean((viewInfo && viewInfo[12]) || false);
+  const creator = extendedMetaData
+    ? String(extendedMetaData[3] ?? "")
+    : String("");  // basicInfo doesn't have creator at index 11
+  const earlyResolutionAllowed = extendedMetaData
+    ? Boolean(extendedMetaData[4])
+    : Boolean(false);  // viewInfo doesn't have earlyResolutionAllowed at index 12
 
   // Fetch all options in parallel with batching to reduce RPC calls
   const options: MarketOption[] = [];
