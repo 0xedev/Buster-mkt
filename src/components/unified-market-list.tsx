@@ -67,59 +67,90 @@ export function UnifiedMarketList({ filter }: UnifiedMarketListProps) {
         const counts = await getTotalMarketCount();
         console.log("Market counts:", counts);
 
-        // For now, prioritize V2 markets and show some V1 markets
-        const marketPromises: Promise<MarketWithVersion>[] = [];
-
-        // Fetch V2 markets in parallel
+        // Progressive loading: Load markets in batches to improve perceived performance
+        const INITIAL_BATCH_SIZE = 6; // First batch for quick initial render
+        const BATCH_SIZE = 12; // Subsequent batches
+        
+        const allMarketIds: { id: number; source: 'v1' | 'v2' }[] = [];
+        
+        // Add V2 markets
         for (let i = 0; i < counts.v2Count; i++) {
-          marketPromises.push(
-            fetchMarketData(i).then(({ version, market }) => ({
-              id: i,
-              version,
-              market:
-                version === "v2"
-                  ? (market as MarketV2)
-                  : convertV1Market(market as MarketV1Types),
-            }))
-          );
+          allMarketIds.push({ id: i, source: 'v2' });
         }
-
-        // Fetch recent V1 markets (up to 20) in parallel
+        
+        // Add recent V1 markets (up to 20)
         const v1MarketsToFetch = Math.min(counts.v1Count, 20);
         for (
           let i = Math.max(0, counts.v1Count - v1MarketsToFetch);
           i < counts.v1Count;
           i++
         ) {
-          marketPromises.push(
-            fetchMarketData(i).then(({ version, market }) => ({
-              id: i,
-              version,
-              market:
-                version === "v2"
-                  ? (market as MarketV2)
-                  : convertV1Market(market as MarketV1Types),
-            }))
-          );
+          allMarketIds.push({ id: i, source: 'v1' });
         }
+        
+        // Sort by ID descending (newest first) before batching
+        allMarketIds.sort((a, b) => b.id - a.id);
+        
+        // Load first batch immediately for fast initial paint
+        const firstBatch = allMarketIds.slice(0, INITIAL_BATCH_SIZE);
+        const firstBatchPromises = firstBatch.map(async ({ id }) => {
+          const { version, market } = await fetchMarketData(id);
+          return {
+            id,
+            version,
+            market: version === "v2" 
+              ? (market as MarketV2) 
+              : convertV1Market(market as MarketV1Types),
+          };
+        });
 
-        const allMarkets = await Promise.allSettled(marketPromises);
-
-        const successfulMarkets = allMarkets
+        const firstBatchResults = await Promise.allSettled(firstBatchPromises);
+        const initialMarkets = firstBatchResults
           .filter(
             (result): result is PromiseFulfilledResult<MarketWithVersion> =>
               result.status === "fulfilled"
           )
           .map((result) => result.value);
+        
+        setMarkets(initialMarkets);
+        setLoading(false); // Show initial markets quickly
+        
+        // Load remaining markets in background
+        const remainingIds = allMarketIds.slice(INITIAL_BATCH_SIZE);
+        
+        // Process in batches to avoid overwhelming the network
+        for (let i = 0; i < remainingIds.length; i += BATCH_SIZE) {
+          const batchIds = remainingIds.slice(i, i + BATCH_SIZE);
+          const batchPromises = batchIds.map(async ({ id }) => {
+            const { version, market } = await fetchMarketData(id);
+            return {
+              id,
+              version,
+              market: version === "v2"
+                ? (market as MarketV2)
+                : convertV1Market(market as MarketV1Types),
+            };
+          });
 
-        // Sort by ID descending (newest first)
-        successfulMarkets.sort((a, b) => b.id - a.id);
+          const batchResults = await Promise.allSettled(batchPromises);
+          const batchMarkets = batchResults
+            .filter(
+              (result): result is PromiseFulfilledResult<MarketWithVersion> =>
+                result.status === "fulfilled"
+            )
+            .map((result) => result.value);
 
-        setMarkets(successfulMarkets);
+          // Append new batch to existing markets
+          setMarkets((prev) => {
+            const combined = [...prev, ...batchMarkets];
+            // Keep sorted by ID descending
+            combined.sort((a, b) => b.id - a.id);
+            return combined;
+          });
+        }
       } catch (err) {
         console.error("Error fetching markets:", err);
         setError("Failed to load markets");
-      } finally {
         setLoading(false);
       }
     };
