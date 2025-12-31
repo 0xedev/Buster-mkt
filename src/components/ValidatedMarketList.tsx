@@ -140,9 +140,8 @@ export function ValidatedMarketList({
 
         // Fetch markets in batches to avoid rate limiting
         const BATCH_SIZE = 10; // Process 10 markets at a time
-        const BATCH_DELAY = 0; // No delay - let Promise.all handle concurrency
 
-        // Helper function to fetch a batch with delay
+        // Helper function to fetch a batch
         const fetchBatch = async (
           startIdx: number,
           endIdx: number,
