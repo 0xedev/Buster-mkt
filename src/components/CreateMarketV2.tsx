@@ -517,7 +517,7 @@ export function CreateMarketV2() {
         const currentTokens = Number(userBalance) / 1e18;
         toast({
           title: "Insufficient Balance",
-          description: `You need ${requiredTokens.toLocaleString()} BUSTER tokens but only have ${currentTokens.toLocaleString()}.`,
+          description: `You need ${requiredTokens.toLocaleString()} Politics tokens but only have ${currentTokens.toLocaleString()}.`,
           variant: "destructive",
         });
         return;
@@ -824,7 +824,7 @@ export function CreateMarketV2() {
                   className="flex items-center gap-2 text-white/80"
                 >
                   <DollarSign className="h-4 w-4" />
-                  Initial Liquidity (buster, min {MIN_INITIAL_LIQUIDITY}) *
+                  Initial Liquidity (Politics, min {MIN_INITIAL_LIQUIDITY}) *
                 </Label>
                 <Input
                   id="initialLiquidity"
@@ -1026,7 +1026,7 @@ export function CreateMarketV2() {
             <div className="space-y-1 text-sm">
               <div className="flex justify-between text-white/80">
                 <span>Initial Liquidity:</span>
-                <span className="text-white">{initialLiquidity} BUSTER</span>
+                <span className="text-white">{initialLiquidity} POLITICS</span>
               </div>
               {marketType === MarketType.FREE_ENTRY && (
                 <>
@@ -1047,7 +1047,7 @@ export function CreateMarketV2() {
                           ? "0"
                           : (participants * tokensPerUser).toLocaleString();
                       })()}{" "}
-                      BUSTER
+                      POLITICS
                     </span>
                   </div>
                   <Separator className="my-2" />
@@ -1070,7 +1070,7 @@ export function CreateMarketV2() {
                           ? "0"
                           : (liquidity + prizePool).toLocaleString();
                       })()}{" "}
-                      BUSTER
+                      POLITICS
                     </span>
                   </div>
                 </>
@@ -1078,7 +1078,7 @@ export function CreateMarketV2() {
               {marketType === MarketType.PAID && (
                 <div className="flex justify-between font-medium text-white">
                   <span>Total Required:</span>
-                  <span>{initialLiquidity} BUSTER</span>
+                  <span>{initialLiquidity} POLITICS</span>
                 </div>
               )}
 
@@ -1106,7 +1106,7 @@ export function CreateMarketV2() {
                     }
                   })()}
                 >
-                  {(Number(userBalance) / 1e18).toLocaleString()} BUSTER
+                  {(Number(userBalance) / 1e18).toLocaleString()} POLITICS
                 </span>
               </div>
 

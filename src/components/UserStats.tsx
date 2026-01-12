@@ -24,38 +24,15 @@ import { Share2, TrendingUp, TrendingDown } from "lucide-react";
 import { sdk } from "@farcaster/miniapp-sdk";
 import { ClaimWinningsSection } from "@/components/ClaimWinningsButton";
 
-interface Vote {
-  marketId: number;
-  isOptionA: boolean;
-  amount: bigint;
-  timestamp: bigint;
-  version: "v1" | "v2";
-  optionId?: number;
-}
-
-interface MarketInfo {
-  question: string;
-  optionA?: string;
-  optionB?: string;
-  options?: string[];
-  outcome: number;
-  resolved: boolean;
-  version: "v1" | "v2";
-}
-
 interface UserStatsData {
-  totalVotes: number;
+  totalTrades: number;
+  marketsParticipated: number;
   wins: number;
   losses: number;
   winRate: number;
   totalInvested: bigint;
+  totalWinnings: bigint;
   netWinnings: bigint;
-  v1Markets: number;
-  v2Markets: number;
-  v1Wins: number;
-  v1Losses: number;
-  v2Wins: number;
-  v2Losses: number;
   v2TradeCount: number;
   v2Portfolio?: {
     totalInvested: bigint;
@@ -66,7 +43,7 @@ interface UserStatsData {
   };
 }
 
-const CACHE_KEY_STATS = "user_stats_cache_v2";
+const CACHE_KEY_STATS = "user_stats_cache_v3";
 const CACHE_TTL_STATS = 60 * 60;
 
 export function UserStats() {
@@ -75,7 +52,7 @@ export function UserStats() {
   const farcasterUser = useFarcasterUser();
   const [stats, setStats] = useState<UserStatsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [tokenSymbol, setTokenSymbol] = useState<string>("buster");
+  const [tokenSymbol, setTokenSymbol] = useState<string>("POLITICS");
   const [tokenDecimals, setTokenDecimals] = useState<number>(18);
 
   const { data: bettingTokenAddr } = useReadContract({
@@ -104,15 +81,6 @@ export function UserStats() {
     if (symbolData) setTokenSymbol(symbolData as string);
     if (decimalsData) setTokenDecimals(Number(decimalsData));
   }, [symbolData, decimalsData]);
-
-  const { data: totalWinningsData } = useReadContract({
-    address: contractAddress,
-    abi: contractAbi,
-    functionName: "totalWinnings",
-    args: [accountAddress!],
-    query: { enabled: !!accountAddress },
-  });
-  const totalWinnings = (totalWinningsData as bigint | undefined) ?? 0n;
 
   type V2PortfolioTuple = readonly [bigint, bigint, bigint, bigint, bigint];
   const { data: v2PortfolioTuple } = useReadContract({
@@ -145,12 +113,11 @@ export function UserStats() {
             if (Date.now() - data.timestamp < CACHE_TTL_STATS * 1000) {
               const cachedStats = {
                 ...data.stats,
-                totalInvested: BigInt(data.stats.totalInvested),
-                netWinnings: BigInt(data.stats.netWinnings),
-                v1Wins: data.stats.v1Wins || 0,
-                v1Losses: data.stats.v1Losses || 0,
-                v2Wins: data.stats.v2Wins || 0,
-                v2Losses: data.stats.v2Losses || 0,
+                totalInvested: BigInt(data.stats.totalInvested ?? 0),
+                totalWinnings: BigInt(data.stats.totalWinnings ?? 0),
+                netWinnings: BigInt(data.stats.netWinnings ?? 0),
+                wins: data.stats.wins || 0,
+                losses: data.stats.losses || 0,
                 v2TradeCount: data.stats.v2TradeCount || 0,
                 v2Portfolio: data.stats.v2Portfolio
                   ? {
@@ -181,71 +148,15 @@ export function UserStats() {
           }
         }
 
-        const [v1VoteCount] = await Promise.all([
-          publicClient.readContract({
-            address: contractAddress,
-            abi: contractAbi,
-            functionName: "getVoteHistoryCount",
-            args: [address],
-          }) as Promise<bigint>,
-        ]);
-
         const v2TradeCount = v2PortfolioTuple ? Number(v2PortfolioTuple[4]) : 0;
-
-        if (v1VoteCount === 0n && v2TradeCount === 0) {
-          setStats({
-            totalVotes: 0,
-            wins: 0,
-            losses: 0,
-            winRate: 0,
-            totalInvested: 0n,
-            netWinnings: 0n,
-            v1Markets: 0,
-            v2Markets: 0,
-            v1Wins: 0,
-            v1Losses: 0,
-            v2Wins: 0,
-            v2Losses: 0,
-            v2TradeCount: 0,
-            v2Portfolio: v2PortfolioTuple
-              ? {
-                  totalInvested: v2PortfolioTuple[0],
-                  totalWinnings: v2PortfolioTuple[1],
-                  unrealizedPnL:
-                    (calculatedUnrealizedPnL as bigint | undefined) ?? 0n,
-                  realizedPnL: v2PortfolioTuple[3],
-                  tradeCount: Number(v2PortfolioTuple[4]),
-                }
-              : undefined,
-          });
-          setIsLoading(false);
-          return;
-        }
-
-        const allVotes: Vote[] = [];
-
-        for (let i = 0; i < v1VoteCount; i += 50) {
-          const votes = (await publicClient.readContract({
-            address: contractAddress,
-            abi: contractAbi,
-            functionName: "getVoteHistory",
-            args: [address, BigInt(i), 50n],
-          })) as readonly {
-            marketId: bigint;
-            isOptionA: boolean;
-            amount: bigint;
-            timestamp: bigint;
-          }[];
-          allVotes.push(
-            ...votes.map((v) => ({
-              ...v,
-              marketId: Number(v.marketId),
-              version: "v1" as const,
-            }))
-          );
-        }
-
-        const v2Trades: any[] = [];
+        const v2Trades: Array<{
+          marketId: number;
+          optionId: number;
+          buyer: Address;
+          seller: Address;
+          quantity: bigint;
+          timestamp: bigint;
+        }> = [];
         try {
           if (v2PortfolioTuple) {
             const tradeCount = Number(v2PortfolioTuple[4]);
@@ -264,9 +175,8 @@ export function UserStats() {
                     v2Trades.push({
                       marketId: Number((trade as any).marketId),
                       optionId: Number((trade as any).optionId),
-                      buyer: (trade as any).buyer,
-                      seller: (trade as any).seller,
-                      price: BigInt((trade as any).price || 0),
+                      buyer: (trade as any).buyer as Address,
+                      seller: (trade as any).seller as Address,
                       quantity: BigInt((trade as any).quantity || 0),
                       timestamp: BigInt((trade as any).timestamp || 0),
                     });
@@ -290,87 +200,50 @@ export function UserStats() {
         }
         const v2MarketIds = [...new Set(v2Trades.map((t) => t.marketId))];
 
-        const v2MarketInfos: Record<number, any> = {};
+        const v2MarketInfos: Record<
+          number,
+          { resolved: boolean; winningOptionId: number }
+        > = {};
+
         if (v2MarketIds.length > 0) {
           try {
             for (const marketId of v2MarketIds) {
-              const marketInfo = await publicClient.readContract({
-                address: PolicastViews as `0x${string}`,
-                abi: PolicastViewsAbi,
-                functionName: "getMarketInfo",
+              const marketBasicInfo = (await publicClient.readContract({
+                address: V2contractAddress,
+                abi: V2contractAbi,
+                functionName: "getMarketBasicInfo",
                 args: [BigInt(marketId)],
-              });
+              })) as [
+                string,
+                string,
+                bigint,
+                number,
+                bigint,
+                boolean,
+                number,
+                boolean,
+                bigint
+              ];
 
-              if (marketInfo) {
-                v2MarketInfos[marketId] = {
-                  question: (marketInfo as any)[0],
-                  description: (marketInfo as any)[1],
-                  endTime: (marketInfo as any)[2],
-                  category: (marketInfo as any)[3],
-                  optionCount: (marketInfo as any)[4],
-                  resolved: (marketInfo as any)[5],
-                  disputed: (marketInfo as any)[6],
-                  winningOptionId: (marketInfo as any)[7],
-                };
-              }
+              const marketExtendedMeta = (await publicClient.readContract({
+                address: V2contractAddress,
+                abi: V2contractAbi,
+                functionName: "getMarketExtendedMeta",
+                args: [BigInt(marketId)],
+              })) as [bigint, boolean, boolean, string, boolean];
+
+              v2MarketInfos[marketId] = {
+                resolved: Boolean(marketBasicInfo[5]),
+                winningOptionId: Number(marketExtendedMeta[0]),
+              };
             }
           } catch (error) {
             console.warn("V2 market info not accessible:", error);
           }
         }
 
-        const v1MarketIds = [
-          ...new Set(
-            allVotes.filter((v) => v.version === "v1").map((v) => v.marketId)
-          ),
-        ];
-
-        const marketInfos: Record<number, MarketInfo> = {};
-
-        if (v1MarketIds.length > 0) {
-          const v1MarketInfosData = await publicClient.readContract({
-            address: contractAddress,
-            abi: contractAbi,
-            functionName: "getMarketInfoBatch",
-            args: [v1MarketIds.map(BigInt)],
-          });
-
-          v1MarketIds.forEach((id, i) => {
-            marketInfos[id] = {
-              question: v1MarketInfosData[0][i],
-              optionA: v1MarketInfosData[1][i],
-              optionB: v1MarketInfosData[2][i],
-              outcome: v1MarketInfosData[4][i],
-              resolved: v1MarketInfosData[7][i],
-              version: "v1",
-            };
-          });
-        }
-
         let wins = 0;
         let losses = 0;
-        let v1Markets = 0;
-        const v2Markets = v2MarketIds.length;
-        let v2Wins = 0;
-        let v2Losses = 0;
-        const totalInvested = allVotes.reduce((acc, v) => acc + v.amount, 0n);
-
-        allVotes.forEach((vote) => {
-          const market = marketInfos[vote.marketId];
-          if (market && market.resolved) {
-            if (market.version === "v1") {
-              v1Markets++;
-              const won =
-                (vote.isOptionA && market.outcome === 1) ||
-                (!vote.isOptionA && market.outcome === 2);
-              if (won) {
-                wins++;
-              } else if (market.outcome !== 0 && market.outcome !== 3) {
-                losses++;
-              }
-            }
-          }
-        });
 
         const v2UserPositions: Record<number, Record<number, bigint>> = {};
 
@@ -413,42 +286,34 @@ export function UserStats() {
             });
 
             if (userWon) {
-              v2Wins++;
+              wins++;
             } else {
               const hadPosition = Object.values(positions).some((q) => q > 0n);
               if (hadPosition) {
-                v2Losses++;
+                losses++;
               }
             }
           }
         });
 
-        const totalVotes = wins + losses + v2Wins + v2Losses;
-        const totalWins = wins + v2Wins;
-        const totalLosses = losses + v2Losses;
-        const winRate = totalVotes > 0 ? (totalWins / totalVotes) * 100 : 0;
+        const resolvedOutcomes = wins + losses;
+        const winRate =
+          resolvedOutcomes > 0 ? (wins / resolvedOutcomes) * 100 : 0;
 
         const v2TotalInvested = v2PortfolioTuple ? v2PortfolioTuple[0] : 0n;
-        const combinedTotalInvested = totalInvested + v2TotalInvested;
-
         const v2TotalWinningsAmount = v2PortfolioTuple
           ? v2PortfolioTuple[1]
           : 0n;
-        const combinedNetWinnings = totalWinnings + v2TotalWinningsAmount;
 
-        const newStats = {
-          totalVotes,
-          wins: totalWins,
-          losses: totalLosses,
+        const newStats: UserStatsData = {
+          totalTrades: v2Trades.length,
+          marketsParticipated: v2MarketIds.length,
+          wins,
+          losses,
           winRate,
-          totalInvested: combinedTotalInvested,
-          netWinnings: combinedNetWinnings,
-          v1Markets,
-          v2Markets,
-          v1Wins: wins,
-          v1Losses: losses,
-          v2Wins,
-          v2Losses,
+          totalInvested: v2TotalInvested,
+          totalWinnings: v2TotalWinningsAmount,
+          netWinnings: v2TotalWinningsAmount,
           v2TradeCount: v2Trades.length,
           v2Portfolio: v2PortfolioTuple
             ? {
@@ -466,6 +331,7 @@ export function UserStats() {
         const statsForCache = {
           ...newStats,
           totalInvested: newStats.totalInvested.toString(),
+          totalWinnings: newStats.totalWinnings.toString(),
           netWinnings: newStats.netWinnings.toString(),
           v2Portfolio: newStats.v2Portfolio
             ? {
@@ -497,7 +363,7 @@ export function UserStats() {
         setIsLoading(false);
       }
     },
-    [toast, totalWinnings, v2PortfolioTuple, calculatedUnrealizedPnL]
+    [toast, v2PortfolioTuple, calculatedUnrealizedPnL]
   );
 
   useEffect(() => {
@@ -617,59 +483,18 @@ export function UserStats() {
       <ClaimWinningsSection />
 
       {/* Compact Performance Cards */}
-      {(stats.v1Markets > 0 || stats.v2Markets > 0) && (
+      {stats.marketsParticipated > 0 && (
         <div className="grid grid-cols-2 gap-3">
-          {/* Binary Markets */}
           <Card className="border-0 shadow-md bg-gradient-to-br from-[#433952] to-[#544863] overflow-hidden relative">
             <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full blur-2xl" />
             <CardContent className="p-4 relative">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <p className="text-xs font-semibold text-white/80 mb-0.5">
-                    Binary Markets v1
+                    Markets Joined
                   </p>
                   <p className="text-2xl font-bold text-white">
-                    {stats.v1Markets}
-                  </p>
-                </div>
-                <div className="p-2 bg-white/10 rounded-lg">
-                  <span className="text-lg">📊</span>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-white/70 font-medium">Win Rate</span>
-                  <span className="font-bold text-white">
-                    {stats.v1Markets > 0
-                      ? (
-                          (stats.v1Wins / (stats.v1Wins + stats.v1Losses)) *
-                          100
-                        ).toFixed(1)
-                      : 0}
-                    %
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-white/70 font-medium">W/L</span>
-                  <span className="font-medium text-white">
-                    {stats.v1Wins}/{stats.v1Losses}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Multi-Option Markets */}
-          <Card className="border-0 shadow-md bg-gradient-to-br from-[#544863] to-[#352c3f] overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full blur-2xl" />
-            <CardContent className="p-4 relative">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-xs font-semibold text-white/80 mb-0.5">
-                    Multi-Option
-                  </p>
-                  <p className="text-2xl font-bold text-white">
-                    {stats.v2Markets}
+                    {stats.marketsParticipated}
                   </p>
                 </div>
                 <div className="p-2 bg-white/10 rounded-lg">
@@ -680,19 +505,50 @@ export function UserStats() {
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-white/70 font-medium">Win Rate</span>
                   <span className="font-bold text-white">
-                    {stats.v2Markets > 0
-                      ? (
-                          (stats.v2Wins / (stats.v2Wins + stats.v2Losses)) *
-                          100
-                        ).toFixed(1)
-                      : 0}
-                    %
+                    {stats.winRate.toFixed(1)}%
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-white/70 font-medium">W/L</span>
                   <span className="font-medium text-white">
-                    {stats.v2Wins}/{stats.v2Losses}
+                    {stats.wins}/{stats.losses}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-md bg-gradient-to-br from-[#544863] to-[#352c3f] overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full blur-2xl" />
+            <CardContent className="p-4 relative">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <p className="text-xs font-semibold text-white/80 mb-0.5">
+                    Trades
+                  </p>
+                  <p className="text-2xl font-bold text-white">
+                    {stats.totalTrades}
+                  </p>
+                </div>
+                <div className="p-2 bg-white/10 rounded-lg">
+                  <span className="text-lg">💹</span>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-white/70 font-medium">
+                    Unique Markets
+                  </span>
+                  <span className="font-bold text-white">
+                    {stats.marketsParticipated}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-white/70 font-medium">
+                    Contract Trades
+                  </span>
+                  <span className="font-medium text-white">
+                    {stats.v2TradeCount}
                   </span>
                 </div>
               </div>

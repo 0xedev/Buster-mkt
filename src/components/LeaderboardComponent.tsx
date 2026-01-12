@@ -251,7 +251,7 @@ export default function LeaderboardComponent({
                       : "text-gray-400 text-xs"
                   }`}
                 >
-                  {entry.winnings.toFixed(0)} BUSTER
+                  {entry.winnings.toFixed(0)} POLITICS
                 </p>
               </div>
             ))}
@@ -293,7 +293,7 @@ export default function LeaderboardComponent({
               </div>
               <div className="flex items-center gap-2">
                 <p className="font-bold text-gray-200">
-                  {entry.winnings.toFixed(0)} BUSTER
+                  {entry.winnings.toFixed(0)} POLITICS
                 </p>
                 {entry.trend !== "none" &&
                   (entry.trend === "up" ? (

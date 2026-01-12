@@ -709,13 +709,8 @@ export function MarketV2Card({ index, market }: MarketV2CardProps) {
           isResolved ? (
             <MarketResolved
               marketId={index}
-              outcome={
-                typeof market.winningOptionId !== "undefined"
-                  ? Number(market.winningOptionId) + 1
-                  : 0
-              }
-              optionA={displayOptions[0]?.name || "Option 1"}
-              optionB={displayOptions[1]?.name || "Option 2"}
+              outcome={Number(market.winningOptionId ?? 0)}
+              options={displayOptions.map((opt) => opt.name)}
             />
           ) : (
             <MarketPending />

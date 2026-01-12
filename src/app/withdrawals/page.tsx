@@ -27,7 +27,7 @@ export default function WithdrawalStatusPage() {
 }
 
 export const metadata = {
-  title: "Admin Withdrawals - Buster Markets",
+  title: "Admin Withdrawals - Policast",
   description:
     "Check and claim your admin liquidity and unused free market funds",
 };

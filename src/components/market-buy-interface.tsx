@@ -48,6 +48,8 @@ type BuyingStep =
 type Option = "A" | "B" | null;
 
 const MAX_BET = 50000000000000000000000000000000;
+const MAX_PRICE_PER_SHARE = 10n ** 20n; // very high cap to avoid UI slippage blocks
+const IGNORE_MAX_TOTAL_COST = 0n;
 
 // Convert amount to token units (handles custom decimals)
 function toUnits(amount: string, decimals: number): bigint {
@@ -175,7 +177,13 @@ export function MarketBuyInterface({
             address: contractAddress,
             abi: contractAbi,
             functionName: "buyShares",
-            args: [BigInt(marketId), selectedOption === "A", amountInUnits],
+            args: [
+              BigInt(marketId),
+              selectedOption === "A" ? 0n : 1n,
+              amountInUnits,
+              MAX_PRICE_PER_SHARE,
+              IGNORE_MAX_TOTAL_COST,
+            ],
           });
         }
         setIsProcessing(false);
@@ -722,7 +730,13 @@ export function MarketBuyInterface({
           data: encodeFunctionData({
             abi: contractAbi,
             functionName: "buyShares",
-            args: [BigInt(marketId), selectedOption === "A", amountInUnits],
+            args: [
+              BigInt(marketId),
+              selectedOption === "A" ? 0n : 1n,
+              amountInUnits,
+              MAX_PRICE_PER_SHARE,
+              IGNORE_MAX_TOTAL_COST,
+            ],
           }),
         },
       ];
@@ -1118,8 +1132,10 @@ export function MarketBuyInterface({
                         functionName: "buyShares",
                         args: [
                           BigInt(marketId),
-                          selectedOption === "A",
+                          selectedOption === "A" ? 0n : 1n,
                           amountInUnits,
+                          MAX_PRICE_PER_SHARE,
+                          IGNORE_MAX_TOTAL_COST,
                         ],
                       })
                         .then(() => {

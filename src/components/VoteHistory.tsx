@@ -9,10 +9,10 @@ import { Input } from "@/components/ui/input";
 import { ArrowUpDown, Search } from "lucide-react";
 import {
   publicClient,
-  contractAddress,
-  contractAbi,
   V2contractAddress,
   V2contractAbi,
+  contractAddress,
+  contractAbi,
   tokenAddress as defaultTokenAddress,
   tokenAbi as defaultTokenAbi,
   PolicastViews,
@@ -21,15 +21,6 @@ import {
 
 const CACHE_KEY = "vote_history_cache_v6";
 const CACHE_TTL = 60 * 60;
-const PAGE_SIZE = 50;
-
-interface Vote {
-  marketId: number;
-  isOptionA: boolean;
-  amount: bigint;
-  timestamp: bigint;
-}
-
 interface V2Trade {
   marketId: bigint;
   optionId: bigint;
@@ -49,21 +40,19 @@ interface DisplayVote {
   marketName: string;
   timestamp: bigint;
   type: TransactionType;
-  version: "v1" | "v2";
+  version: "v2";
 }
 
 interface MarketInfo {
   marketId: number;
   question: string;
-  optionA?: string;
-  optionB?: string;
   options?: string[];
-  version: "v1" | "v2";
+  version: "v2";
 }
 
 interface CacheData {
   votes: DisplayVote[];
-  marketInfo: Record<number, MarketInfo>;
+  marketInfo: Record<string, MarketInfo>;
   timestamp: number;
 }
 
@@ -75,7 +64,7 @@ export function VoteHistory() {
   const { toast } = useToast();
   const [votes, setVotes] = useState<DisplayVote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [, setTokenSymbol] = useState<string>("buster");
+  const [, setTokenSymbol] = useState<string>("POLITICS");
   const [tokenDecimals, setTokenDecimals] = useState<number>(18);
   const [search, setSearch] = useState<string>("");
   const [sortKey, setSortKey] = useState<SortKey>("timestamp");
@@ -144,35 +133,6 @@ export function VoteHistory() {
     }
   }, []);
 
-  const fetchV1Votes = async (address: Address): Promise<Vote[]> => {
-    const voteCount = (await publicClient.readContract({
-      address: contractAddress,
-      abi: contractAbi,
-      functionName: "getVoteHistoryCount",
-      args: [address],
-    })) as bigint;
-
-    if (voteCount === 0n) return [];
-
-    const allVotes: Vote[] = [];
-    let start = 0;
-
-    while (start < Number(voteCount)) {
-      const voteBatch = (await publicClient.readContract({
-        address: contractAddress,
-        abi: contractAbi,
-        functionName: "getVoteHistory",
-        args: [address, BigInt(start), BigInt(PAGE_SIZE)],
-      })) as unknown as Vote[];
-
-      if (voteBatch.length === 0) break;
-      allVotes.push(...voteBatch);
-      start += PAGE_SIZE;
-    }
-
-    return allVotes;
-  };
-
   const fetchV2Trades = async (address: Address): Promise<V2Trade[]> => {
     try {
       const portfolioParams: any = {
@@ -237,44 +197,10 @@ export function VoteHistory() {
     }
   };
 
-  const fetchMarketInfo = async (
-    v1MarketIds: number[],
-    v2MarketIds: number[],
-    cache: any
-  ) => {
-    const marketInfoCache = { ...cache.marketInfo };
-
-    const uncachedV1Ids = v1MarketIds.filter(
-      (id) => !marketInfoCache[`v1_${id}`]
-    );
-    if (uncachedV1Ids.length > 0) {
-      const marketInfos = (await publicClient.readContract({
-        address: contractAddress,
-        abi: contractAbi,
-        functionName: "getMarketInfoBatch",
-        args: [uncachedV1Ids.map(BigInt)],
-      })) as [
-        string[],
-        string[],
-        string[],
-        bigint[],
-        number[],
-        bigint[],
-        bigint[],
-        boolean[]
-      ];
-
-      const [questions, optionAs, optionBs] = marketInfos;
-      uncachedV1Ids.forEach((id, i) => {
-        marketInfoCache[`v1_${id}`] = {
-          marketId: id,
-          question: questions[i],
-          optionA: optionAs[i],
-          optionB: optionBs[i],
-          version: "v1" as const,
-        };
-      });
-    }
+  const fetchMarketInfo = async (v2MarketIds: number[], cache: any) => {
+    const marketInfoCache: Record<string, MarketInfo> = {
+      ...cache.marketInfo,
+    };
 
     const uncachedV2Ids = v2MarketIds.filter(
       (id) => !marketInfoCache[`v2_${id}`]
@@ -353,36 +279,12 @@ export function VoteHistory() {
           return;
         }
 
-        const [v1Votes, v2Trades] = await Promise.all([
-          fetchV1Votes(address),
-          fetchV2Trades(address),
-        ]);
-
-        const v1MarketIds = [
-          ...new Set(v1Votes.map((v) => Number(v.marketId))),
-        ];
+        const v2Trades = await fetchV2Trades(address);
         const v2MarketIds = [
           ...new Set(v2Trades.map((t) => Number(t.marketId))),
         ];
 
-        const marketInfoCache = await fetchMarketInfo(
-          v1MarketIds,
-          v2MarketIds,
-          cache
-        );
-
-        const displayV1Votes: DisplayVote[] = v1Votes.map((vote) => {
-          const marketInfo = marketInfoCache[`v1_${Number(vote.marketId)}`];
-          return {
-            marketId: Number(vote.marketId),
-            option: vote.isOptionA ? marketInfo.optionA : marketInfo.optionB,
-            amount: vote.amount,
-            marketName: marketInfo.question,
-            timestamp: vote.timestamp,
-            type: "vote" as const,
-            version: "v1" as const,
-          };
-        });
+        const marketInfoCache = await fetchMarketInfo(v2MarketIds, cache);
 
         const displayV2Trades: DisplayVote[] = v2Trades.map((trade) => {
           const marketInfo = marketInfoCache[`v2_${Number(trade.marketId)}`];
@@ -404,8 +306,8 @@ export function VoteHistory() {
           };
         });
 
-        const allTransactions = [...displayV1Votes, ...displayV2Trades].sort(
-          (a, b) => Number(b.timestamp - a.timestamp)
+        const allTransactions = [...displayV2Trades].sort((a, b) =>
+          Number(b.timestamp - a.timestamp)
         );
 
         const newCache = {
@@ -571,13 +473,7 @@ export function VoteHistory() {
                         ? "📈"
                         : "📉"}
                     </span>
-                    <span
-                      className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                        vote.version === "v1"
-                          ? "bg-white/20 text-white/90"
-                          : "bg-white/20 text-white/90"
-                      }`}
-                    >
+                    <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-white/20 text-white/90">
                       {vote.version.toUpperCase()}
                     </span>
                     <span className="text-xs text-white/70">

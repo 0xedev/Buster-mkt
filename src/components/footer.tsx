@@ -64,14 +64,14 @@ export function Footer() {
   const USDC_CAIP19 =
     "eip155:8453/erc20:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
   const CAIP_ETH = "eip155:8453/native";
-  const BUSTER_CAIP19 =
-    "eip155:8453/erc20:0x53Bd7F868764333de01643ca9102ee4297eFA3cb";
+  const POLITICS_CAIP19 =
+    "eip155:8453/erc20:0x43ad5adae56fa09127ba147d5b24c4bc34abdb07";
 
-  const handleBuyBuster = async (sellToken: string) => {
+  const handleBuyPolitics = async (sellToken: string) => {
     try {
       await sdk.actions.swapToken({
         sellToken,
-        buyToken: BUSTER_CAIP19,
+        buyToken: POLITICS_CAIP19,
       });
     } catch (error) {
       console.error("Failed to open swap:", error);
@@ -98,27 +98,33 @@ export function Footer() {
               </p>
               <div className="flex flex-col gap-1.5 text-xs text-gray-200 mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-purple-500 text-white flex items-center justify-center text-xs font-bold">1</span>
+                  <span className="w-5 h-5 rounded-full bg-purple-500 text-white flex items-center justify-center text-xs font-bold">
+                    1
+                  </span>
                   <span>Sign in with your wallet</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">2</span>
+                  <span className="w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                    2
+                  </span>
                   <span>Browse predictions</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-green-500 text-white flex items-center justify-center text-xs font-bold">3</span>
+                  <span className="w-5 h-5 rounded-full bg-green-500 text-white flex items-center justify-center text-xs font-bold">
+                    3
+                  </span>
                   <span>Place your bets!</span>
                 </div>
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => handleBuyBuster(USDC_CAIP19)}
+                  onClick={() => handleBuyPolitics(USDC_CAIP19)}
                   className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:from-purple-700 hover:to-blue-700 transition-all shadow-md hover:shadow-lg"
                 >
                   Buy with USDC
                 </button>
                 <button
-                  onClick={() => handleBuyBuster(CAIP_ETH)}
+                  onClick={() => handleBuyPolitics(CAIP_ETH)}
                   className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:from-blue-700 hover:to-cyan-700 transition-all shadow-md hover:shadow-lg"
                 >
                   Buy with ETH
@@ -158,14 +164,18 @@ export function Footer() {
                   {isActive && (
                     <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full" />
                   )}
-                  <item.icon className={cn(
-                    "h-5 w-5 transition-all duration-200",
-                    isActive && "scale-110"
-                  )} />
-                  <span className={cn(
-                    "text-[10px] font-medium transition-all duration-200",
-                    isActive && "font-semibold"
-                  )}>
+                  <item.icon
+                    className={cn(
+                      "h-5 w-5 transition-all duration-200",
+                      isActive && "scale-110"
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "text-[10px] font-medium transition-all duration-200",
+                      isActive && "font-semibold"
+                    )}
+                  >
                     {item.label}
                   </span>
                 </button>
@@ -184,14 +194,18 @@ export function Footer() {
               {showInfo && (
                 <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full" />
               )}
-              <Info className={cn(
-                "h-5 w-5 transition-all duration-200",
-                showInfo && "scale-110"
-              )} />
-              <span className={cn(
-                "text-[10px] font-medium transition-all duration-200",
-                showInfo && "font-semibold"
-              )}>
+              <Info
+                className={cn(
+                  "h-5 w-5 transition-all duration-200",
+                  showInfo && "scale-110"
+                )}
+              />
+              <span
+                className={cn(
+                  "text-[10px] font-medium transition-all duration-200",
+                  showInfo && "font-semibold"
+                )}
+              >
                 About
               </span>
             </button>

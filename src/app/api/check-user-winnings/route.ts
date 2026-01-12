@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPublicClient, http } from "viem";
 import { base } from "viem/chains";
-import {
-  V2contractAddress,
-  V2contractAbi,
-  PolicastViews,
-  PolicastViewsAbi,
-} from "@/constants/contract";
+import { PolicastViews, PolicastViewsAbi } from "@/constants/contract";
 
 const publicClient = createPublicClient({
   chain: base,

@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://buster-mkt.vercel.app";
+  const baseUrl = process.env.NEXT_PUBLIC_URL || "https://policast.xyz";
 
   return [
     {

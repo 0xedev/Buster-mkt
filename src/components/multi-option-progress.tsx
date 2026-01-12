@@ -122,7 +122,7 @@ export function MultiOptionProgress({
       {/* Total Volume Display */}
       {totalVolume > 0n && (
         <div className="text-center text-sm text-gray-400 pt-2 border-t border-[#544863]">
-          Total Volume: {formatPrice(totalVolume)} Buster
+          Total Volume: {formatPrice(totalVolume)} POLITICS
         </div>
       )}
     </div>

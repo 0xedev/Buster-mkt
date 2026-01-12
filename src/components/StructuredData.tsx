@@ -11,7 +11,7 @@ export function StructuredData({ metadata }: StructuredDataProps) {
     name: "Policast",
     description:
       "Decentralized political prediction markets powered by blockchain technology",
-    url: process.env.NEXT_PUBLIC_URL || "https://buster-mkt.vercel.app",
+    url: process.env.NEXT_PUBLIC_URL || "https://policast.xyz",
     applicationCategory: "FinanceApplication",
     operatingSystem: "Web Browser",
     offers: {
@@ -31,7 +31,7 @@ export function StructuredData({ metadata }: StructuredDataProps) {
       "Community-driven platform",
     ],
     screenshot: `${
-      process.env.NEXT_PUBLIC_URL || "https://buster-mkt.vercel.app"
+      process.env.NEXT_PUBLIC_URL || "https://policast.xyz"
     }/icon.jpg`,
     sameAs: [
       // Add your social media URLs here when available

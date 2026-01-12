@@ -224,7 +224,7 @@ export function ClaimWinningsSection() {
             </h3>
             <p className="text-sm text-gray-600">
               <span className="font-semibold text-green-600">
-                {totalClaimedEth.toFixed(4)} $Buster
+                {totalClaimedEth.toFixed(4)} $POLITICS
               </span>{" "}
               collected
             </p>
@@ -242,7 +242,7 @@ export function ClaimWinningsSection() {
                   <p className="text-2xl font-bold text-white">
                     {totalWinningsEth.toFixed(4)}
                   </p>
-                  <p className="text-xs text-purple-100 mt-0.5">$Buster</p>
+                  <p className="text-xs text-purple-100 mt-0.5">$POLITICS</p>
                 </div>
                 <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm px-3 py-1 text-xs font-semibold">
                   {unclaimedWinnings.length} market
@@ -269,7 +269,7 @@ export function ClaimWinningsSection() {
                       <p className="font-semibold text-sm text-gray-900">
                         {(Number(winnings.amount) / 1e18).toFixed(4)}
                       </p>
-                      <p className="text-xs text-gray-500">$Buster</p>
+                      <p className="text-xs text-gray-500">$POLITICS</p>
                     </div>
                   </div>
                   <Button
@@ -315,7 +315,7 @@ export function ClaimWinningsSection() {
                     <p className="font-medium text-sm text-gray-700">
                       {(Number(winnings.amount) / 1e18).toFixed(4)}
                     </p>
-                    <p className="text-xs text-gray-500">$Buster</p>
+                    <p className="text-xs text-gray-500">$POLITICS</p>
                   </div>
                 </div>
                 <Badge className="bg-green-100 text-green-700 border-0 text-xs font-medium">

@@ -334,25 +334,25 @@ export function V3FinancialManager({
               <div>
                 <p className="text-sm text-gray-500">Total Fees Collected</p>
                 <p className="text-lg font-semibold">
-                  {formatAmount(cumulativeFees)} buster
+                  {formatAmount(cumulativeFees)} POLITICS
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Available Fees</p>
                 <p className="text-lg font-semibold">
-                  {formatAmount(unlockedFees)} buster
+                  {formatAmount(unlockedFees)} POLITICS
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Locked Fees</p>
                 <p className="text-lg font-semibold">
-                  {formatAmount(lockedFees)} buster
+                  {formatAmount(lockedFees)} POLITICS
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Withdrawn Fees</p>
                 <p className="text-lg font-semibold">
-                  {formatAmount(withdrawnFees)} buster
+                  {formatAmount(withdrawnFees)} POLITICS
                 </p>
               </div>
             </div>
@@ -416,13 +416,13 @@ export function V3FinancialManager({
             <div>
               <p className="text-sm text-gray-500">Fees Collected</p>
               <p className="text-lg font-semibold">
-                {formatAmount(collected)} buster
+                {formatAmount(collected)} POLITICS
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Locked Portion</p>
               <p className="text-lg font-semibold">
-                {formatAmount(lockedPortion)} buster
+                {formatAmount(lockedPortion)} POLITICS
               </p>
             </div>
           </div>
@@ -454,13 +454,13 @@ export function V3FinancialManager({
               <div>
                 <p className="text-sm text-gray-500">Total Invested</p>
                 <p className="text-lg font-semibold">
-                  {formatAmount(totalInvested)} buster
+                  {formatAmount(totalInvested)} POLITICS
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Winnings</p>
                 <p className="text-lg font-semibold">
-                  {formatAmount(totalWinnings)} buster
+                  {formatAmount(totalWinnings)} POLITICS
                 </p>
               </div>
               <div>
@@ -474,7 +474,7 @@ export function V3FinancialManager({
                   {formatAmount(
                     realizedPnL < 0n ? -realizedPnL : realizedPnL
                   )}{" "}
-                  buster
+                  POLITICS
                 </p>
               </div>
               <div>
@@ -503,25 +503,25 @@ export function V3FinancialManager({
               <div>
                 <p className="text-sm text-gray-500">Total Fees Collected</p>
                 <p className="text-lg font-semibold">
-                  {formatAmount(cumulativeFees)} buster
+                  {formatAmount(cumulativeFees)} POLITICS
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Available Fees</p>
                 <p className="text-lg font-semibold">
-                  {formatAmount(unlockedFees)} buster
+                  {formatAmount(unlockedFees)} POLITICS
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Locked Fees</p>
                 <p className="text-lg font-semibold">
-                  {formatAmount(lockedFees)} buster
+                  {formatAmount(lockedFees)} POLITICS
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Withdrawn Fees</p>
                 <p className="text-lg font-semibold">
-                  {formatAmount(withdrawnFees)} buster
+                  {formatAmount(withdrawnFees)} POLITICS
                 </p>
               </div>
             </div>

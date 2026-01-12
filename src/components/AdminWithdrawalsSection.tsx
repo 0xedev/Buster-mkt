@@ -397,7 +397,7 @@ export function AdminWithdrawalsSection() {
                       Total Available
                     </p>
                     <p className="text-2xl font-bold text-green-900">
-                      {formatPrice(totals.total)} $Buster
+                      {formatPrice(totals.total)} $POLITICS
                     </p>
                   </div>
                   <Badge
@@ -489,7 +489,7 @@ function WithdrawalSection({
         </div>
         <div className="text-right">
           <p className="text-sm text-gray-600">
-            Total: {formatPrice(total)} $Buster
+            Total: {formatPrice(total)} $POLITICS
           </p>
           {withdrawals.length > 1 && (
             <Button
@@ -517,7 +517,7 @@ function WithdrawalSection({
               </p>
               <p className="text-sm text-gray-600">{withdrawal.description}</p>
               <p className="text-sm font-medium text-green-600">
-                {formatPrice(withdrawal.amount)} $Buster
+                {formatPrice(withdrawal.amount)} $POLITICS
               </p>
             </div>
             <Button

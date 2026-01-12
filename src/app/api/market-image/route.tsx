@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  contract,
+  contractAddress,
   contractAbi,
   publicClient,
-  V2contractAddress,
-  V2contractAbi,
-  PolicastViews,
-  PolicastViewsAbi,
 } from "@/constants/contract";
 import satori from "satori";
 import sharp from "sharp";
@@ -14,18 +10,6 @@ import { promises as fs } from "fs";
 import path from "node:path";
 import { format } from "date-fns";
 //
-interface MarketImageDataV1 {
-  question: string;
-  optionA: string;
-  optionB: string;
-  totalOptionAShares: bigint;
-  totalOptionBShares: bigint;
-  endTime: bigint;
-  resolved: boolean;
-  outcome: number;
-  version: "v1";
-}
-
 interface MarketImageDataV2 {
   question: string;
   description: string;
@@ -46,35 +30,7 @@ interface MarketImageDataV2 {
   totalVolume: bigint;
 }
 
-type MarketImageData = MarketImageDataV1 | MarketImageDataV2;
-
-// V1 Market Info Contract Return
-type MarketInfoV1ContractReturn = readonly [
-  string, // question
-  string, // optionA
-  string, // optionB
-  bigint, // endTime
-  number, // outcome
-  bigint, // totalOptionAShares
-  bigint, // totalOptionBShares
-  boolean // resolved
-];
-
-// V2 Market Info Contract Return
-type MarketInfoV2ContractReturn = readonly [
-  string, // question
-  string, // description
-  bigint, // endTime
-  number, // category
-  bigint, // optionCount
-  boolean, // resolved
-  boolean, // disputed
-  number, // marketType
-  boolean, // invalidated
-  bigint, // winningOptionId
-  string,
-  boolean
-];
+type MarketImageData = MarketImageDataV2;
 
 async function fetchMarketData(marketId: string): Promise<MarketImageData> {
   console.log(`Market Image API: Fetching info for marketId ${marketId}...`);
@@ -85,165 +41,87 @@ async function fetchMarketData(marketId: string): Promise<MarketImageData> {
 
     const marketIdBigInt = BigInt(marketId);
 
-    // Try V2 first (newer contract)
-    try {
-      // Read raw result and coerce to unknown first to avoid strict tuple/readonly conversion errors
-      const raw = (await publicClient.readContract({
-        address: PolicastViews,
-        abi: PolicastViewsAbi,
-        functionName: "getMarketInfo",
-        args: [marketIdBigInt],
-      })) as unknown;
+    const basicInfo = (await publicClient.readContract({
+      address: contractAddress,
+      abi: contractAbi,
+      functionName: "getMarketBasicInfo",
+      args: [marketIdBigInt],
+    })) as [
+      string,
+      string,
+      bigint,
+      number,
+      bigint,
+      boolean,
+      number,
+      boolean,
+      bigint
+    ];
 
-      // Normalize to an any[] for safe indexing; support both 12- and 13-element ABI shapes
-      const v2Arr = (raw as readonly any[]) || [];
+    const extendedMeta = (await publicClient.readContract({
+      address: contractAddress,
+      abi: contractAbi,
+      functionName: "getMarketExtendedMeta",
+      args: [marketIdBigInt],
+    })) as [bigint, boolean, boolean, string, boolean];
 
-      if (v2Arr.length === 0) {
-        throw new Error("Empty response from V2 getMarketInfo");
-      }
+    const question = basicInfo[0];
+    const description = basicInfo[1];
+    const endTime = basicInfo[2];
+    const category = Number(basicInfo[3]);
+    const optionCount = Number(basicInfo[4]);
+    const resolved = Boolean(basicInfo[5]);
+    const marketType = Number(basicInfo[6]);
+    const invalidated = Boolean(basicInfo[7]);
+    const totalVolume = basicInfo[8];
+    const winningOptionId = resolved ? Number(extendedMeta[0]) : 0;
+    const creator = extendedMeta[3];
 
-      // The actual PolicastViews.getMarketInfo() returns a 9-element tuple:
-      // [question, description, endTime, category, marketType, resolved, invalidated, creator, lmsrB]
-      // NOTE: It does NOT include optionCount - we need to fetch that separately!
+    const options: Array<{
+      name: string;
+      totalShares: bigint;
+      currentPrice: bigint;
+    }> = [];
 
-      const question = String(v2Arr[0] ?? "");
-      const description = String(v2Arr[1] ?? "");
-      const endTime = BigInt(v2Arr[2] ?? 0n);
-      const category = Number(v2Arr[3] ?? 0);
-      const marketType = Number(v2Arr[4] ?? 0);
-      const resolved = Boolean(v2Arr[5]);
-      const invalidated = Boolean(v2Arr[6]);
-      const creator = String(v2Arr[7] ?? "");
-      // v2Arr[8] is lmsrB - we don't need it for images
+    for (let i = 0; i < optionCount; i++) {
+      try {
+        const optionData = (await publicClient.readContract({
+          address: contractAddress,
+          abi: contractAbi,
+          functionName: "getMarketOption",
+          args: [marketIdBigInt, BigInt(i)],
+        })) as [string, string, bigint, bigint, bigint, boolean];
 
-      // Fetch optionCount separately
-      const optionCount = Number(
-        await publicClient.readContract({
-          address: PolicastViews,
-          abi: PolicastViewsAbi,
-          functionName: "getMarketOptionCount",
-          args: [marketIdBigInt],
-        })
-      );
-
-      // Fetch winningOptionId if resolved
-      let winningOptionId = 0;
-      if (resolved) {
-        try {
-          winningOptionId = Number(
-            await publicClient.readContract({
-              address: PolicastViews,
-              abi: PolicastViewsAbi,
-              functionName: "getMarketResolvedOutcome",
-              args: [marketIdBigInt],
-            })
-          );
-        } catch (e) {
-          console.log(`Could not fetch winningOptionId for market ${marketId}`);
-        }
-      }
-
-      console.log(`Market Image API: Found V2 market ${marketId}:`, v2Arr);
-
-      // Fetch all options for this V2 market
-      const options: Array<{
-        name: string;
-        totalShares: bigint;
-        currentPrice: bigint;
-      }> = [];
-      let calculatedTotalVolume = 0n;
-
-      for (let i = 0; i < optionCount; i++) {
-        try {
-          const optionData = await publicClient.readContract({
-            address: V2contractAddress,
-            abi: V2contractAbi,
-            functionName: "getMarketOption",
-            args: [marketIdBigInt, BigInt(i)],
-          });
-
-          const [name, , totalShares, optionVolume, currentPrice] =
-            optionData as [string, string, bigint, bigint, bigint, boolean];
-
-          options.push({
-            name,
-            totalShares,
-            currentPrice,
-          });
-
-          calculatedTotalVolume += optionVolume;
-        } catch (error) {
-          console.error(
-            `Error fetching option ${i} for market ${marketId}:`,
-            error
-          );
-          options.push({
-            name: `Option ${i + 1}`,
-            totalShares: 0n,
-            currentPrice: 0n,
-          });
-        }
-      }
-
-      console.log(
-        `Market Image API: Fetched ${options.length} options for market ${marketId}`
-      );
-
-      return {
-        question,
-        description,
-        endTime,
-        category,
-        optionCount,
-        resolved,
-        marketType,
-        invalidated,
-        winningOptionId,
-        creator,
-        version: "v2",
-        options,
-        totalVolume: calculatedTotalVolume,
-      };
-    } catch (error) {
-      // V2 market doesn't exist, try V1
-      console.log(`Market ${marketId} not found in V2, trying V1...`);
-    }
-
-    // Try V1
-    try {
-      const v1MarketData = (await publicClient.readContract({
-        address: contract.address,
-        abi: contractAbi,
-        functionName: "getMarketInfo",
-        args: [marketIdBigInt],
-      })) as MarketInfoV1ContractReturn;
-
-      // If successful and market exists, return V1 data
-      if (v1MarketData[0]) {
-        // question exists
-        console.log(
-          `Market Image API: Found V1 market ${marketId}:`,
-          v1MarketData
+        const [name, , totalShares, optionVolume, currentPrice] = optionData;
+        options.push({ name, totalShares, currentPrice });
+      } catch (error) {
+        console.error(
+          `Error fetching option ${i} for market ${marketId}:`,
+          error
         );
-        return {
-          question: v1MarketData[0],
-          optionA: v1MarketData[1],
-          optionB: v1MarketData[2],
-          endTime: v1MarketData[3],
-          outcome: v1MarketData[4],
-          totalOptionAShares: v1MarketData[5],
-          totalOptionBShares: v1MarketData[6],
-          resolved: v1MarketData[7],
-          version: "v1",
-        };
+        options.push({
+          name: `Option ${i + 1}`,
+          totalShares: 0n,
+          currentPrice: 0n,
+        });
       }
-    } catch (error) {
-      console.log(`Market ${marketId} not found in V1 either`);
     }
 
-    throw new Error(
-      `Market ${marketId} not found in either V1 or V2 contracts`
-    );
+    return {
+      question,
+      description,
+      endTime,
+      category,
+      optionCount,
+      resolved,
+      marketType,
+      invalidated,
+      winningOptionId,
+      creator,
+      version: "v2",
+      options,
+      totalVolume,
+    };
   } catch (error) {
     console.error(
       `Market Image API: Failed to fetch or parse market ${marketId}:`,
@@ -404,73 +282,35 @@ export async function GET(request: NextRequest) {
         : text;
     };
 
-    // Calculate percentages for V2 options
-    let optionsData: Array<{
-      name: string;
-      percentage: number;
-      color: string;
-    }> = [];
-    let totalVolumeFormatted = "0";
+    const optionColors = [
+      "#2563eb", // blue
+      "#7c3aed", // purple
+      "#059669", // green
+      "#dc2626", // red
+      "#f59e0b", // amber
+      "#06b6d4", // cyan
+      "#ec4899", // pink
+      "#8b5cf6", // violet
+    ];
 
-    if (market.version === "v1") {
-      const total = market.totalOptionAShares + market.totalOptionBShares;
-      const aPercentage =
-        total > 0n ? Number((market.totalOptionAShares * 100n) / total) : 50;
-      const bPercentage =
-        total > 0n ? Number((market.totalOptionBShares * 100n) / total) : 50;
-
-      optionsData = [
-        {
-          name: truncateText(market.optionA, 30),
-          percentage: aPercentage,
-          color: colors.primary,
-        },
-        {
-          name: truncateText(market.optionB, 30),
-          percentage: bPercentage,
-          color: colors.secondary,
-        },
-      ];
-
-      totalVolumeFormatted = (Number(total) / 10 ** 18).toLocaleString(
-        undefined,
-        { maximumFractionDigits: 0 }
+    const optionsData = market.options.map((opt, idx) => {
+      // currentPrice is 1e18 probability; convert to percentage
+      const probability = Math.max(
+        0,
+        Math.min(100, (Number(opt.currentPrice) / 1e18) * 100)
       );
-    } else {
-      // V2 market - calculate percentages from currentPrice (LMSR probability)
-      // currentPrice is in 1e18 units and represents probability (0-1 range)
-      // Multiply by 100 to get percentage (0-100 range)
 
-      const optionColors = [
-        "#2563eb", // blue
-        "#7c3aed", // purple
-        "#059669", // green
-        "#dc2626", // red
-        "#f59e0b", // amber
-        "#06b6d4", // cyan
-        "#ec4899", // pink
-        "#8b5cf6", // violet
-      ];
+      return {
+        name: truncateText(opt.name, 25),
+        percentage: probability,
+        color: optionColors[idx % optionColors.length],
+      };
+    });
 
-      optionsData = market.options.map((opt, idx) => {
-        // Convert currentPrice from 1e18 to percentage (0-100)
-        const probability = Math.max(
-          0,
-          Math.min(100, (Number(opt.currentPrice) / 1e18) * 100)
-        );
-
-        return {
-          name: truncateText(opt.name, 25),
-          percentage: probability,
-          color: optionColors[idx % optionColors.length],
-        };
-      });
-
-      totalVolumeFormatted = (
-        Number(market.totalVolume) /
-        10 ** 18
-      ).toLocaleString(undefined, { maximumFractionDigits: 0 });
-    }
+    const totalVolumeFormatted = (
+      Number(market.totalVolume) /
+      10 ** 18
+    ).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
     const timeStatus = formatTimeStatus(market.endTime);
 
@@ -479,8 +319,7 @@ export async function GET(request: NextRequest) {
     // Dynamic font sizing based on question length
     const questionFontSize =
       market.question.length > 80 ? 26 : market.question.length > 50 ? 30 : 34;
-    const optionFontSize =
-      market.version === "v2" && market.optionCount > 3 ? 14 : 16;
+    const optionFontSize = market.optionCount > 3 ? 14 : 16;
 
     const jsx = (
       <div
@@ -541,7 +380,7 @@ export async function GET(request: NextRequest) {
                 fontWeight: "600",
               }}
             >
-              Vol: {totalVolumeFormatted} BSTR
+              Vol: {totalVolumeFormatted} $POLITICS
             </div>
           </div>
         </div>
@@ -613,10 +452,7 @@ export async function GET(request: NextRequest) {
             style={{
               display: "flex",
               flexDirection: "column",
-              gap:
-                market.version === "v2" && market.optionCount > 3
-                  ? "12px"
-                  : "18px",
+              gap: market.optionCount > 3 ? "12px" : "18px",
               flex: 1,
             }}
           >
@@ -644,10 +480,7 @@ export async function GET(request: NextRequest) {
                   </span>
                   <span
                     style={{
-                      fontSize:
-                        market.version === "v2" && market.optionCount > 3
-                          ? "16px"
-                          : "18px",
+                      fontSize: market.optionCount > 3 ? "16px" : "18px",
                       fontWeight: "bold",
                       color: option.color,
                     }}
@@ -659,10 +492,7 @@ export async function GET(request: NextRequest) {
                   style={{
                     display: "flex",
                     width: "100%",
-                    height:
-                      market.version === "v2" && market.optionCount > 3
-                        ? "8px"
-                        : "10px",
+                    height: market.optionCount > 3 ? "8px" : "10px",
                     backgroundColor: "#e5e7eb",
                     borderRadius: "6px",
                     overflow: "hidden",
@@ -721,18 +551,11 @@ export async function GET(request: NextRequest) {
                     color: colors.success,
                   }}
                 >
-                  {market.version === "v1"
-                    ? truncateText(
-                        market.outcome === 1
-                          ? market.optionA!
-                          : market.optionB!,
-                        30
-                      )
-                    : truncateText(
-                        optionsData[Number(market.winningOptionId)]?.name ||
-                          `Option ${Number(market.winningOptionId) + 1}`,
-                        30
-                      )}
+                  {truncateText(
+                    optionsData[Number(market.winningOptionId)]?.name ||
+                      `Option ${Number(market.winningOptionId) + 1}`,
+                    30
+                  )}
                 </div>
               </div>
             </div>

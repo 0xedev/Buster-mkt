@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://buster-mkt.vercel.app/sitemap.xml
+Sitemap: https://policast.xyz/sitemap.xml

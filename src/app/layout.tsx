@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     "politics",
     "trading",
   ],
-  authors: [{ name: "Policast Team" }],
+  authors: [{ name: "Oxdev" }],
   creator: "Policast",
   publisher: "Policast",
   formatDetection: {
@@ -42,9 +42,7 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_URL || "https://buster-mkt.vercel.app"
-  ),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_URL || "https://policast.xyz"),
   alternates: {
     canonical: "/",
   },
@@ -52,7 +50,7 @@ export const metadata: Metadata = {
     title: "Policast - Political Prediction Markets",
     description:
       "Trade on political outcomes with confidence. Decentralized prediction markets for politics, powered by blockchain technology.",
-    url: process.env.NEXT_PUBLIC_URL || "https://buster-mkt.vercel.app",
+    url: process.env.NEXT_PUBLIC_URL || "https://policast.xyz",
     siteName: "Policast",
     images: [
       {
@@ -104,7 +102,13 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://base.rpc.url" />
         <link rel="dns-prefetch" href="https://imagedelivery.net" />
         {/* Preconnect to RPC endpoints for faster blockchain calls */}
-        <link rel="preconnect" href={process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || "https://base.rpc.url"} crossOrigin="anonymous" />
+        <link
+          rel="preconnect"
+          href={
+            process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL || "https://base.rpc.url"
+          }
+          crossOrigin="anonymous"
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

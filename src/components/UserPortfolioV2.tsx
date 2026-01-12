@@ -72,7 +72,7 @@ export function UserPortfolioV2() {
   const [positions, setPositions] = useState<MarketPosition[]>([]);
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [tokenSymbol, setTokenSymbol] = useState<string>("buster");
+  const [tokenSymbol, setTokenSymbol] = useState<string>("POLITICS");
   const [tokenDecimals, setTokenDecimals] = useState<number>(18);
 
   // Get betting token info (casted to any to avoid deep ABI typing issues)

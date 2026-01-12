@@ -11,7 +11,7 @@ import {
 } from "./ui/card";
 import { Button } from "./ui/button";
 import { useAccount, useReadContract } from "wagmi";
-import { contract, contractAbi } from "@/constants/contract";
+import { contractAddress, contractAbi } from "@/constants/contract";
 import { MarketProgress } from "./market-progress";
 import MarketTime from "./market-time";
 import { MarketResolved } from "./market-resolved";
@@ -99,20 +99,29 @@ export function MarketCard({ index, market }: MarketCardProps) {
 
   const marketData = market;
 
-  const { data: sharesBalanceData } = useReadContract({
-    address: contract.address,
+  const { data: optionAShares } = useReadContract({
+    address: contractAddress,
     abi: contractAbi,
-    functionName: "getShareBalance",
-    args: [BigInt(index), address as `0x${string}`],
+    functionName: "getMarketOptionUserShares",
+    args: [BigInt(index), 0n, address as `0x${string}`],
     query: { enabled: !!address && !!marketData },
   });
 
-  const sharesBalance: SharesBalance | undefined = sharesBalanceData
-    ? {
-        optionAShares: sharesBalanceData[0],
-        optionBShares: sharesBalanceData[1],
-      }
-    : undefined;
+  const { data: optionBShares } = useReadContract({
+    address: contractAddress,
+    abi: contractAbi,
+    functionName: "getMarketOptionUserShares",
+    args: [BigInt(index), 1n, address as `0x${string}`],
+    query: { enabled: !!address && !!marketData },
+  });
+
+  const sharesBalance: SharesBalance | undefined =
+    optionAShares !== undefined && optionBShares !== undefined
+      ? {
+          optionAShares: optionAShares as bigint,
+          optionBShares: optionBShares as bigint,
+        }
+      : undefined;
 
   // Fetch comment count
   useEffect(() => {
@@ -136,8 +145,7 @@ export function MarketCard({ index, market }: MarketCardProps) {
   const isExpired = new Date(Number(marketData.endTime) * 1000) < new Date();
   const isResolved = marketData.resolved;
 
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL || "https://buster-mkt.vercel.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://policast.xyz";
   const marketPageUrl = `${appUrl}/market/${index}/details`;
   const handleShare = async () => {
     try {
@@ -172,9 +180,11 @@ export function MarketCard({ index, market }: MarketCardProps) {
           isResolved ? (
             <MarketResolved
               marketId={index}
-              outcome={marketData.outcome}
-              optionA={marketData.optionA}
-              optionB={marketData.optionB}
+              outcome={Math.max(0, Number(marketData.outcome) - 1)}
+              options={[
+                marketData.optionA || "Option A",
+                marketData.optionB || "Option B",
+              ]}
             />
           ) : (
             <MarketPending />

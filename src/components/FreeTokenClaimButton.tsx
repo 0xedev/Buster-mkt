@@ -498,7 +498,7 @@ export function FreeTokenClaimButton({
             <div className="flex justify-between">
               <span>Tokens Received:</span>
               <span className="font-medium">
-                {(Number(tokensPerParticipant) / 1e18).toFixed(2)} $Buster
+                {(Number(tokensPerParticipant) / 1e18).toFixed(2)} $POLITICS
               </span>
             </div>
             <div className="flex justify-between">
@@ -525,7 +525,7 @@ export function FreeTokenClaimButton({
               <div className="flex justify-between text-gray-600 dark:text-gray-400">
                 <span>Total Prize Pool:</span>
                 <span>
-                  {(Number(totalPrizePool) / 1e18).toFixed(2)} $Buster
+                  {(Number(totalPrizePool) / 1e18).toFixed(2)} $POLITICS
                 </span>
               </div>
               <div className="flex justify-between text-gray-600 dark:text-gray-400">
@@ -538,7 +538,7 @@ export function FreeTokenClaimButton({
               <div className="flex justify-between text-gray-600 dark:text-gray-400">
                 <span>Remaining Pool:</span>
                 <span>
-                  {(Number(remainingPrizePool) / 1e18).toFixed(2)} $Buster
+                  {(Number(remainingPrizePool) / 1e18).toFixed(2)} $POLITICS
                 </span>
               </div>
             </div>

@@ -478,7 +478,7 @@ export function MarketV2SellInterface({
                         </div>
                         <div className="font-medium text-xs text-gray-100">
                           {Number(formatPrice(option.currentPrice)).toFixed(1)}
-                          Buster
+                          POLITICS
                         </div>
                       </div>
                     </div>
@@ -500,7 +500,7 @@ export function MarketV2SellInterface({
                 <div>Available: {formatShares(userSharesForOption)} shares</div>
                 <div>
                   Current Price: {Number(formatPrice(currentPrice)).toFixed(1)}{" "}
-                  Buster
+                  POLITICS
                 </div>
               </div>
             </div>

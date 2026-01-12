@@ -11,8 +11,6 @@ import {
   contractAbi,
   tokenAddress as defaultTokenAddress,
   tokenAbi as defaultTokenAbi,
-  V2contractAddress,
-  V2contractAbi,
 } from "@/constants/contract";
 import { Address } from "viem";
 
@@ -231,49 +229,10 @@ export async function GET(request: Request) {
     ).then((results) => [Number(results[0].result)]);
     console.log(`💸 Token Decimals: ${tokenDecimals}`);
 
-    console.log("📊 Fetching leaderboard from V1 and V2 contracts...");
+    console.log("📊 Fetching Policast participants and portfolios...");
 
-    // ==================== V1 LEADERBOARD ====================
-    const totalParticipantsV1 = (await withRetry(() =>
-      publicClient.readContract({
-        address: contractAddress,
-        abi: contractAbi,
-        functionName: "getAllParticipantsCount",
-      })
-    )) as bigint;
-
-    console.log(`📊 V1 Total Participants: ${totalParticipantsV1}`);
-
-    const entriesV1: {
-      user: Address;
-      totalWinnings: bigint;
-      voteCount: number;
-      totalInvested?: bigint;
-    }[] = [];
-
-    for (
-      let start = 0;
-      start < Number(totalParticipantsV1);
-      start += PAGE_SIZE
-    ) {
-      const batch = (await withRetry(() =>
-        publicClient.readContract({
-          address: contractAddress,
-          abi: contractAbi,
-          functionName: "getLeaderboard",
-          args: [BigInt(start), BigInt(PAGE_SIZE)],
-        })
-      )) as unknown as {
-        user: Address;
-        totalWinnings: bigint;
-        voteCount: number;
-      }[];
-      entriesV1.push(...batch);
-    }
-
-    // Fetch V2 leaderboard using allParticipants array and userPortfolios mapping
-    console.log("📊 Fetching V2 participants and portfolios...");
-    const entriesV2: {
+    // ==================== POLICAST LEADERBOARD ====================
+    const entries: {
       user: Address;
       totalWinnings: bigint;
       voteCount: number;
@@ -292,8 +251,8 @@ export async function GET(request: Request) {
         const batchContracts = Array.from(
           { length: Math.min(V2_BATCH_SIZE, MAX_PARTICIPANTS - currentIndex) },
           (_, i) => ({
-            address: V2contractAddress as Address,
-            abi: V2contractAbi,
+            address: contractAddress as Address,
+            abi: contractAbi,
             functionName: "allParticipants" as const,
             args: [BigInt(currentIndex + i)],
           })
@@ -324,15 +283,15 @@ export async function GET(request: Request) {
         }
       }
 
-      console.log(`✅ Found ${addresses.length} V2 participant addresses`);
+      console.log(`✅ Found ${addresses.length} participant addresses`);
 
       // Step 2: Fetch portfolios using multicall batches
       for (let i = 0; i < addresses.length; i += V2_BATCH_SIZE) {
         const batchAddresses = addresses.slice(i, i + V2_BATCH_SIZE);
 
         const portfolioContracts = batchAddresses.map((addr) => ({
-          address: V2contractAddress as Address,
-          abi: V2contractAbi,
+          address: contractAddress as Address,
+          abi: contractAbi,
           functionName: "userPortfolios" as const,
           args: [addr],
         }));
@@ -358,7 +317,7 @@ export async function GET(request: Request) {
             const tradeCount = Number(portfolio[4]); // index 4 = tradeCount
 
             if (totalWinnings > 0n) {
-              entriesV2.push({
+              entries.push({
                 user: batchAddresses[idx],
                 totalWinnings,
                 voteCount: tradeCount,
@@ -369,13 +328,12 @@ export async function GET(request: Request) {
         });
       }
 
-      console.log(`✅ Fetched ${entriesV2.length} V2 leaderboard entries`);
-    } catch (v2Error) {
-      console.error("❌ V2 fetch error (continuing with V1 only):", v2Error);
-      // Continue with V1 data only
+      console.log(`✅ Fetched ${entries.length} leaderboard entries`);
+    } catch (error) {
+      console.error("❌ Policast fetch error:", error);
     }
 
-    // ==================== COMBINE V1 + V2 ====================
+    // ==================== PROCESS ENTRIES ====================
     const combinedEntries = new Map<
       string,
       {
@@ -386,39 +344,14 @@ export async function GET(request: Request) {
       }
     >();
 
-    // Add V1 entries
-    entriesV1.forEach((entry) => {
+    // Add all Policast entries
+    entries.forEach((entry) => {
       combinedEntries.set(entry.user.toLowerCase(), {
         user: entry.user,
         totalWinnings: entry.totalWinnings,
         voteCount: entry.voteCount,
-        totalInvested: 0n, // V1 doesn't track totalInvested
+        totalInvested: entry.totalInvested,
       });
-    });
-
-    // Merge V2 entries (add to existing V1 data or create new)
-    entriesV2.forEach((entry) => {
-      const addr = entry.user.toLowerCase();
-      const existing = combinedEntries.get(addr);
-      if (existing) {
-        // User exists in both V1 and V2 - ADD the values
-        combinedEntries.set(addr, {
-          user: entry.user,
-          totalWinnings:
-            BigInt(existing.totalWinnings) + BigInt(entry.totalWinnings),
-          voteCount: Number(existing.voteCount) + Number(entry.voteCount),
-          totalInvested:
-            BigInt(existing.totalInvested) + BigInt(entry.totalInvested),
-        });
-      } else {
-        // User only exists in V2
-        combinedEntries.set(addr, {
-          user: entry.user,
-          totalWinnings: entry.totalWinnings,
-          voteCount: entry.voteCount,
-          totalInvested: entry.totalInvested,
-        });
-      }
     });
 
     // First: Calculate all metrics (just winnings, no accuracy)

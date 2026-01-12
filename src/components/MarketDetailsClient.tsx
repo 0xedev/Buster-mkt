@@ -323,7 +323,7 @@ export function MarketDetailsClient({
                   Reward pool
                 </div>
                 <div className="text-xs md:text-sm text-gray-300">
-                  {totalSharesDisplay.toLocaleString()} Buster
+                  {totalSharesDisplay.toLocaleString()} POLITICS
                 </div>
               </div>
             </div>
@@ -397,15 +397,17 @@ export function MarketDetailsClient({
                   marketId={Number(marketId)}
                   outcome={
                     market.version === "v2"
-                      ? typeof market.winningOptionId !== "undefined"
-                        ? Number(market.winningOptionId) + 1
-                        : Number(market.outcome)
-                      : Number(market.outcome)
+                      ? Number(market.winningOptionId ?? market.outcome ?? 0)
+                      : Math.max(0, Number(market.outcome) - 1)
                   }
-                  optionA={market.optionA}
-                  optionB={market.optionB}
-                  options={market.options}
-                  version={market.version}
+                  options={
+                    market.version === "v2"
+                      ? optionLabels
+                      : [
+                          market.optionA || "Option A",
+                          market.optionB || "Option B",
+                        ]
+                  }
                 />
               ) : (
                 <MarketPending />

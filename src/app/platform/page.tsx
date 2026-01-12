@@ -17,6 +17,6 @@ export default function PlatformPage() {
 }
 
 export const metadata = {
-  title: "Platform Management - Buster Markets",
+  title: "Platform Management - Policast",
   description: "Manage V3 platform settings and collect fees",
 };

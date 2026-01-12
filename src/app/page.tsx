@@ -4,13 +4,24 @@ import { OnboardingModal } from "@/components/OnboardingModal";
 import { Suspense } from "react";
 import { Metadata } from "next";
 
+const baseUrl = process.env.NEXT_PUBLIC_URL || "https://policast.xyz";
+
 export const metadata: Metadata = {
   title: "Policast - Political Prediction Markets | Trade on Politics",
-  description: "Join the decentralized political prediction market. Bet on election outcomes, policy decisions, and political events with crypto. Secure, transparent, and community-driven.",
-  keywords: ["political prediction markets", "election betting", "political trading", "crypto betting", "decentralized markets", "blockchain predictions"],
+  description:
+    "Join the decentralized political prediction market. Bet on election outcomes, policy decisions, and political events with crypto. Secure, transparent, and community-driven.",
+  keywords: [
+    "political prediction markets",
+    "election betting",
+    "political trading",
+    "crypto betting",
+    "decentralized markets",
+    "blockchain predictions",
+  ],
   openGraph: {
     title: "Policast - Political Prediction Markets",
-    description: "Join the decentralized political prediction market. Bet on election outcomes, policy decisions, and political events with crypto.",
+    description:
+      "Join the decentralized political prediction market. Bet on election outcomes, policy decisions, and political events with crypto.",
     images: [
       {
         url: "/icon.jpg",
@@ -20,26 +31,27 @@ export const metadata: Metadata = {
       },
     ],
     type: "website",
-    url: "https://buster-mkt.vercel.app",
+    url: baseUrl,
   },
   twitter: {
     card: "summary_large_image",
     title: "Policast - Political Prediction Markets",
-    description: "Join the decentralized political prediction market. Bet on election outcomes, policy decisions, and political events with crypto.",
+    description:
+      "Join the decentralized political prediction market. Bet on election outcomes, policy decisions, and political events with crypto.",
     images: ["/icon.jpg"],
   },
   other: {
     "fc:miniapp": JSON.stringify({
       version: "1",
-      imageUrl: "https://buster-mkt.vercel.app/icon.jpg",
+      imageUrl: `${baseUrl}/icon.jpg`,
       button: {
         title: "Explore Markets🏪",
         action: {
           type: "launch_miniapp",
           name: "Policast",
-          iconUrl: "https://buster-mkt.vercel.app/icon.png",
-          url: "https://buster-mkt.vercel.app",
-          splashImageUrl: "https://buster-mkt.vercel.app/icon.jpg",
+          iconUrl: `${baseUrl}/icon.png`,
+          url: baseUrl,
+          splashImageUrl: `${baseUrl}/icon.jpg`,
           splashBackgroundColor: "#131E2A",
           state: "marketId",
         },

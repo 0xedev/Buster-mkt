@@ -276,7 +276,7 @@ export function V3AdminDashboard() {
           </CardHeader>
           <CardContent className="px-3 md:px-6">
             <div className="text-lg md:text-2xl font-bold truncate">
-              {formatAmount(globalStats?.totalFeesCollected)} $Buster
+              {formatAmount(globalStats?.totalFeesCollected)} $POLITICS
             </div>
           </CardContent>
         </Card>

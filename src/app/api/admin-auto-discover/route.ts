@@ -7,7 +7,7 @@ import {
   PolicastViews,
   PolicastViewsAbi,
 } from "@/constants/contract";
-import { MarketBasicInfoTuple } from "@/types/market";
+// import { MarketBasicInfoTuple } from "@/types/market";
 
 // Typed wrappers to reduce any-casts; generic return typing follows call sites
 async function readCore<TReturn>(
@@ -241,9 +241,9 @@ async function checkMarketBatchForAdmin(
       // for fields like optionCount, totalVolume and marketType when available.
       const raw = marketInfo as readonly any[];
       const question = String(raw[0] ?? "");
-      const description = String(raw[1] ?? "");
-      const endTime = BigInt(raw[2] ?? 0n);
-      const category = Number(raw[3] ?? 0);
+      // const description = String(raw[1] ?? "");
+      // const endTime = BigInt(raw[2] ?? 0n);
+      // const category = Number(raw[3] ?? 0);
       // Some Views implementations include marketType at index 4; others put
       // optionCount there. Try to read explicit view getters for correctness.
 
@@ -281,7 +281,7 @@ async function checkMarketBatchForAdmin(
         explicitMarketType = Number(raw[4] ?? raw[7] ?? 0);
       }
 
-      const optionCount = optionCountBig;
+      // const optionCount = optionCountBig;
       const totalVolume = totalVolumeBig;
       const marketType = explicitMarketType ?? 0; // 0 = paid, 1 = free (fallback)
       const resolved = Boolean(raw[5] ?? false);

@@ -7,14 +7,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserPortfolioV2 } from "@/components/UserPortfolioV2";
 import { MarketAnalyticsV2 } from "@/components/MarketAnalyticsV2";
-import { PriceHistoryV2 } from "@/components/PriceHistoryV2";
+// import { PriceHistoryV2 } from "@/components/PriceHistoryV2";
 
 import { MultiOptionPositions } from "@/components/MultiOptionPositions";
 import {
   BarChart3,
-  TrendingUp,
-  PieChart,
-  Activity,
+  // TrendingUp,
+  // PieChart,
+  // Activity,
   User,
   Target,
 } from "lucide-react";

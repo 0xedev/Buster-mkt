@@ -55,14 +55,14 @@ export function OnboardingModal() {
   const USDC_CAIP19 =
     "eip155:8453/erc20:0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
   const CAIP_ETH = "eip155:8453/native";
-  const BUSTER_CAIP19 =
-    "eip155:8453/erc20:0x53Bd7F868764333de01643ca9102ee4297eFA3cb";
+  const POLITICS_CAIP19 =
+    "eip155:8453/erc20:0x43ad5adae56fa09127ba147d5b24c4bc34abdb07";
 
-  const handleBuyBuster = async (sellToken: string) => {
+  const handleBuyPolitics = async (sellToken: string) => {
     try {
       await sdk.actions.swapToken({
         sellToken,
-        buyToken: BUSTER_CAIP19,
+        buyToken: POLITICS_CAIP19,
         // Optionally, set sellAmount: "1000000" // 1 USDC (if you want to pre-fill)
       });
       setStep("share");
@@ -75,8 +75,8 @@ export function OnboardingModal() {
   const handleShare = async () => {
     try {
       await sdk.actions.composeCast({
-        text: "Just joined Policast! Predict public sentiments and earn $Buster tokens!",
-        embeds: ["https://buster-mkt.vercel.app"],
+        text: "Just joined Policast! Predict public sentiments and earn $POLITICS tokens!",
+        embeds: ["https://policast.xyz"],
       });
       setStep("done");
       setIsOpen(false);
@@ -114,7 +114,7 @@ export function OnboardingModal() {
         <DialogHeader>
           <DialogTitle>
             {step === "add" && "Welcome to Policast!"}
-            {step === "buy" && "Buy $Buster"}
+            {step === "buy" && "Buy $POLITICS"}
             {step === "share" && "Share Policast"}
           </DialogTitle>
         </DialogHeader>
@@ -140,17 +140,17 @@ export function OnboardingModal() {
         {step === "buy" && (
           <div className="flex flex-col gap-4">
             <p className="text-sm text-gray-600">
-              Great! Now buy your $Buster tokens to start playing.
+              Great! Now buy your $POLITICS tokens to start playing.
             </p>
             <div className="flex gap-2">
               <Button
-                onClick={() => handleBuyBuster(USDC_CAIP19)}
+                onClick={() => handleBuyPolitics(USDC_CAIP19)}
                 className="bg-gray-800 text-white hover:bg-gray-900"
               >
                 Buy with USDC
               </Button>
               <Button
-                onClick={() => handleBuyBuster(CAIP_ETH)}
+                onClick={() => handleBuyPolitics(CAIP_ETH)}
                 className="bg-gray-800 text-white hover:bg-gray-900"
               >
                 Buy with ETH

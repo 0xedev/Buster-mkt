@@ -67,7 +67,7 @@ export function ClaimTokensButton({ onClaimComplete }: ClaimTokensButtonProps) {
     if (isTxConfirmed) {
       toast({
         title: "Tokens Claimed!",
-        description: "You've claimed 5000 buster tokens.",
+        description: "You've claimed 5000 POLITICS tokens.",
       });
       setHasClaimed(true);
       onClaimComplete?.();
@@ -108,7 +108,7 @@ export function ClaimTokensButton({ onClaimComplete }: ClaimTokensButtonProps) {
           Claiming...
         </>
       ) : (
-        "Claim 5000 buster"
+        "Claim 5000 POLITICS"
       )}
     </Button>
   );

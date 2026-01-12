@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MarketCard, Market } from "./marketCard";
 import { MarketV2Card } from "./market-v2-card";
 import { MarketCardSkeleton } from "./market-card-skeleton";
-import { MarketV2, Market as MarketV1Types } from "@/types/types";
+import { MarketV2 } from "@/types/types";
 import {
-  V2contractAddress,
-  V2contractAbi,
+  contractAddress,
+  contractAbi,
   publicClient,
 } from "@/constants/contract";
 import { Input } from "./ui/input";
@@ -27,31 +26,14 @@ interface ValidatedMarketListProps {
   filter: "active" | "pending" | "resolved";
   showOnlyValidated?: boolean;
 }
-//
-interface MarketWithVersion {
+
+interface MarketData {
   id: number;
-  version: "v1" | "v2";
-  market: Market | MarketV2;
+  market: MarketV2;
   validated: boolean;
 }
 
-// Helper function to convert MarketV1Types to Market (for compatibility)
-function convertV1Market(market: MarketV1Types): Market {
-  return {
-    question: market.question,
-    optionA: market.optionA,
-    optionB: market.optionB,
-    endTime: BigInt(market.endTime),
-    outcome: parseInt(market.outcome),
-    totalOptionAShares: BigInt(market.totalOptionAShares),
-    totalOptionBShares: BigInt(market.totalOptionBShares),
-    resolved: market.resolved,
-  };
-}
-
-function getMarketStatus(
-  market: Market | MarketV2
-): "active" | "pending" | "resolved" {
+function getMarketStatus(market: MarketV2): "active" | "pending" | "resolved" {
   const now = Math.floor(Date.now() / 1000);
   // Handle both bigint and string endTime types
   const endTime =
@@ -71,10 +53,13 @@ function getMarketStatus(
 }
 
 // Cache for validation status to avoid repeated checks
-const validationCache = new Map<number, { validated: boolean; timestamp: number }>();
+const validationCache = new Map<
+  number,
+  { validated: boolean; timestamp: number }
+>();
 const VALIDATION_CACHE_TTL = 60000; // 60 seconds
 
-// Check if a V2 market is validated by attempting a purchase call
+// Check if a market is validated by attempting a purchase call
 async function checkMarketValidation(marketId: number): Promise<boolean> {
   // Check cache first
   const cached = validationCache.get(marketId);
@@ -84,30 +69,30 @@ async function checkMarketValidation(marketId: number): Promise<boolean> {
 
   try {
     // We'll try to simulate a purchase to see if it throws MarketNotValidated
-    // This is a workaround since there's no direct validation getter
+    // This is a workaround since there's no direct validation getter in the contract
     // We use estimateContractGas with a dummy call to check if the market is validated
-    // Cast to `any` to avoid ABI-derived type errors (ABI varies by deployed contract version).
+    // Cast to `any` to avoid ABI-derived type errors
     await (publicClient.estimateContractGas as any)({
-      address: V2contractAddress,
-      abi: V2contractAbi,
+      address: contractAddress,
+      abi: contractAbi,
       functionName: "buyShares" as any,
       args: [BigInt(marketId), BigInt(0), BigInt(1), BigInt(1000000)], // Try to buy 1 share of option 0 with max price 1000000
       account: "0x0000000000000000000000000000000000000001", // Dummy account
     });
-    
+
     // Cache the result
     validationCache.set(marketId, { validated: true, timestamp: Date.now() });
     return true; // If no error, market is validated
   } catch (error: any) {
     // Check if the error is specifically MarketNotValidated
-    const isNotValidated = 
+    const isNotValidated =
       error?.message?.includes("MarketNotValidated") ||
       error?.shortMessage?.includes("MarketNotValidated") ||
       error?.details?.includes("MarketNotValidated");
-    
+
     // For other errors (like insufficient funds, invalid option, etc.), assume validated
     const validated = !isNotValidated;
-    
+
     // Cache the result
     validationCache.set(marketId, { validated, timestamp: Date.now() });
     return validated;
@@ -118,7 +103,7 @@ export function ValidatedMarketList({
   filter,
   showOnlyValidated = true,
 }: ValidatedMarketListProps) {
-  const [markets, setMarkets] = useState<MarketWithVersion[]>([]);
+  const [markets, setMarkets] = useState<MarketData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -131,42 +116,27 @@ export function ValidatedMarketList({
         setLoading(true);
         setError(null);
 
-        // Get market counts from both contracts
         const counts = await getTotalMarketCount();
-        console.log("Market counts:", counts);
+        console.log("Total market count:", counts.total);
 
-        // For now, prioritize V2 markets and show some V1 markets
-        const allMarketData: MarketWithVersion[] = [];
+        const allMarketData: MarketData[] = [];
 
         // Fetch markets in batches to avoid rate limiting
         const BATCH_SIZE = 10; // Process 10 markets at a time
 
         // Helper function to fetch a batch
-        const fetchBatch = async (
-          startIdx: number,
-          endIdx: number,
-          isV2: boolean
-        ) => {
+        const fetchBatch = async (startIdx: number, endIdx: number) => {
           const promises = [];
           for (let i = startIdx; i < endIdx; i++) {
             promises.push(
               fetchMarketData(i)
-                .then(async ({ version, market }) => {
-                  let validated = true; // V1 markets are always considered validated
-
-                  if (version === "v2" && isV2) {
-                    // Check validation status for V2 markets
-                    validated = await checkMarketValidation(i);
-                  }
+                .then(async ({ market }) => {
+                  const validated = await checkMarketValidation(i);
 
                   return {
                     id: i,
-                    version,
                     validated,
-                    market:
-                      version === "v2"
-                        ? (market as MarketV2)
-                        : convertV1Market(market as MarketV1Types),
+                    market: market as MarketV2,
                   };
                 })
                 .catch((err) => {
@@ -179,29 +149,16 @@ export function ValidatedMarketList({
           const results = await Promise.allSettled(promises);
           return results
             .filter(
-              (r): r is PromiseFulfilledResult<MarketWithVersion | null> =>
+              (r): r is PromiseFulfilledResult<MarketData | null> =>
                 r.status === "fulfilled" && r.value !== null
             )
-            .map((r) => r.value as MarketWithVersion);
+            .map((r) => r.value as MarketData);
         };
 
-        // Fetch V2 markets in batches
-        for (let i = 0; i < counts.v2Count; i += BATCH_SIZE) {
-          const endIdx = Math.min(i + BATCH_SIZE, counts.v2Count);
-          const batchResults = await fetchBatch(i, endIdx, true);
-          allMarketData.push(...batchResults);
-
-          // Update UI progressively
-          setMarkets([...allMarketData].sort((a, b) => b.id - a.id));
-        }
-
-        // Fetch recent V1 markets (up to 20) in batches
-        const v1MarketsToFetch = Math.min(counts.v1Count, 20);
-        const v1StartIdx = Math.max(0, counts.v1Count - v1MarketsToFetch);
-
-        for (let i = v1StartIdx; i < counts.v1Count; i += BATCH_SIZE) {
-          const endIdx = Math.min(i + BATCH_SIZE, counts.v1Count);
-          const batchResults = await fetchBatch(i, endIdx, false);
+        // Fetch all markets in batches
+        for (let i = 0; i < counts.total; i += BATCH_SIZE) {
+          const endIdx = Math.min(i + BATCH_SIZE, counts.total);
+          const batchResults = await fetchBatch(i, endIdx);
           allMarketData.push(...batchResults);
 
           // Update UI progressively
@@ -232,17 +189,12 @@ export function ValidatedMarketList({
       // Search filter
       const searchMatch = searchQuery
         ? market.question?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          ("description" in market &&
-            market.description
-              ?.toLowerCase()
-              .includes(searchQuery.toLowerCase()))
+          market.description?.toLowerCase().includes(searchQuery.toLowerCase())
         : true;
 
-      // Category filter for V2 markets
       const categoryMatch =
         categoryFilter === "all" ||
-        ("category" in market &&
-          market.category?.toString() === categoryFilter);
+        market.category?.toString() === categoryFilter;
 
       return statusMatch && validationMatch && searchMatch && categoryMatch;
     })
@@ -430,31 +382,16 @@ export function ValidatedMarketList({
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredMarkets.map(({ id, version, market, validated }) => {
-            if (version === "v2") {
-              return (
-                <div key={`v2-${id}`} className="relative">
-                  <MarketV2Card index={id} market={market as MarketV2} />
-                  {!validated && (
-                    <div className="absolute top-2 right-2 bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded">
-                      Pending Validation
-                    </div>
-                  )}
+          {filteredMarkets.map(({ id, market, validated }) => (
+            <div key={`market-${id}`} className="relative">
+              <MarketV2Card index={id} market={market as MarketV2} />
+              {!validated && (
+                <div className="absolute top-2 right-2 bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded">
+                  Pending Validation
                 </div>
-              );
-            } else {
-              return (
-                <div key={`v1-${id}`} className="relative">
-                  <MarketCard index={id} market={market as Market} />
-                  {!validated && (
-                    <div className="absolute top-2 right-2 bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded">
-                      Pending Validation
-                    </div>
-                  )}
-                </div>
-              );
-            }
-          })}
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

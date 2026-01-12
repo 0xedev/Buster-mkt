@@ -45,6 +45,7 @@ export const APP_TAGS: string[] = [
   "ponder",
   "buster",
   "polymarket",
+  "POLITICS",
 ];
 
 // --- Asset URLs ---
