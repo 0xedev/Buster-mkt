@@ -127,7 +127,7 @@ export function ModernAdminDashboard() {
         description: "Platform data has been updated.",
       });
     } catch (error) {
-      console.error("Failed to refresh data:", error);
+      // console.error("Failed to refresh data:", error);
       toast({
         title: "Refresh Failed",
         description: "Failed to refresh platform data.",
@@ -152,7 +152,7 @@ export function ModernAdminDashboard() {
         args: [],
       });
     } catch (error: any) {
-      console.error("Error withdrawing platform fees:", error);
+      //  console.error("Error withdrawing platform fees:", error);
       toast({
         title: "Transaction Failed",
         description: error?.shortMessage || "Failed to withdraw platform fees.",
@@ -186,7 +186,7 @@ export function ModernAdminDashboard() {
         args: [BigInt(feeRateValue)],
       });
     } catch (error: any) {
-      console.error("Error setting fee rate:", error);
+      // console.error("Error setting fee rate:", error);
       toast({
         title: "Transaction Failed",
         description: error?.shortMessage || "Failed to set fee rate.",
@@ -218,7 +218,7 @@ export function ModernAdminDashboard() {
         args: [newFeeCollector as `0x${string}`],
       });
     } catch (error: any) {
-      console.error("Error setting fee collector:", error);
+      // console.error("Error setting fee collector:", error);
       toast({
         title: "Transaction Failed",
         description: error?.shortMessage || "Failed to set fee collector.",
@@ -291,7 +291,7 @@ export function ModernAdminDashboard() {
             Admin Dashboard
           </h1>
           <p className="text-sm md:text-base text-gray-600 dark:text-gray-300">
-            Manage LMSR prediction markets and platform settings
+            Manage Policast prediction markets and platform settings
           </p>
         </div>
         <div className="flex items-center gap-1 md:gap-2 flex-wrap">
@@ -372,7 +372,7 @@ export function ModernAdminDashboard() {
                   Total Fees Collected
                 </p>
                 <p className="text-lg md:text-2xl font-bold">
-                  {formatTokenAmount(totalPlatformFeesCollected)} BSTR
+                  {formatTokenAmount(totalPlatformFeesCollected)} $Politics
                 </p>
               </div>
               <Award className="h-6 w-6 md:h-8 md:w-8 text-purple-600" />
@@ -582,7 +582,8 @@ export function ModernAdminDashboard() {
                           Available for Withdrawal
                         </p>
                         <p className="text-xl md:text-2xl font-bold text-green-600 truncate">
-                          {formatAmount(globalStats?.totalFeesCollected)} BSTR
+                          {formatAmount(globalStats?.totalFeesCollected)}{" "}
+                          Politics
                         </p>
                         <p className="text-xs md:text-sm text-gray-500 truncate">
                           Fee Collector: {globalStats?.feeCollector}

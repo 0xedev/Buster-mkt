@@ -358,7 +358,7 @@ export function V3AdminDashboard() {
                     Available for Withdrawal
                   </p>
                   <p className="text-xl md:text-2xl font-bold text-green-600 truncate">
-                    {formatAmount(globalStats?.totalFeesCollected)} BSTR
+                    {formatAmount(globalStats?.totalFeesCollected)} Politics
                   </p>
                   <p className="text-xs md:text-sm text-gray-500 truncate">
                     Fee Collector: {globalStats?.feeCollector}

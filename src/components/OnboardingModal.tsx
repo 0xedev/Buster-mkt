@@ -21,9 +21,9 @@ export function OnboardingModal() {
     if (!localStorage.getItem("hasCompletedOnboarding")) {
       setIsOpen(true);
       setOnboardingTriggered(true);
-      sdk.actions
-        .ready()
-        .catch((err) => console.error("SDK ready error:", err));
+      sdk.actions.ready().catch((err) => {
+        // console.error("SDK ready error:", err);
+      });
 
       const checkAdded = async () => {
         const client = await (await sdk.context).client;
@@ -47,7 +47,7 @@ export function OnboardingModal() {
     try {
       await sdk.actions.addFrame();
     } catch (error) {
-      console.error("Failed to add frame:", error);
+      // console.error("Failed to add frame:", error);
     }
   };
 
@@ -67,7 +67,7 @@ export function OnboardingModal() {
       });
       setStep("share");
     } catch (error) {
-      console.error("Failed to open swap:", error);
+      // console.error("Failed to open swap:", error);
       setStep("share");
     }
   };
@@ -82,7 +82,7 @@ export function OnboardingModal() {
       setIsOpen(false);
       localStorage.setItem("hasCompletedOnboarding", "true");
     } catch (error) {
-      console.error("Failed to compose cast:", error);
+      // console.error("Failed to compose cast:", error);
       setStep("done");
       setIsOpen(false);
       localStorage.setItem("hasCompletedOnboarding", "true");
