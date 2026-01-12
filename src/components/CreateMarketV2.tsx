@@ -276,80 +276,86 @@ export function CreateMarketV2() {
 
     if (!question.trim()) {
       toast({
-        title: "Error",
-        description: "Question is required",
+        title: "Missing Information",
+        description:
+          "Please enter a question for the market (e.g., 'Will X happen by Y?')",
         variant: "destructive",
       });
       return false;
     }
     if (question.length > 200) {
       toast({
-        title: "Error",
-        description: "Question must be 200 characters or less",
+        title: "Input Too Long",
+        description: `Questions are limited to 200 characters. You are currently at ${question.length}.`,
         variant: "destructive",
       });
       return false;
     }
     if (!description.trim()) {
       toast({
-        title: "Error",
-        description: "Description is required",
+        title: "Missing Information",
+        description:
+          "Please provide a description to clarify resolution criteria for this market.",
         variant: "destructive",
       });
       return false;
     }
     if (description.length > 1000) {
       toast({
-        title: "Error",
-        description: "Description must be 1000 characters or less",
+        title: "Input Too Long",
+        description: `Descriptions are limited to 1000 characters. You are currently at ${description.length}.`,
         variant: "destructive",
       });
       return false;
     }
     if (options.length < 2) {
       toast({
-        title: "Error",
-        description: "At least 2 options are required",
+        title: "Not Enough Options",
+        description:
+          "A market must have at least 2 outcomes for users to bet on.",
         variant: "destructive",
       });
       return false;
     }
     if (options.some((opt) => !opt.name.trim())) {
+      const idx = options.findIndex((opt) => !opt.name.trim()) + 1;
       toast({
-        title: "Error",
-        description: "All options must have names",
+        title: "Missing Option Name",
+        description: `Please enter a name for Option ${idx}.`,
         variant: "destructive",
       });
       return false;
     }
     if (options.some((opt) => opt.name.length > 50)) {
+      const idx = options.findIndex((opt) => opt.name.length > 50) + 1;
       toast({
-        title: "Error",
-        description: "Option names must be 50 characters or less",
+        title: "Option Name Too Long",
+        description: `Option ${idx} is too long (max 50 characters).`,
         variant: "destructive",
       });
       return false;
     }
     if (options.some((opt) => opt.description.length > 500)) {
+      const idx = options.findIndex((opt) => opt.description.length > 500) + 1;
       toast({
-        title: "Error",
-        description: "Option descriptions must be 500 characters or less",
+        title: "Option Description Too Long",
+        description: `Description for Option ${idx} is too long (max 500 characters).`,
         variant: "destructive",
       });
       return false;
     }
     if (parseFloat(duration) < 1) {
       toast({
-        title: "Error",
-        description: "Duration must be at least 1 day",
+        title: "Invalid Duration",
+        description: "Market duration must be at least 1 day.",
         variant: "destructive",
       });
       return false;
     }
     if (parseFloat(initialLiquidity) < MIN_INITIAL_LIQUIDITY) {
       toast({
-        title: "Error",
-        description: `Initial liquidity must be at least ${MIN_INITIAL_LIQUIDITY} tokens`,
+        title: "Insufficient Liquidity",
+        description: `The minimum initial liquidity required is ${MIN_INITIAL_LIQUIDITY} tokens.`,
         variant: "destructive",
       });
       return false;
@@ -366,11 +372,21 @@ export function CreateMarketV2() {
     // Additional validation for free markets
     if (marketType === MarketType.FREE_ENTRY) {
       // Check for empty inputs first
-      if (!maxFreeParticipants.trim() || !freeSharesPerUser.trim()) {
-        console.error("❌ Empty free market fields detected");
+      if (!maxFreeParticipants.trim()) {
         toast({
-          title: "Error",
-          description: "Please fill in all free market fields",
+          title: "Missing Configuration",
+          description:
+            "Please specify the maximum number of participants for this free market.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      if (!freeSharesPerUser.trim()) {
+        toast({
+          title: "Missing Configuration",
+          description:
+            "Please specify how many free tokens each user will receive.",
           variant: "destructive",
         });
         return false;
@@ -380,20 +396,19 @@ export function CreateMarketV2() {
       const tokensPerUser = parseFloat(freeSharesPerUser);
 
       if (isNaN(maxParticipants) || maxParticipants < 1) {
-        console.error("❌ Invalid max participants:", maxParticipants);
         toast({
-          title: "Error",
-          description: "Max free participants must be at least 1",
+          title: "Invalid Participants",
+          description:
+            "Max free participants must be a whole number greater than 0.",
           variant: "destructive",
         });
         return false;
       }
 
       if (isNaN(tokensPerUser) || tokensPerUser <= 0) {
-        console.error("❌ Invalid tokens per user:", tokensPerUser);
         toast({
-          title: "Error",
-          description: "Free tokens per user must be greater than 0",
+          title: "Invalid Token Amount",
+          description: "Free tokens per user must be greater than 0.",
           variant: "destructive",
         });
         return false;
