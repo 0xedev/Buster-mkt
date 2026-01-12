@@ -52,49 +52,6 @@ function getMarketStatus(market: MarketV2): "active" | "pending" | "resolved" {
   }
 }
 
-// Cache for validation status to avoid repeated checks
-const validationCache = new Map<
-  number,
-  { validated: boolean; timestamp: number }
->();
-const VALIDATION_CACHE_TTL = 60000; // 60 seconds
-
-// Check if a market is validated by attempting a purchase call
-async function checkMarketValidation(marketId: number): Promise<boolean> {
-  // Check cache first
-  const cached = validationCache.get(marketId);
-  if (cached && Date.now() - cached.timestamp < VALIDATION_CACHE_TTL) {
-    return cached.validated;
-  }
-
-  try {
-    await (publicClient.estimateContractGas as any)({
-      address: contractAddress,
-      abi: contractAbi,
-      functionName: "buyShares" as any,
-      args: [BigInt(marketId), BigInt(0), BigInt(1), BigInt(1000000)], // Try to buy 1 share of option 0 with max price 1000000
-      account: "0x0000000000000000000000000000000000000001", // Dummy account
-    });
-
-    // Cache the result
-    validationCache.set(marketId, { validated: true, timestamp: Date.now() });
-    return true; // If no error, market is validated
-  } catch (error: any) {
-    // Check if the error is specifically MarketNotValidated
-    const isNotValidated =
-      error?.message?.includes("MarketNotValidated") ||
-      error?.shortMessage?.includes("MarketNotValidated") ||
-      error?.details?.includes("MarketNotValidated");
-
-    // For other errors (like insufficient funds, invalid option, etc.), assume validated
-    const validated = !isNotValidated;
-
-    // Cache the result
-    validationCache.set(marketId, { validated, timestamp: Date.now() });
-    return validated;
-  }
-}
-
 export function ValidatedMarketList({
   filter,
   showOnlyValidated = true,
@@ -127,7 +84,8 @@ export function ValidatedMarketList({
             promises.push(
               fetchMarketData(i)
                 .then(async ({ market }) => {
-                  const validated = await checkMarketValidation(i);
+                  // Direct access to validated property from contract data (much faster than estimateGas workaround)
+                  const validated = (market as MarketV2).validated;
 
                   return {
                     id: i,

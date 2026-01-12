@@ -103,26 +103,26 @@ const CategoryBadge = ({ category }: { category: MarketCategory }) => {
 
   const categoryColors = {
     [MarketCategory.POLITICS]:
-      "bg-red-500/20 text-red-300 border border-red-400/30",
+      "bg-red-500/10 text-red-200 border border-red-500/20",
     [MarketCategory.SPORTS]:
-      "bg-green-500/20 text-green-300 border border-green-400/30",
+      "bg-emerald-500/10 text-emerald-200 border border-emerald-500/20",
     [MarketCategory.ENTERTAINMENT]:
-      "bg-purple-500/20 text-purple-300 border border-purple-400/30",
+      "bg-purple-500/10 text-purple-200 border border-purple-500/20",
     [MarketCategory.TECHNOLOGY]:
-      "bg-blue-500/20 text-blue-300 border border-blue-400/30",
+      "bg-blue-500/10 text-blue-200 border border-blue-500/20",
     [MarketCategory.ECONOMICS]:
-      "bg-yellow-500/20 text-yellow-300 border border-yellow-400/30",
+      "bg-yellow-500/10 text-yellow-200 border border-yellow-500/20",
     [MarketCategory.SCIENCE]:
-      "bg-teal-500/20 text-teal-300 border border-teal-400/30",
+      "bg-teal-500/10 text-teal-200 border border-teal-500/20",
     [MarketCategory.WEATHER]:
-      "bg-gray-500/20 text-gray-300 border border-gray-400/30",
+      "bg-sky-500/10 text-sky-200 border border-sky-500/20",
     [MarketCategory.OTHER]:
-      "bg-gray-500/20 text-gray-300 border border-gray-400/30",
+      "bg-gray-500/10 text-gray-200 border border-gray-500/20",
   };
 
   return (
     <span
-      className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${categoryColors[category]}`}
+      className={`inline-block px-2 py-1 rounded-md text-[10px] uppercase tracking-wider font-medium ${categoryColors[category]}`}
     >
       {categoryNames[category]}
     </span>
@@ -132,7 +132,7 @@ const CategoryBadge = ({ category }: { category: MarketCategory }) => {
 // Invalidation badge component
 const InvalidatedBadge = () => {
   return (
-    <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-red-500/20 text-red-300 border border-red-400/30">
+    <span className="inline-block px-2 py-1 rounded-md text-[10px] uppercase tracking-wider font-medium bg-red-500/10 text-red-200 border border-red-500/20">
       Invalidated
     </span>
   );
@@ -141,7 +141,7 @@ const InvalidatedBadge = () => {
 // Free market badge component
 const FreeMarketBadge = () => {
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 border border-green-400/30 shadow-sm">
+    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] uppercase tracking-wider font-medium bg-emerald-500/10 text-emerald-200 border border-emerald-500/20">
       <Gift className="h-3 w-3" />
       Free
     </span>
@@ -151,7 +151,7 @@ const FreeMarketBadge = () => {
 // Event-based market badge component
 const EventBasedBadge = () => {
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-orange-500/20 to-amber-500/20 text-orange-300 border border-orange-400/30 shadow-sm">
+    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] uppercase tracking-wider font-medium bg-orange-500/10 text-orange-200 border border-orange-500/20">
       <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
         <path
           fillRule="evenodd"
@@ -566,7 +566,7 @@ export function MarketV2Card({ index, market }: MarketV2CardProps) {
     return (
       <Card
         key={index}
-        className="flex flex-col border-red-400/30 bg-[#433952]/50 backdrop-blur-sm"
+        className="flex flex-col border-red-500/20 bg-red-500/5 backdrop-blur-md"
       >
         <CardHeader>
           <div className="flex items-center justify-between mb-2">
@@ -583,11 +583,11 @@ export function MarketV2Card({ index, market }: MarketV2CardProps) {
               {showEventBadge && <EventBasedBadge />}
             </div>
           </div>
-          <CardTitle className="text-base leading-relaxed text-gray-100">
+          <CardTitle className="text-sm leading-relaxed text-white">
             <LinkifiedText text={market.question} />
           </CardTitle>
           {market.description && (
-            <p className="text-sm text-gray-300 mt-1">
+            <p className="text-xs text-white/50 mt-1">
               <LinkifiedText text={market.description} />
             </p>
           )}
@@ -654,7 +654,7 @@ export function MarketV2Card({ index, market }: MarketV2CardProps) {
   return (
     <Card
       key={index}
-      className="flex flex-col bg-[#433952]/50 backdrop-blur-sm border-[#544863]"
+      className="flex flex-col bg-white/5 backdrop-blur-md border-white/10"
     >
       <CardHeader>
         <div className="flex flex-col gap-2 mb-2">
@@ -673,11 +673,11 @@ export function MarketV2Card({ index, market }: MarketV2CardProps) {
             {showEventBadge && <EventBasedBadge />}
           </div>
         </div>
-        <CardTitle className="text-base leading-relaxed text-gray-100">
+        <CardTitle className="text-sm leading-relaxed text-white font-medium">
           <LinkifiedText text={market.question} />
         </CardTitle>
         {market.description && (
-          <p className="text-sm text-gray-300 mt-1">
+          <p className="text-xs text-white/50 mt-1">
             <LinkifiedText text={market.description} />
           </p>
         )}
@@ -718,24 +718,24 @@ export function MarketV2Card({ index, market }: MarketV2CardProps) {
         ) : (
           <div className="space-y-3">
             {/* Tab-style Buy/Sell Toggle */}
-            <div className="border-b border-[#544863] -mx-1.5">
+            <div className="border-b border-white/10 -mx-1.5">
               <nav className="flex -mb-px">
                 <button
                   onClick={() => setActiveInterface("buy")}
-                  className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-4 py-2 text-xs font-medium border-b-2 transition-colors ${
                     activeInterface === "buy"
-                      ? "border-purple-500 text-purple-400"
-                      : "border-transparent text-gray-400 hover:border-[#544863] hover:text-gray-300"
+                      ? "border-emerald-500 text-emerald-400"
+                      : "border-transparent text-white/50 hover:border-white/10 hover:text-white"
                   }`}
                 >
                   <TrendingUp className="h-3.5 w-3.5" /> Buy
                 </button>
                 <button
                   onClick={() => setActiveInterface("sell")}
-                  className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-4 py-2 text-xs font-medium border-b-2 transition-colors ${
                     activeInterface === "sell"
                       ? "border-red-500 text-red-400"
-                      : "border-transparent text-gray-400 hover:border-[#544863] hover:text-gray-300"
+                      : "border-transparent text-white/50 hover:border-white/10 hover:text-white"
                   }`}
                 >
                   <TrendingDown className="h-3.5 w-3.5" /> Sell
@@ -797,7 +797,7 @@ export function MarketV2Card({ index, market }: MarketV2CardProps) {
 
             {/* Dedicated Position Card */}
             {hasShares && activeInterface === "sell" && (
-              <div className="mt-4 p-3 bg-[#352c3f]/80 backdrop-blur-sm rounded-lg border border-[#544863]">
+              <div className="mt-4 p-3 bg-white/5 backdrop-blur-md rounded-lg border border-white/10">
                 <MarketV2SharesDisplay
                   market={market}
                   userShares={userShares || []}
@@ -807,7 +807,7 @@ export function MarketV2Card({ index, market }: MarketV2CardProps) {
                   <Button
                     variant="secondary"
                     size="sm"
-                    className="w-full mt-2 text-xs"
+                    className="w-full mt-2 text-xs bg-white/10 hover:bg-white/20 text-white border-0"
                   >
                     Manage Position
                   </Button>
@@ -818,21 +818,21 @@ export function MarketV2Card({ index, market }: MarketV2CardProps) {
         )}
       </CardContent>
 
-      <CardFooter className="pt-4 border-t border-[#544863]">
+      <CardFooter className="pt-4 border-t border-white/10">
         <div className="grid grid-cols-3 gap-4 w-full">
           {/* Comments Button */}
           <div className="flex flex-col items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
-              className="flex flex-col items-center justify-center h-auto p-2 w-full hover:bg-[#544863]/50"
+              className="flex flex-col items-center justify-center h-auto p-2 w-full hover:bg-white/5"
               asChild
             >
               <Link href={`/market/${index}/details#comments`}>
-                <div className="flex items-center justify-center size-9 rounded-full bg-[#544863]/50 mb-1 border border-[#544863]">
-                  <MessageCircle className="h-4 w-4 text-gray-300" />
+                <div className="flex items-center justify-center size-9 rounded-full bg-white/5 mb-1 border border-white/10 text-white/70">
+                  <MessageCircle className="h-4 w-4" />
                 </div>
-                <span className="text-xs font-medium text-gray-300">
+                <span className="text-[10px] font-medium text-white/50">
                   {commentCount > 0 ? `${commentCount} comments` : "Comments"}
                 </span>
               </Link>
@@ -845,15 +845,15 @@ export function MarketV2Card({ index, market }: MarketV2CardProps) {
               variant="ghost"
               size="sm"
               onClick={handleShare}
-              className="flex flex-col items-center justify-center h-auto p-2 w-full hover:bg-[#544863]/50"
+              className="flex flex-col items-center justify-center h-auto p-2 w-full hover:bg-white/5"
             >
-              <div className="flex items-center justify-center size-9 rounded-full bg-[#544863]/50 mb-1 border border-[#544863]">
+              <div className="flex items-center justify-center size-9 rounded-full bg-white/5 mb-1 border border-white/10 text-white/70">
                 <FontAwesomeIcon
                   icon={faShareFromSquare}
-                  className="h-4 w-4 text-gray-300"
+                  className="h-4 w-4"
                 />
               </div>
-              <span className="text-xs font-medium text-gray-300">Share</span>
+              <span className="text-[10px] font-medium text-white/50">Share</span>
             </Button>
           </div>
 
@@ -862,17 +862,17 @@ export function MarketV2Card({ index, market }: MarketV2CardProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="flex flex-col items-center justify-center h-auto p-2 w-full hover:bg-[#544863]/50"
+              className="flex flex-col items-center justify-center h-auto p-2 w-full hover:bg-white/5"
               asChild
             >
               <Link href={`/market/${index}/details`}>
-                <div className="flex items-center justify-center size-9 rounded-full bg-[#544863]/50 mb-1 border border-[#544863]">
+                <div className="flex items-center justify-center size-9 rounded-full bg-white/5 mb-1 border border-white/10 text-white/70">
                   <FontAwesomeIcon
                     icon={faUpRightAndDownLeftFromCenter}
-                    className="h-4 w-4 text-gray-300"
+                    className="h-4 w-4"
                   />
                 </div>
-                <span className="text-xs font-medium text-gray-300">
+                <span className="text-[10px] font-medium text-white/50">
                   Details
                 </span>
               </Link>
