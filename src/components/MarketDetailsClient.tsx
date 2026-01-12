@@ -117,10 +117,10 @@ export function MarketDetailsClient({
   market,
 }: MarketDetailsClientProps) {
   // Debug logging for market data
-  console.log(`[MarketDetailsClient] Loading market ${marketId}:`, market);
-  console.log(
-    `[MarketDetailsClient] Market version: ${market.version}, marketType: ${market.marketType}`
-  );
+  // console.log(`[MarketDetailsClient] Loading market ${marketId}:`, market);
+  // console.log(
+  //   `[MarketDetailsClient] Market version: ${market.version}, marketType: ${market.marketType}`
+  // );
 
   // Normalize options so components always receive either string labels
   // or well-formed MarketOption objects. Some fetchers return `options` as
@@ -235,7 +235,7 @@ export function MarketDetailsClient({
       (async () => {
         await sdk.actions.addFrame();
       })();
-      console.log("MarketDetailsClient: Mini App signaled ready.");
+      // console.log("MarketDetailsClient: Mini App signaled ready.");
     };
     signalReady();
   }, []);

@@ -117,7 +117,7 @@ export function ValidatedMarketList({
         setError(null);
 
         const counts = await getTotalMarketCount();
-        console.log("Total market count:", counts.total);
+        //  console.log("Total market count:", counts.total);
 
         const allMarketData: MarketData[] = [];
 

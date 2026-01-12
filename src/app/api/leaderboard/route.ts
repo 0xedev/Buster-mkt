@@ -128,8 +128,6 @@ export async function GET(request: Request) {
   const cachedLeaderboard = cache.get<LeaderboardEntry[]>(cacheKey);
 
   if (cachedLeaderboard && !forceRefresh) {
-    console.log("✅ Serving from cache");
-
     // Calculate pagination
     const startIndex = (page - 1) * pageSize;
     const endIndex = startIndex + pageSize;
@@ -186,13 +184,10 @@ export async function GET(request: Request) {
   }
 
   if (forceRefresh) {
-    console.log("🔄 Force refresh requested, clearing cache");
     cache.flushAll();
   }
 
   try {
-    console.log("🚀 Starting leaderboard fetch...");
-
     // Check for required environment variables
     const neynarApiKey = process.env.NEYNAR_API_KEY;
     const alchemyRpcUrl = process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL;
@@ -214,7 +209,6 @@ export async function GET(request: Request) {
     }
 
     const neynar = new NeynarAPIClient({ apiKey: neynarApiKey });
-    console.log("✅ Neynar client initialized.");
 
     const [tokenDecimals] = await withRetry(() =>
       publicClient.multicall({
@@ -227,9 +221,6 @@ export async function GET(request: Request) {
         ],
       })
     ).then((results) => [Number(results[0].result)]);
-    console.log(`💸 Token Decimals: ${tokenDecimals}`);
-
-    console.log("📊 Fetching Policast participants and portfolios...");
 
     // ==================== POLICAST LEADERBOARD ====================
     const entries: {
@@ -283,8 +274,6 @@ export async function GET(request: Request) {
         }
       }
 
-      console.log(`✅ Found ${addresses.length} participant addresses`);
-
       // Step 2: Fetch portfolios using multicall batches
       for (let i = 0; i < addresses.length; i += V2_BATCH_SIZE) {
         const batchAddresses = addresses.slice(i, i + V2_BATCH_SIZE);
@@ -327,8 +316,6 @@ export async function GET(request: Request) {
           }
         });
       }
-
-      console.log(`✅ Fetched ${entries.length} leaderboard entries`);
     } catch (error) {
       console.error("❌ Policast fetch error:", error);
     }
@@ -385,10 +372,8 @@ export async function GET(request: Request) {
       trend: calculateTrend(index + 1, 0), // For proper trend implementation, you'd need to store previous ranks
     }));
 
-    console.log(`📊 Combined ${winners.length} total unique winners`);
-
     // ==================== FETCH NEYNAR DATA ====================
-    console.log("📬 Fetching Farcaster users...");
+
     const neynarCache =
       cache.get<Record<string, NeynarUser[]>>(NEYNAR_CACHE_KEY) || {};
     const addressesToFetch = winners
@@ -397,21 +382,13 @@ export async function GET(request: Request) {
     let addressToUsersMap: Record<string, NeynarUser[]> = { ...neynarCache };
 
     if (addressesToFetch.length > 0) {
-      console.log(
-        `📬 Requesting Neynar for ${addressesToFetch.length} addresses`
-      );
       const newUsersMap = await batchFetchNeynarUsers(neynar, addressesToFetch);
       addressToUsersMap = { ...addressToUsersMap, ...newUsersMap };
       cache.set(NEYNAR_CACHE_KEY, addressToUsersMap, 86400); // 1-day TTL
-      console.log(
-        `✅ Neynar responded. Found users for ${
-          Object.keys(newUsersMap).length
-        } addresses.`
-      );
     }
 
     // ==================== BUILD FINAL LEADERBOARD ====================
-    console.log("🧠 Building leaderboard...");
+   
     const leaderboard: LeaderboardEntry[] = winners.map((winner) => {
       const usersForAddress = addressToUsersMap[winner.address];
       const user =
@@ -433,7 +410,7 @@ export async function GET(request: Request) {
       };
     });
 
-    console.log("🏆 Final Leaderboard:", leaderboard);
+   
 
     // Ensure no BigInt values before caching and returning
     const safeLeaderboard = JSON.parse(
@@ -443,7 +420,7 @@ export async function GET(request: Request) {
     );
 
     cache.set(cacheKey, safeLeaderboard);
-    console.log("✅ Cached leaderboard");
+   
 
     // Calculate pagination
     const startIndex = (page - 1) * pageSize;
@@ -476,7 +453,7 @@ export async function GET(request: Request) {
 
     const cachedLeaderboard = cache.get<LeaderboardEntry[]>(cacheKey);
     if (cachedLeaderboard) {
-      console.log("✅ Serving stale cache due to error");
+     
       const safeLeaderboard = JSON.parse(
         JSON.stringify(cachedLeaderboard, (key, value) =>
           typeof value === "bigint" ? Number(value) : value

@@ -94,7 +94,7 @@ export function MarketResolver() {
     queryFn: async () => {
       if (!marketCount) return [];
 
-      console.log("Fetching markets from contract...", Number(marketCount)); // Debug log
+      //  console.log("Fetching markets from contract...", Number(marketCount)); // Debug log
 
       const markets = [];
       const count = Number(marketCount);
@@ -212,7 +212,7 @@ export function MarketResolver() {
         }
       }
 
-      console.log("Contract response:", markets); // Debug log
+      //  console.log("Contract response:", markets); // Debug log
       return markets;
     },
     enabled: isConnected && !!marketCount,
@@ -229,7 +229,7 @@ export function MarketResolver() {
   // Map contract markets to local MarketInfo shape
   useEffect(() => {
     const mapMarkets = (items: any[] | undefined) => {
-      console.log("Mapping markets from contract:", items); // Debug log
+      //  console.log("Mapping markets from contract:", items); // Debug log
       if (!items) {
         setIsLoading(false);
         return;
@@ -286,7 +286,7 @@ export function MarketResolver() {
           } as MarketInfo;
         });
 
-        console.log("Mapped markets:", mapped); // Debug log
+        //  console.log("Mapped markets:", mapped); // Debug log
         setMarkets(mapped);
       } catch (err) {
         console.error("Error mapping markets:", err);

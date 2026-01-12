@@ -47,7 +47,7 @@ export function UnifiedMarketList({ filter }: UnifiedMarketListProps) {
         setError(null);
 
         const counts = await getTotalMarketCount();
-        console.log("Market counts:", counts);
+        //  console.log("Market counts:", counts);
 
         // Progressive loading: Load markets in batches to improve perceived performance
         const INITIAL_BATCH_SIZE = 6; // First batch for quick initial render

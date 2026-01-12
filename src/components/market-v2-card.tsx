@@ -334,15 +334,15 @@ export function MarketV2Card({ index, market }: MarketV2CardProps) {
   // Debug user shares (only in development)
   useEffect(() => {
     if (process.env.NODE_ENV === "development" && shouldFetchShares) {
-      console.log(
-        `[MarketV2Card ${index}] User shares array:`,
-        userShares.map((s, idx) => ({
-          optionId: idx,
-          shares: s.toString(),
-          hasShares: s > 0n,
-        })),
-        `| address: ${address}`
-      );
+      // console.log(
+      //   `[MarketV2Card ${index}] User shares array:`,
+      //   userShares.map((s, idx) => ({
+      //     optionId: idx,
+      //     shares: s.toString(),
+      //     hasShares: s > 0n,
+      //   })),
+      //   `| address: ${address}`
+      // );
     }
   }, [userShares, index, address, shouldFetchShares]);
 

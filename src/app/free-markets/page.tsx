@@ -25,7 +25,6 @@ export default function FreeMarketsPage() {
     const fetchFreeMarkets = async () => {
       try {
         const totalCount = await getTotalMarketCount();
-        console.log("📊 Total market count:", totalCount);
 
         const freeMarkets: { index: number; market: MarketV2 }[] = [];
 
@@ -60,7 +59,6 @@ export default function FreeMarketsPage() {
           }
         }
 
-        console.log("🎁 Found free markets:", freeMarkets.length);
         setMarkets(freeMarkets);
       } catch (error) {
         console.error("Error fetching free markets:", error);

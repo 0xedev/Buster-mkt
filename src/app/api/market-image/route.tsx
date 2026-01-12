@@ -33,7 +33,6 @@ interface MarketImageDataV2 {
 type MarketImageData = MarketImageDataV2;
 
 async function fetchMarketData(marketId: string): Promise<MarketImageData> {
-  console.log(`Market Image API: Fetching info for marketId ${marketId}...`);
   try {
     if (!process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL) {
       throw new Error("NEXT_PUBLIC_ALCHEMY_RPC_URL is not set");
@@ -196,8 +195,6 @@ const mediumFontPath = path.join(
   "Inter_18pt-Medium.ttf"
 );
 
-console.log("Attempting to load fonts from:", regularFontPath, boldFontPath);
-
 const regularFontDataPromise = fs.readFile(regularFontPath);
 const boldFontDataPromise = fs.readFile(boldFontPath);
 const mediumFontDataPromise = fs.readFile(mediumFontPath).catch(() => null);
@@ -228,15 +225,6 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const marketId = searchParams.get("marketId");
 
-  console.log(
-    `--- Market Image API: Received request for marketId: ${marketId} ---`
-  );
-  console.log("Market Image API: Full URL:", request.url);
-  console.log(
-    "Market Image API: All search params:",
-    Object.fromEntries(searchParams.entries())
-  );
-
   // More robust validation
   if (!marketId) {
     console.error("Market Image API: No marketId parameter provided");
@@ -265,15 +253,7 @@ export async function GET(request: NextRequest) {
       mediumFontDataPromise.catch(() => null),
     ]);
 
-    console.log(
-      `Market Image API: Successfully loaded fonts for marketId ${cleanMarketId}`
-    );
-
     const market = await fetchMarketData(cleanMarketId);
-    console.log(
-      `Market Image API: Market data processed for marketId ${cleanMarketId}:`,
-      market
-    );
 
     // Truncate long questions and adjust font sizes
     const truncateText = (text: string, maxLength: number) => {
@@ -594,10 +574,6 @@ export async function GET(request: NextRequest) {
     });
 
     const pngBuffer = await sharp(Buffer.from(svg)).png().toBuffer();
-
-    console.log(
-      `Market Image API: Successfully generated image for marketId ${cleanMarketId}`
-    );
 
     return new NextResponse(new Uint8Array(pngBuffer), {
       headers: {

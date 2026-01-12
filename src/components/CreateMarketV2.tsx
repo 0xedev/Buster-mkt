@@ -104,7 +104,6 @@ export function CreateMarketV2() {
   useEffect(() => {
     if (!sendCallsData || sendCallsError) return;
 
-    console.log("🎉 Market creation transaction sent successfully!");
     setMarketCreated(true);
     toast({
       title: "Success",
@@ -366,10 +365,6 @@ export function CreateMarketV2() {
 
     // Additional validation for free markets
     if (marketType === MarketType.FREE_ENTRY) {
-      console.log("🔍 Validating free market configuration...");
-      console.log("Max Participants:", maxFreeParticipants);
-      console.log("Tokens Per User:", freeSharesPerUser);
-
       // Check for empty inputs first
       if (!maxFreeParticipants.trim() || !freeSharesPerUser.trim()) {
         console.error("❌ Empty free market fields detected");
@@ -383,13 +378,6 @@ export function CreateMarketV2() {
 
       const maxParticipants = parseInt(maxFreeParticipants);
       const tokensPerUser = parseFloat(freeSharesPerUser);
-
-      console.log(
-        "Parsed values - Max Participants:",
-        maxParticipants,
-        "Tokens Per User:",
-        tokensPerUser
-      );
 
       if (isNaN(maxParticipants) || maxParticipants < 1) {
         console.error("❌ Invalid max participants:", maxParticipants);
@@ -413,34 +401,27 @@ export function CreateMarketV2() {
 
       // Calculate total prize pool and log it
       const totalPrizePool = tokensPerUser * maxParticipants;
-      console.log("✅ Free market validation passed");
-      console.log("💰 Total Prize Pool:", totalPrizePool, "tokens");
-      console.log(
-        "📊 Prize Pool Breakdown:",
-        `${maxParticipants} participants × ${tokensPerUser} tokens each`
-      );
     }
 
-    console.log("✅ Form validation completed successfully");
     return true;
   };
 
   const handleSubmit = async () => {
-    console.log("🚀 Starting batch market creation process...");
-    console.log("📝 Form data:", {
-      question,
-      description,
-      marketType,
-      category,
-      duration,
-      initialLiquidity,
-      options,
-      earlyResolutionAllowed,
-      maxFreeParticipants:
-        marketType === MarketType.FREE_ENTRY ? maxFreeParticipants : "N/A",
-      freeSharesPerUser:
-        marketType === MarketType.FREE_ENTRY ? freeSharesPerUser : "N/A",
-    });
+    // console.log("🚀 Starting batch market creation process...");
+    // console.log("📝 Form data:", {
+    //   question,
+    //   description,
+    //   marketType,
+    //   category,
+    //   duration,
+    //   initialLiquidity,
+    //   options,
+    //   earlyResolutionAllowed,
+    //   maxFreeParticipants:
+    //     marketType === MarketType.FREE_ENTRY ? maxFreeParticipants : "N/A",
+    //   freeSharesPerUser:
+    //     marketType === MarketType.FREE_ENTRY ? freeSharesPerUser : "N/A",
+    // });
 
     if (!validateForm()) {
       console.error("❌ Form validation failed");
@@ -481,19 +462,17 @@ export function CreateMarketV2() {
       return;
     }
 
-    console.log("🔄 Setting submission state to true");
     setIsSubmitting(true);
     setMarketCreated(false);
 
     try {
-      console.log("📐 Calculating transaction parameters...");
       const liquidityWei = parseEther(initialLiquidity);
 
       // Calculate required approval amount based on market type
       let requiredApproval = liquidityWei;
 
       if (marketType === MarketType.FREE_ENTRY) {
-        console.log("🎁 Processing free market configuration...");
+        // console.log("🎁 Processing free market configuration...");
         if (!freeSharesPerUser.trim() || !maxFreeParticipants.trim()) {
           console.error("❌ Empty free market fields during submission");
           toast({
@@ -507,7 +486,7 @@ export function CreateMarketV2() {
         const maxParticipants = BigInt(maxFreeParticipants || "0");
         const totalPrizePool = tokensPerUser * maxParticipants;
         requiredApproval = liquidityWei + totalPrizePool;
-        console.log("💰 Total required approval:", requiredApproval.toString());
+        //  console.log("💰 Total required approval:", requiredApproval.toString());
       }
 
       // Check if user has sufficient balance
@@ -528,7 +507,7 @@ export function CreateMarketV2() {
 
       // Add approval call if needed
       if (requiredApproval > currentAllowance) {
-        console.log("� Adding approval to batch...");
+        //  console.log("� Adding approval to batch...");
         calls.push({
           to: tokenAddress as `0x${string}`,
           data: encodeFunctionData({
@@ -540,7 +519,7 @@ export function CreateMarketV2() {
       }
 
       // Add market creation call
-      console.log("🏗️ Adding market creation to batch...");
+      //  console.log("🏗️ Adding market creation to batch...");
       const builtArgs2 = buildCreateMarketArgs();
       const createMarketCall = {
         to: V2contractAddress as `0x${string}`,
@@ -577,8 +556,8 @@ export function CreateMarketV2() {
 
       calls.push(createMarketCall);
 
-      console.log("📦 Sending batch transaction with", calls.length, "calls");
-      console.log("� Batch calls:", calls);
+      //  console.log("📦 Sending batch transaction with", calls.length, "calls");
+      //  console.log("� Batch calls:", calls);
 
       // Send batch transaction
       await sendCalls({ calls });

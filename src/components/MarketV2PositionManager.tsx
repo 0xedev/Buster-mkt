@@ -326,8 +326,8 @@ export function MarketV2PositionManager({
 
     // Debug logging
     if (optionData) {
-      console.log(`Option ${optionId} data:`, optionData);
-      console.log(`Option ${optionId} current price:`, currentPrice.toString());
+      //  console.log(`Option ${optionId} data:`, optionData);
+      //  console.log(`Option ${optionId} current price:`, currentPrice.toString());
     }
 
     const currentValue =

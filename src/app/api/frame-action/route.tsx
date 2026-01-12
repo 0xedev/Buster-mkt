@@ -35,8 +35,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     rawState = body.untrustedData?.state;
 
-    console.log("Frame Action: Raw state received:", rawState);
-
     const decodedState = rawState
       ? (() => {
           try {
@@ -54,8 +52,6 @@ export async function POST(req: NextRequest) {
 
     marketId = decodedState.marketId;
     currentView = decodedState.view === "details" ? "details" : "overview";
-
-    console.log("Frame Action: Extracted marketId:", marketId);
 
     if (!marketId || isNaN(Number(marketId))) {
       console.error("Frame Action: Invalid marketId", marketId);
@@ -76,15 +72,11 @@ export async function POST(req: NextRequest) {
     };
 
     if (currentView === "overview") {
-      console.log(
-        `Frame Action: Transitioning to details view for market ${marketId}`
-      );
       responseButtons = [
         { label: "Back to Markets", action: "link", target: `${baseUrl}/` },
       ];
       responseState = { marketId, view: "details" };
     } else {
-      console.log(`Frame Action: Showing overview for market ${marketId}`);
       responseButtons = [{ label: "View", action: "post" }];
       responseState = { marketId, view: "overview" };
     }

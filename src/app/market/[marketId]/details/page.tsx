@@ -37,8 +37,6 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const { marketId } = await params;
 
-  console.log("generateMetadata: Processing marketId:", marketId);
-
   if (!marketId || isNaN(Number(marketId))) {
     console.error("generateMetadata: Invalid marketId", marketId);
     return {
@@ -131,8 +129,6 @@ export async function generateMetadata(
 export default async function MarketDetailsPage({ params }: Props) {
   const { marketId } = await params;
 
-  console.log(`=== MARKET DETAILS PAGE: Loading market ${marketId} ===`);
-
   if (!marketId || isNaN(Number(marketId))) {
     notFound();
   }
@@ -145,10 +141,6 @@ export default async function MarketDetailsPage({ params }: Props) {
 
     // Use the shared migration fetch which already implements consistent market fetching
     const marketResult = await fetchMarketDataFromMigration(Number(marketId));
-    console.log(
-      `Market ${marketId} detected as version:`,
-      marketResult.version
-    );
 
     // The migration fetcher may return either a raw contract tuple or a pre-parsed Market object.
     const raw = marketResult.market as any;
@@ -174,7 +166,6 @@ export default async function MarketDetailsPage({ params }: Props) {
         marketType:
           Number((marketResult as any).marketType ?? raw.marketType ?? 0) || 0,
       };
-      console.log(`Market ${marketId} pre-parsed data:`, market);
     } else {
       // Otherwise treat it as the raw contract tuple and fetch options ourselves
       const marketData = raw as MarketInfoContractReturn;
@@ -226,7 +217,6 @@ export default async function MarketDetailsPage({ params }: Props) {
         optionShares,
         marketType: Number(marketData[6]) || 0,
       };
-      console.log(`Market ${marketId} data:`, market);
     }
 
     // Use the market object built above, which already selects V2 if active

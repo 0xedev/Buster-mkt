@@ -254,13 +254,13 @@ export function MarketV2SellInterface({
           ? withNegBuffer(netRefundFromQuote)
           : withNegBuffer(estimatedRevenue as bigint);
 
-      console.log("=== V2 SELL TRANSACTION ===");
-      console.log("Market ID:", marketId);
-      console.log("Option ID:", selectedOptionId);
-      console.log("Sell Amount:", sellAmountBigInt.toString());
-      console.log("Estimated Revenue:", estimatedRevenue.toString());
-      console.log("Avg Price Per Share:", avgPricePerShare.toString());
-      console.log("Min Price Per Share:", minPricePerShare.toString());
+      //  console.log("=== V2 SELL TRANSACTION ===");
+      //  console.log("Market ID:", marketId);
+      //  console.log("Option ID:", selectedOptionId);
+      //  console.log("Sell Amount:", sellAmountBigInt.toString());
+      //  console.log("Estimated Revenue:", estimatedRevenue.toString());
+      //  console.log("Avg Price Per Share:", avgPricePerShare.toString());
+      //  console.log("Min Price Per Share:", minPricePerShare.toString());
 
       await writeContractAsync({
         address: V2contractAddress,

@@ -205,7 +205,7 @@ export function MarketV2BuyInterface({
   } = useSendCalls({
     mutation: {
       onSuccess: (data) => {
-        console.log("=== V2 BATCH TRANSACTION CALLBACK ===");
+        //  console.log("=== V2 BATCH TRANSACTION CALLBACK ===");
         // Defensive: some connectors may return an unexpected shape
         if (!data || typeof data !== "object" || !("id" in data)) {
           console.warn(
@@ -213,7 +213,7 @@ export function MarketV2BuyInterface({
             data
           );
         } else {
-          console.log("Batch transaction submitted with id:", data.id);
+          //  console.log("Batch transaction submitted with id:", data.id);
         }
         toast({
           title: "Batch Transaction Submitted",
@@ -421,23 +421,23 @@ export function MarketV2BuyInterface({
         ? (requiredBalance * 102n) / 100n
         : requiredBalance;
 
-      console.log("=== V2 DIRECT PURCHASE DEBUG ===");
-      console.log("Market ID:", marketId);
-      console.log("Selected option ID:", selectedOptionId);
-      console.log("Amount in units:", amountInUnits.toString());
-      console.log("Estimated cost:", estimatedCost?.toString());
-      console.log("Required balance:", requiredBalance.toString());
-      console.log("User balance:", userBalance?.toString());
-      console.log("Avg price per share:", avgPricePerShare.toString());
-      console.log("Max price per share:", maxPricePerShare.toString());
-      console.log("Market info:", marketInfo);
-      console.log("Option data:", optionData);
+      //  console.log("=== V2 DIRECT PURCHASE DEBUG ===");
+      //  console.log("Market ID:", marketId);
+      //  console.log("Selected option ID:", selectedOptionId);
+      //  console.log("Amount in units:", amountInUnits.toString());
+      //  console.log("Estimated cost:", estimatedCost?.toString());
+      //  console.log("Required balance:", requiredBalance.toString());
+      //  console.log("User balance:", userBalance?.toString());
+      //  console.log("Avg price per share:", avgPricePerShare.toString());
+      //  console.log("Max price per share:", maxPricePerShare.toString());
+      //  console.log("Market info:", marketInfo);
+      //  console.log("Option data:", optionData);
 
-      console.log("=== V2 BATCH PURCHASE ===");
-      console.log("Amount in units:", amountInUnits.toString());
-      console.log("Estimated cost:", estimatedCost?.toString());
-      console.log("Avg price per share:", avgPricePerShare.toString());
-      console.log("Max price per share:", maxPricePerShare.toString());
+      //  console.log("=== V2 BATCH PURCHASE ===");
+      //  console.log("Amount in units:", amountInUnits.toString());
+      //  console.log("Estimated cost:", estimatedCost?.toString());
+      //  console.log("Avg price per share:", avgPricePerShare.toString());
+      //  console.log("Max price per share:", maxPricePerShare.toString());
 
       await writeContractAsync({
         address: V2contractAddress,
@@ -555,17 +555,17 @@ export function MarketV2BuyInterface({
         ? (requiredBalance * 102n) / 100n
         : requiredBalance;
 
-      console.log("=== V2 SEQUENTIAL PURCHASE ===");
-      console.log("Amount in units:", amountInUnits.toString());
-      console.log("Required approval:", requiredBalance.toString());
+      //  console.log("=== V2 SEQUENTIAL PURCHASE ===");
+      //  console.log("Amount in units:", amountInUnits.toString());
+      //  console.log("Required approval:", requiredBalance.toString());
       const requiredApproval = requiredBalance;
       const needsApproval = requiredApproval > (userAllowance || 0n);
-      console.log("Needs approval:", needsApproval);
-      console.log("Current allowance:", userAllowance?.toString());
+      //  console.log("Needs approval:", needsApproval);
+      //  console.log("Current allowance:", userAllowance?.toString());
 
       if (needsApproval) {
         setBuyingStep("allowance");
-        console.log("Approving tokens...");
+        //  console.log("Approving tokens...");
         // First approve - approve the estimated cost, not the share amount
         await writeContractAsync({
           address: tokenAddress,
@@ -581,10 +581,10 @@ export function MarketV2BuyInterface({
           : currentOptionPrice;
         const maxPricePerShare = calculateMaxPrice(avgPricePerShare);
 
-        console.log("Making direct purchase...");
-        console.log("Estimated cost:", estimatedCost?.toString());
-        console.log("Avg price per share:", avgPricePerShare.toString());
-        console.log("Max price per share:", maxPricePerShare.toString());
+        //  console.log("Making direct purchase...");
+        //  console.log("Estimated cost:", estimatedCost?.toString());
+        //  console.log("Avg price per share:", avgPricePerShare.toString());
+        //  console.log("Max price per share:", maxPricePerShare.toString());
 
         await writeContractAsync({
           address: V2contractAddress,
@@ -685,22 +685,22 @@ export function MarketV2BuyInterface({
         : currentPrice;
       const maxPricePerShare = calculateMaxPrice(avgPricePerShare);
 
-      console.log("=== V2 BATCH TRANSACTION DEBUG ===");
-      console.log("Amount in units:", amountInUnits.toString());
-      console.log("Market ID:", marketId);
-      console.log("Selected option ID:", selectedOptionId);
-      console.log("Balance before batch:", userBalance?.toString());
-      console.log("Current allowance:", userAllowance?.toString());
-      console.log("Is Farcaster connector:", isFarcasterConnector);
-      console.log("Current price:", currentPrice.toString());
-      console.log("Estimated cost:", estimatedCost?.toString());
-      console.log("Avg price per share:", avgPricePerShare.toString());
-      console.log("Max price per share:", maxPricePerShare.toString());
+      //  console.log("=== V2 BATCH TRANSACTION DEBUG ===");
+      //  console.log("Amount in units:", amountInUnits.toString());
+      //  console.log("Market ID:", marketId);
+      //  console.log("Selected option ID:", selectedOptionId);
+      //  console.log("Balance before batch:", userBalance?.toString());
+      //  console.log("Current allowance:", userAllowance?.toString());
+      //  console.log("Is Farcaster connector:", isFarcasterConnector);
+      //  console.log("Current price:", currentPrice.toString());
+      //  console.log("Estimated cost:", estimatedCost?.toString());
+      //  console.log("Avg price per share:", avgPricePerShare.toString());
+      //  console.log("Max price per share:", maxPricePerShare.toString());
 
       // Use estimated cost for approval, not the share amount
       const approvalAmount =
         estimatedCost || (amountInUnits * avgPricePerShare) / BigInt(1e18);
-      console.log("Approval amount:", approvalAmount.toString());
+      //  console.log("Approval amount:", approvalAmount.toString());
 
       const batchCalls = [
         {
@@ -727,7 +727,7 @@ export function MarketV2BuyInterface({
         },
       ];
 
-      console.log("V2 Batch calls prepared:", batchCalls);
+      //  console.log("V2 Batch calls prepared:", batchCalls);
 
       await sendCalls({ calls: batchCalls });
     } catch (err) {
@@ -784,18 +784,18 @@ export function MarketV2BuyInterface({
     }
 
     // Debug log all required data
-    console.log("=== V2 PURCHASE DEBUG ===");
-    console.log("Account:", accountAddress);
-    console.log("Selected option:", selectedOptionId);
-    console.log("Market ID:", marketId);
-    console.log("Token address:", tokenAddress);
-    console.log("V2 contract address:", V2contractAddress);
-    console.log("Token symbol:", tokenSymbol);
-    console.log("Token decimals:", tokenDecimals);
-    console.log("User balance:", userBalance?.toString());
-    console.log("User allowance:", userAllowance?.toString());
-    console.log("Option data:", optionData);
-    console.log("Market info:", marketInfo);
+    //  console.log("=== V2 PURCHASE DEBUG ===");
+    //  console.log("Account:", accountAddress);
+    //  console.log("Selected option:", selectedOptionId);
+    //  console.log("Market ID:", marketId);
+    //  console.log("Token address:", tokenAddress);
+    //  console.log("V2 contract address:", V2contractAddress);
+    //  console.log("Token symbol:", tokenSymbol);
+    //  console.log("Token decimals:", tokenDecimals);
+    //  console.log("User balance:", userBalance?.toString());
+    //  console.log("User allowance:", userAllowance?.toString());
+    //  console.log("Option data:", optionData);
+    //  console.log("Market info:", marketInfo);
 
     setIsBuying(true);
     setBuyingStep("amount");
@@ -887,13 +887,13 @@ export function MarketV2BuyInterface({
       return;
     }
 
-    console.log("=== V2 PURCHASE CONFIRMATION ===");
-    console.log("Amount:", amount);
-    console.log("Amount in units:", amountInUnits.toString());
-    console.log("User balance:", userBalance.toString());
-    console.log("Sufficient balance:", amountInUnits <= userBalance);
-    console.log("Connector:", connector?.name, connector?.id);
-    console.log("Supports batch transactions:", supportseBatchTransactions);
+    //  console.log("=== V2 PURCHASE CONFIRMATION ===");
+    //  console.log("Amount:", amount);
+    //  console.log("Amount in units:", amountInUnits.toString());
+    //  console.log("User balance:", userBalance.toString());
+    //  console.log("Sufficient balance:", amountInUnits <= userBalance);
+    //  console.log("Connector:", connector?.name, connector?.id);
+    //  console.log("Supports batch transactions:", supportseBatchTransactions);
 
     // Reset processed transaction tracking before kicking off a new flow
     processedCallsRef.current.clear();
@@ -902,10 +902,10 @@ export function MarketV2BuyInterface({
 
     // Only use batch transactions for wallets that support EIP-5792
     if (supportseBatchTransactions) {
-      console.log("Using batch transaction method");
+      //  console.log("Using batch transaction method");
       handleBatchPurchase();
     } else {
-      console.log("Using sequential transaction method");
+      //  console.log("Using sequential transaction method");
       handleSequentialPurchase();
     }
   }, [
@@ -935,37 +935,37 @@ export function MarketV2BuyInterface({
             )}`;
 
       if (processedCallsRef.current.has(txId)) {
-        console.log("=== V2 BATCH STATUS ALREADY HANDLED ===", txId);
+        //  console.log("=== V2 BATCH STATUS ALREADY HANDLED ===", txId);
         return;
       }
 
       processedCallsRef.current.add(txId);
 
-      console.log("=== V2 BATCH CALLS STATUS SUCCESS ===");
-      console.log("Status:", callsStatusData.status);
-      console.log("Receipts:", callsStatusData.receipts);
+      //  console.log("=== V2 BATCH CALLS STATUS SUCCESS ===");
+      //  console.log("Status:", callsStatusData.status);
+      //  console.log("Receipts:", callsStatusData.receipts);
 
       if (callsStatusData.status === "success") {
         const receipts = callsStatusData.receipts;
 
-        console.log("=== V2 BATCH SUCCESS ANALYSIS ===");
-        console.log("Number of receipts:", receipts?.length);
-        console.log("All receipts:", receipts);
+        //  console.log("=== V2 BATCH SUCCESS ANALYSIS ===");
+        //  console.log("Number of receipts:", receipts?.length);
+        //  console.log("All receipts:", receipts);
 
         if (receipts && receipts.length === 2) {
           // Standard case: Two receipts (approval + purchase)
           const approvalReceipt = receipts[0];
           const purchaseReceipt = receipts[1];
 
-          console.log("=== V2 TRANSACTION RECEIPTS (2) ===");
-          console.log("Approval receipt:", approvalReceipt);
-          console.log("Purchase receipt:", purchaseReceipt);
+          //  console.log("=== V2 TRANSACTION RECEIPTS (2) ===");
+          //  console.log("Approval receipt:", approvalReceipt);
+          //  console.log("Purchase receipt:", purchaseReceipt);
 
           if (
             approvalReceipt?.status === "success" &&
             purchaseReceipt?.status === "success"
           ) {
-            console.log("✅ V2 Both transactions successful");
+            //  console.log("✅ V2 Both transactions successful");
             setBuyingStep("purchaseSuccess");
             setAmount("");
 
@@ -1004,16 +1004,16 @@ export function MarketV2BuyInterface({
           // Some wallets might return only 1 receipt even for successful batch
           const singleReceipt = receipts[0];
 
-          console.log("=== V2 SINGLE RECEIPT SUCCESS CASE ===");
-          console.log("Single receipt:", singleReceipt);
-          console.log("Receipt status:", singleReceipt?.status);
+          //  console.log("=== V2 SINGLE RECEIPT SUCCESS CASE ===");
+          //  console.log("Single receipt:", singleReceipt);
+          //  console.log("Receipt status:", singleReceipt?.status);
 
           if (singleReceipt?.status === "success") {
             // Since batch status is "success" and we have a successful receipt,
             // assume the entire batch was successful
-            console.log(
-              "✅ V2 Batch success with single receipt - assuming full success"
-            );
+            // console.log(
+            //   "✅ V2 Batch success with single receipt - assuming full success"
+            // );
             setBuyingStep("purchaseSuccess");
             setAmount("");
             toast({
@@ -1034,12 +1034,12 @@ export function MarketV2BuyInterface({
             (receipt) => receipt?.status === "success"
           );
 
-          console.log("=== V2 MULTIPLE RECEIPTS SUCCESS CASE ===");
-          console.log(`Found ${receipts.length} receipts`);
-          console.log("All successful:", allSuccessful);
+          //  console.log("=== V2 MULTIPLE RECEIPTS SUCCESS CASE ===");
+          //  console.log(`Found ${receipts.length} receipts`);
+          //  console.log("All successful:", allSuccessful);
 
           if (allSuccessful) {
-            console.log("✅ V2 All receipts successful!");
+            //  console.log("✅ V2 All receipts successful!");
             setBuyingStep("purchaseSuccess");
             setAmount("");
             toast({
@@ -1057,7 +1057,7 @@ export function MarketV2BuyInterface({
         } else {
           // No receipts or empty array - this shouldn't happen for success status
           console.warn("⚠️ V2 Success status but no receipts");
-          console.log("Assuming success since batch status is 'success'");
+          //  console.log("Assuming success since batch status is 'success'");
           setBuyingStep("purchaseSuccess");
           setAmount("");
           toast({
@@ -1073,18 +1073,18 @@ export function MarketV2BuyInterface({
       } else if (callsStatusData.status === "failure") {
         const receipts = callsStatusData.receipts;
 
-        console.log(
-          "❌ V2 Batch status is 'failure' but checking receipts for partial success"
-        );
-        console.log("Failure receipts:", receipts);
+        // console.log(
+        //   "❌ V2 Batch status is 'failure' but checking receipts for partial success"
+        // );
+        // console.log("Failure receipts:", receipts);
 
         if (receipts && receipts.length === 1) {
           // Farcaster case: batch "fails" but approval succeeds
           const singleReceipt = receipts[0];
 
-          console.log("=== V2 FAILURE WITH SINGLE RECEIPT ===");
-          console.log("Single receipt (likely approval):", singleReceipt);
-          console.log("Receipt status:", singleReceipt?.status);
+          //  console.log("=== V2 FAILURE WITH SINGLE RECEIPT ===");
+          //  console.log("Single receipt (likely approval):", singleReceipt);
+          //  console.log("Receipt status:", singleReceipt?.status);
 
           if (singleReceipt?.status === "success") {
             console.warn(
@@ -1113,9 +1113,9 @@ export function MarketV2BuyInterface({
           const approvalReceipt = receipts[0];
           const purchaseReceipt = receipts[1];
 
-          console.log("=== V2 FAILURE WITH TWO RECEIPTS ===");
-          console.log("Approval receipt:", approvalReceipt);
-          console.log("Purchase receipt:", purchaseReceipt);
+          //  console.log("=== V2 FAILURE WITH TWO RECEIPTS ===");
+          //  console.log("Approval receipt:", approvalReceipt);
+          //  console.log("Purchase receipt:", purchaseReceipt);
 
           if (
             approvalReceipt?.status === "success" &&
@@ -1145,9 +1145,9 @@ export function MarketV2BuyInterface({
             (receipt) => receipt?.status === "success"
           );
 
-          console.log("=== V2 FAILURE WITH MULTIPLE RECEIPTS ===");
-          console.log(`Found ${receipts.length} receipts`);
-          console.log("Any successful:", anySuccessful);
+          //  console.log("=== V2 FAILURE WITH MULTIPLE RECEIPTS ===");
+          //  console.log(`Found ${receipts.length} receipts`);
+          //  console.log("Any successful:", anySuccessful);
 
           if (anySuccessful) {
             console.warn("⚠️ V2 Partial success in batch failure");
@@ -1179,7 +1179,7 @@ export function MarketV2BuyInterface({
         }
         setIsProcessing(false);
       } else if (callsStatusData.status === "pending") {
-        console.log("⏳ V2 Batch calls still pending...");
+        //  console.log("⏳ V2 Batch calls still pending...");
         // Keep waiting, the hook will refetch
       }
       return;
@@ -1192,7 +1192,7 @@ export function MarketV2BuyInterface({
           : `error-${callsStatusErrorMsg.message ?? "unknown"}`;
 
       if (processedCallsRef.current.has(errorId)) {
-        console.log("=== V2 BATCH ERROR ALREADY HANDLED ===", errorId);
+        //  console.log("=== V2 BATCH ERROR ALREADY HANDLED ===", errorId);
         return;
       }
 
@@ -1227,7 +1227,7 @@ export function MarketV2BuyInterface({
   // Monitor regular transaction status
   useEffect(() => {
     if (isTxConfirmed && hash && hash !== lastProcessedHash) {
-      console.log("=== V2 REGULAR TRANSACTION CONFIRMED ===");
+      //  console.log("=== V2 REGULAR TRANSACTION CONFIRMED ===");
       setLastProcessedHash(hash);
 
       if (buyingStep === "allowance") {

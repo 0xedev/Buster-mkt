@@ -77,17 +77,16 @@ export function AdminWithdrawalsSection() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Auto-discovered admin withdrawals:", data);
 
         // Debug: Show more detailed information
-        console.log("DEBUG - Response details:", {
-          totalCount: data.totalCount,
-          withdrawalsKeys: Object.keys(data.withdrawals || {}),
-          adminLiquidityCount: data.withdrawals?.adminLiquidity?.length || 0,
-          prizePoolCount: data.withdrawals?.prizePool?.length || 0,
-          lpRewardsCount: data.withdrawals?.lpRewards?.length || 0,
-          totals: data.totals,
-        });
+        // console.log("DEBUG - Response details:", {
+        //   totalCount: data.totalCount,
+        //   withdrawalsKeys: Object.keys(data.withdrawals || {}),
+        //   adminLiquidityCount: data.withdrawals?.adminLiquidity?.length || 0,
+        //   prizePoolCount: data.withdrawals?.prizePool?.length || 0,
+        //   lpRewardsCount: data.withdrawals?.lpRewards?.length || 0,
+        //   totals: data.totals,
+        // });
 
         // Convert string amounts back to BigInt for internal use
         const withdrawalsWithBigInt = {

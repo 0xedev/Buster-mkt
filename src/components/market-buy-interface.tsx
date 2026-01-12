@@ -87,11 +87,11 @@ export function MarketBuyInterface({
     connector?.id === "miniAppConnector" ||
     connector?.name?.includes("Farcaster");
 
-  console.log("=== CONNECTOR DEBUG ===");
-  console.log("Connector ID:", connector?.id);
-  console.log("Connector Name:", connector?.name);
-  console.log("Is Farcaster:", isFarcasterConnector);
-  console.log("Connector Client:", connectorClient);
+  //  console.log("=== CONNECTOR DEBUG ===");
+  //  console.log("Connector ID:", connector?.id);
+  //  console.log("Connector Name:", connector?.name);
+  //  console.log("Is Farcaster:", isFarcasterConnector);
+  //  console.log("Connector Client:", connectorClient);
 
   const [isBuying, setIsBuying] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
@@ -118,16 +118,16 @@ export function MarketBuyInterface({
   } = useSendCalls({
     mutation: {
       onSuccess: (data) => {
-        console.log("=== BATCH TRANSACTION CALLBACK ===");
+        //  console.log("=== BATCH TRANSACTION CALLBACK ===");
         if (!data || typeof data !== "object" || !("id" in data)) {
           console.warn(
             "Batch transaction response missing .id, response:",
             data
           );
         } else {
-          console.log("Batch transaction submitted with id:", data.id);
+          //  console.log("Batch transaction submitted with id:", data.id);
         }
-        console.log("Batch capabilities:", (data as any)?.capabilities);
+        //  console.log("Batch capabilities:", (data as any)?.capabilities);
 
         toast({
           title: "Batch Transaction Submitted",
@@ -306,34 +306,34 @@ export function MarketBuyInterface({
   // Monitor batch calls status
   useEffect(() => {
     if (callsStatusSuccess && callsStatusData) {
-      console.log("=== BATCH CALLS STATUS SUCCESS ===");
-      console.log("Calls status data:", callsStatusData);
-      console.log("Status:", callsStatusData.status);
-      console.log("Receipts:", callsStatusData.receipts);
+      //  console.log("=== BATCH CALLS STATUS SUCCESS ===");
+      //  console.log("Calls status data:", callsStatusData);
+      //  console.log("Status:", callsStatusData.status);
+      //  console.log("Receipts:", callsStatusData.receipts);
 
       if (callsStatusData.status === "success") {
         const receipts = callsStatusData.receipts;
 
-        console.log("=== BATCH SUCCESS ANALYSIS ===");
-        console.log("Number of receipts:", receipts?.length);
-        console.log("All receipts:", receipts);
+        //  console.log("=== BATCH SUCCESS ANALYSIS ===");
+        //  console.log("Number of receipts:", receipts?.length);
+        //  console.log("All receipts:", receipts);
 
         if (receipts && receipts.length === 2) {
           // Standard case: Two receipts (approval + purchase)
           const approvalReceipt = receipts[0];
           const purchaseReceipt = receipts[1];
 
-          console.log("=== TRANSACTION RECEIPTS (2) ===");
-          console.log("Approval receipt:", approvalReceipt);
-          console.log("Purchase receipt:", purchaseReceipt);
-          console.log("Approval status:", approvalReceipt?.status);
-          console.log("Purchase status:", purchaseReceipt?.status);
+          //  console.log("=== TRANSACTION RECEIPTS (2) ===");
+          //  console.log("Approval receipt:", approvalReceipt);
+          //  console.log("Purchase receipt:", purchaseReceipt);
+          //  console.log("Approval status:", approvalReceipt?.status);
+          //  console.log("Purchase status:", purchaseReceipt?.status);
 
           if (
             approvalReceipt?.status === "success" &&
             purchaseReceipt?.status === "success"
           ) {
-            console.log("✅ Both transactions successful!");
+            //  console.log("✅ Both transactions successful!");
             toast({
               title: "Purchase Successful!",
               description: "Your shares have been purchased successfully.",
@@ -345,7 +345,7 @@ export function MarketBuyInterface({
             purchaseReceipt?.status !== "success"
           ) {
             console.warn("⚠️ Approval successful, but purchase failed");
-            console.log("Purchase failure reason:", purchaseReceipt);
+            //  console.log("Purchase failure reason:", purchaseReceipt);
 
             toast({
               title: "Purchase Failed",
@@ -368,16 +368,16 @@ export function MarketBuyInterface({
           // Some wallets might return only 1 receipt even for successful batch
           const singleReceipt = receipts[0];
 
-          console.log("=== SINGLE RECEIPT SUCCESS CASE ===");
-          console.log("Single receipt:", singleReceipt);
-          console.log("Receipt status:", singleReceipt?.status);
+          //  console.log("=== SINGLE RECEIPT SUCCESS CASE ===");
+          //  console.log("Single receipt:", singleReceipt);
+          //  console.log("Receipt status:", singleReceipt?.status);
 
           if (singleReceipt?.status === "success") {
             // Since batch status is "success" and we have a successful receipt,
             // assume the entire batch was successful
-            console.log(
-              "✅ Batch success with single receipt - assuming full success"
-            );
+            // console.log(
+            //   "✅ Batch success with single receipt - assuming full success"
+            // );
             toast({
               title: "Purchase Successful!",
               description: "Your shares have been purchased successfully.",
@@ -395,12 +395,12 @@ export function MarketBuyInterface({
             (receipt) => receipt?.status === "success"
           );
 
-          console.log("=== MULTIPLE RECEIPTS SUCCESS CASE ===");
-          console.log(`Found ${receipts.length} receipts`);
-          console.log("All successful:", allSuccessful);
+          //  console.log("=== MULTIPLE RECEIPTS SUCCESS CASE ===");
+          //  console.log(`Found ${receipts.length} receipts`);
+          //  console.log("All successful:", allSuccessful);
 
           if (allSuccessful) {
-            console.log("✅ All receipts successful!");
+            //  console.log("✅ All receipts successful!");
             toast({
               title: "Purchase Successful!",
               description: "Your shares have been purchased successfully.",
@@ -415,7 +415,7 @@ export function MarketBuyInterface({
         } else {
           // No receipts or empty array - this shouldn't happen for success status
           console.warn("⚠️ Success status but no receipts");
-          console.log("Assuming success since batch status is 'success'");
+          //  console.log("Assuming success since batch status is 'success'");
           toast({
             title: "Purchase Successful!",
             description: "Your shares have been purchased successfully.",
@@ -427,27 +427,27 @@ export function MarketBuyInterface({
         // Handle failure status - but check if we have partial success
         const receipts = callsStatusData.receipts;
 
-        console.log(
-          "❌ Batch status is 'failure' but checking receipts for partial success"
-        );
-        console.log("Failure receipts:", receipts);
+        // console.log(
+        //   "❌ Batch status is 'failure' but checking receipts for partial success"
+        // );
+        // console.log("Failure receipts:", receipts);
 
         if (receipts && receipts.length === 1) {
           // Farcaster case: batch "fails" but approval succeeds
           const singleReceipt = receipts[0];
 
-          console.log("=== FAILURE WITH SINGLE RECEIPT ===");
-          console.log("Single receipt (likely approval):", singleReceipt);
-          console.log("Receipt status:", singleReceipt?.status);
-          console.log("Receipt logs:", singleReceipt?.logs);
+          //  console.log("=== FAILURE WITH SINGLE RECEIPT ===");
+          //  console.log("Single receipt (likely approval):", singleReceipt);
+          //  console.log("Receipt status:", singleReceipt?.status);
+          //  console.log("Receipt logs:", singleReceipt?.logs);
 
           if (singleReceipt?.status === "success") {
             console.warn(
               "⚠️ Batch failed overall, but approval transaction succeeded."
             );
-            console.log(
-              "🔍 This is typical Farcaster wallet behavior - non-atomic execution"
-            );
+            // console.log(
+            //   "🔍 This is typical Farcaster wallet behavior - non-atomic execution"
+            // );
 
             toast({
               title: "Partial Success",
@@ -471,9 +471,9 @@ export function MarketBuyInterface({
           const approvalReceipt = receipts[0];
           const purchaseReceipt = receipts[1];
 
-          console.log("=== FAILURE WITH TWO RECEIPTS ===");
-          console.log("Approval receipt:", approvalReceipt);
-          console.log("Purchase receipt:", purchaseReceipt);
+          // console.log("=== FAILURE WITH TWO RECEIPTS ===");
+          // console.log("Approval receipt:", approvalReceipt);
+          // console.log("Purchase receipt:", purchaseReceipt);
 
           if (
             approvalReceipt?.status === "success" &&
@@ -510,15 +510,15 @@ export function MarketBuyInterface({
           setIsProcessing(false);
         }
       } else if (callsStatusData.status === "pending") {
-        console.log("⏳ Batch calls still pending...");
+        // console.log("⏳ Batch calls still pending...");
         // Keep waiting, the hook will refetch
       }
     }
 
     if (callsStatusError && callsStatusErrorMsg) {
-      console.error("=== BATCH CALLS STATUS ERROR ===");
-      console.error("Status error:", callsStatusErrorMsg);
-      console.error("Full error object:", callsStatusError);
+      // console.error("=== BATCH CALLS STATUS ERROR ===");
+      // console.error("Status error:", callsStatusErrorMsg);
+      // console.error("Full error object:", callsStatusError);
 
       toast({
         title: "Batch Transaction Failed",
@@ -707,13 +707,13 @@ export function MarketBuyInterface({
     try {
       const amountInUnits = toUnits(amount, tokenDecimals);
 
-      console.log("=== BATCH TRANSACTION DEBUG ===");
-      console.log("Amount in units:", amountInUnits.toString());
-      console.log("Market ID:", marketId);
-      console.log("Selected option A:", selectedOption === "A");
-      console.log("Balance before batch:", balance.toString());
-      console.log("Current allowance:", userAllowance.toString());
-      console.log("Is Farcaster connector:", isFarcasterConnector);
+      // console.log("=== BATCH TRANSACTION DEBUG ===");
+      // console.log("Amount in units:", amountInUnits.toString());
+      // console.log("Market ID:", marketId);
+      // console.log("Selected option A:", selectedOption === "A");
+      // console.log("Balance before batch:", balance.toString());
+      // console.log("Current allowance:", userAllowance.toString());
+      // console.log("Is Farcaster connector:", isFarcasterConnector);
 
       // Prepare batch calls without explicit value fields
       const batchCalls = [
@@ -741,19 +741,19 @@ export function MarketBuyInterface({
         },
       ];
 
-      console.log("Batch calls prepared:", batchCalls);
-      console.log("Approve call data:", batchCalls[0].data);
-      console.log("BuyShares call data:", batchCalls[1].data);
+      // console.log("Batch calls prepared:", batchCalls);
+      // console.log("Approve call data:", batchCalls[0].data);
+      // console.log("BuyShares call data:", batchCalls[1].data);
 
       // Check if we can use EIP-5792 batch transactions
       if (isFarcasterConnector) {
-        console.log(
-          "🔗 Using Farcaster wallet with EIP-5792 batch transactions"
-        );
+        // console.log(
+        //   "🔗 Using Farcaster wallet with EIP-5792 batch transactions"
+        // );
       } else {
-        console.log(
-          "🔗 Using standard wallet with EIP-5792 batch transactions"
-        );
+        // console.log(
+        //   "🔗 Using standard wallet with EIP-5792 batch transactions"
+        // );
       }
 
       // Try the batch transaction

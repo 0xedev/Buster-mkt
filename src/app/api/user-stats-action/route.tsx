@@ -8,8 +8,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const rawState = body.untrustedData?.state;
 
-    console.log("User Stats Frame Action: Raw state received:", rawState);
-
     const decodedState = rawState
       ? (() => {
           try {
@@ -29,8 +27,6 @@ export async function POST(req: NextRequest) {
     const username = decodedState.username;
     const pfpUrl = decodedState.pfpUrl;
     const fid = decodedState.fid;
-
-    console.log("User Stats Frame Action: Extracted address:", address);
 
     if (!address) {
       console.error("User Stats Frame Action: Invalid address", address);

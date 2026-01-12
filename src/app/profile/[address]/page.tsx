@@ -18,8 +18,6 @@ export async function generateMetadata(
   const pfpUrl = searchParamsResolved.pfpUrl as string;
   const fid = searchParamsResolved.fid as string;
 
-  console.log("generateMetadata: Processing address:", address);
-
   if (!address) {
     console.error("generateMetadata: Invalid address", address);
     return {

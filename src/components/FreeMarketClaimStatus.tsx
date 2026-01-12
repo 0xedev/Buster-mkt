@@ -208,7 +208,7 @@ export function FreeMarketClaimStatus({
   // Handle claiming free tokens
   const handleClaimFreeTokens = async () => {
     try {
-      console.log("🎁 Claiming free shares for market:", marketId);
+      //  console.log("🎁 Claiming free shares for market:", marketId);
       claimFreeTokens({
         address: V2contractAddress,
         abi: V2contractAbi,

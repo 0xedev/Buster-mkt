@@ -46,7 +46,6 @@ export function ClaimWinningsSection() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Auto-discovered markets response:", data);
 
         // Ensure winningsData exists and is an array
         if (!data.winningsData || !Array.isArray(data.winningsData)) {
@@ -57,7 +56,6 @@ export function ClaimWinningsSection() {
         }
 
         const winnings = data.winningsData.map((w: any) => {
-          console.log("Processing winning entry:", w);
           return {
             marketId: w.marketId,
             amount: BigInt(w.amount || 0),
@@ -66,7 +64,6 @@ export function ClaimWinningsSection() {
           };
         });
 
-        console.log("Processed winnings:", winnings);
         setWinningsData(winnings);
         setUserMarkets(data.participatedMarkets || []);
       } else {

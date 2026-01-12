@@ -149,9 +149,9 @@ export function MultiOptionPositions() {
       let winningPositions = 0;
       let losingPositions = 0;
 
-      console.log(
-        `🚀 Fetching positions for ${count} markets using optimized multicall...`
-      );
+      // console.log(
+      //   `🚀 Fetching positions for ${count} markets using optimized multicall...`
+      // );
 
       // ==================== STEP 1: BATCH FETCH ALL MARKET INFO + USER SHARES ====================
       const BATCH_SIZE = 20; // Process markets in batches of 20
@@ -225,9 +225,9 @@ export function MultiOptionPositions() {
         }
       }
 
-      console.log(
-        `✅ Found ${allMarketData.length} markets with user positions`
-      );
+      // console.log(
+      //   `✅ Found ${allMarketData.length} markets with user positions`
+      // );
 
       // ==================== STEP 2: BATCH FETCH OPTION DETAILS ====================
       for (const { marketId, marketInfo, userShares } of allMarketData) {

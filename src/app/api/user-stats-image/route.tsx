@@ -106,8 +106,6 @@ export async function GET(request: NextRequest) {
   const pfpUrl = searchParams.get("pfpUrl");
   const fid = searchParams.get("fid");
 
-  console.log(`User Stats Image API: Received request for address: ${address}`);
-
   if (!address) {
     console.error("User Stats Image API: No address parameter provided");
     return new NextResponse("Missing address parameter", { status: 400 });
@@ -571,10 +569,6 @@ export async function GET(request: NextRequest) {
     });
 
     const pngBuffer = await sharp(Buffer.from(svg)).png().toBuffer();
-
-    console.log(
-      `User Stats Image API: Successfully generated image for address ${address}`
-    );
 
     return new NextResponse(new Uint8Array(pngBuffer), {
       headers: {

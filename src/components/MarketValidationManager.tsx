@@ -169,14 +169,14 @@ export function MarketValidationManager() {
 
   // Debug logging for markets data
   useEffect(() => {
-    console.log("🔍 Contract markets data:", {
-      marketCount,
-      marketsData,
-      isLoadingCount,
-      isLoadingMarkets,
-      isConnected,
-      dataLength: marketsData?.length || 0,
-    });
+    // console.log("🔍 Contract markets data:", {
+    //   marketCount,
+    //   marketsData,
+    //   isLoadingCount,
+    //   isLoadingMarkets,
+    //   isConnected,
+    //   dataLength: marketsData?.length || 0,
+    // });
   }, [marketCount, marketsData, isLoadingCount, isLoadingMarkets, isConnected]);
 
   // Map contract markets to pending/validated lists
@@ -199,18 +199,18 @@ export function MarketValidationManager() {
         setPendingMarkets(pending);
         setValidatedMarkets(validated);
 
-        console.log("📊 Market validation data from contract:", {
-          total: items.length,
-          pending: pending.length,
-          validated: validated.length,
-          firstFewPending: pending.slice(0, 3).map((p) => ({
-            id: p.marketId,
-            question: p.question,
-            validated: p.validated,
-            invalidated: p.invalidated,
-            resolved: p.resolved,
-          })),
-        });
+        // console.log("📊 Market validation data from contract:", {
+        //   total: items.length,
+        //   pending: pending.length,
+        //   validated: validated.length,
+        //   firstFewPending: pending.slice(0, 3).map((p) => ({
+        //     id: p.marketId,
+        //     question: p.question,
+        //     validated: p.validated,
+        //     invalidated: p.invalidated,
+        //     resolved: p.resolved,
+        //   })),
+        // });
       } catch (err) {
         console.error("Error mapping contract markets:", err);
         toast({
