@@ -68,10 +68,6 @@ async function checkMarketValidation(marketId: number): Promise<boolean> {
   }
 
   try {
-    // We'll try to simulate a purchase to see if it throws MarketNotValidated
-    // This is a workaround since there's no direct validation getter in the contract
-    // We use estimateContractGas with a dummy call to check if the market is validated
-    // Cast to `any` to avoid ABI-derived type errors
     await (publicClient.estimateContractGas as any)({
       address: contractAddress,
       abi: contractAbi,
@@ -239,10 +235,10 @@ export function ValidatedMarketList({
   if (error) {
     return (
       <div className="text-center py-8">
-        <p className="text-red-600">{error}</p>
+        <p className="text-red-400 text-sm">{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="mt-2 text-blue-600 hover:underline"
+          className="mt-2 text-indigo-400 hover:text-indigo-300 text-xs hover:underline"
         >
           Retry
         </button>
@@ -259,24 +255,24 @@ export function ValidatedMarketList({
   return (
     <div className="space-y-4">
       {/* Search and Filter Bar */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-2 md:p-4 border border-gray-200 dark:border-gray-700">
+      <div className="bg-white/5 backdrop-blur-md rounded-xl p-2 md:p-4 border border-white/10">
         <div className="flex items-center gap-2 md:gap-3 overflow-x-auto flex-nowrap">
           {/* Search Input */}
           <div className="flex-1 relative">
-            <Search className="absolute left-2 md:left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-2 md:left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-white/50" />
             <Input
               type="text"
               placeholder="Search markets..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 text-sm pl-8 md:pl-10 pr-8 md:pr-10 min-w-[160px]"
+              className="h-9 text-xs pl-8 md:pl-10 pr-8 md:pr-10 min-w-[160px] bg-black/20 border-white/10 text-white placeholder:text-white/20 focus-visible:ring-white/20"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2 md:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-2 md:right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
@@ -284,11 +280,11 @@ export function ValidatedMarketList({
           {/* Category Filter */}
           <div className="block">
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[120px] md:w-[180px] h-9 text-sm">
-                <Filter className="h-4 w-4 mr-2" />
+              <SelectTrigger className="w-[120px] md:w-[180px] h-9 text-xs bg-white/5 border-white/10 text-white hover:bg-white/10 focus:ring-white/20">
+                <Filter className="h-3.5 w-3.5 mr-2 opacity-70" />
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#1a1b23] border-white/10 text-white">
                 <SelectItem value="all">All Categories</SelectItem>
                 <SelectItem value={MarketCategory.POLITICS.toString()}>
                   {CATEGORY_LABELS[MarketCategory.POLITICS]}
@@ -321,10 +317,10 @@ export function ValidatedMarketList({
           {/* Sort By */}
           <div className="block">
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[120px] md:w-[180px] h-9 text-sm">
+              <SelectTrigger className="w-[120px] md:w-[180px] h-9 text-xs bg-white/5 border-white/10 text-white hover:bg-white/10 focus:ring-white/20">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#1a1b23] border-white/10 text-white">
                 <SelectItem value="newest">Newest First</SelectItem>
                 <SelectItem value="oldest">Oldest First</SelectItem>
                 <SelectItem value="ending-soon">Ending Soon</SelectItem>
@@ -339,10 +335,10 @@ export function ValidatedMarketList({
               categoryFilter !== "all" ||
               sortBy !== "newest") && (
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={clearFilters}
-                className="whitespace-nowrap h-9"
+                className="whitespace-nowrap h-9 text-xs bg-white/5 hover:bg-white/10 text-white border border-white/10"
               >
                 Clear Filters
               </Button>
@@ -351,7 +347,7 @@ export function ValidatedMarketList({
         </div>
 
         {/* Results Count */}
-        <div className="hidden md:block mt-3 text-sm text-gray-600 dark:text-gray-400">
+        <div className="hidden md:block mt-3 text-xs text-white/50">
           Showing {filteredMarkets.length} of{" "}
           {
             markets.filter(({ market, validated }) => {
@@ -366,8 +362,8 @@ export function ValidatedMarketList({
 
       {/* Markets Grid */}
       {filteredMarkets.length === 0 ? (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-          <p className="text-gray-500">
+        <div className="text-center py-12 bg-white/5 backdrop-blur-md rounded-xl border border-white/10">
+          <p className="text-white/50 text-sm">
             {searchQuery || categoryFilter !== "all"
               ? "No markets match your filters."
               : `No ${
@@ -375,7 +371,7 @@ export function ValidatedMarketList({
                 }${filter} markets found.`}
           </p>
           {showOnlyValidated && !searchQuery && categoryFilter === "all" && (
-            <p className="text-sm text-gray-400 mt-2">
+            <p className="text-xs text-white/30 mt-2">
               Markets must be validated by an admin before appearing here.
             </p>
           )}
@@ -386,7 +382,7 @@ export function ValidatedMarketList({
             <div key={`market-${id}`} className="relative">
               <MarketV2Card index={id} market={market as MarketV2} />
               {!validated && (
-                <div className="absolute top-2 right-2 bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded">
+                <div className="absolute top-2 right-2 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 backdrop-blur-md text-[10px] px-2 py-1 rounded-md">
                   Pending Validation
                 </div>
               )}

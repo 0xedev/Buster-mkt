@@ -287,26 +287,26 @@ export function ModernAdminDashboard() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0">
         <div>
-          <h1 className="text-xl md:text-3xl font-bold text-gray-900 dark:text-white">
-            Admin Dashboard
+          <h1 className="text-lg md:text-xl font-medium text-white tracking-tight">
+            Dashboard
           </h1>
-          <p className="text-sm md:text-base text-gray-600 dark:text-gray-300">
-            Manage Policast prediction markets and platform settings
+          <p className="text-xs md:text-sm text-white/50 font-light">
+            Manage Policast prediction markets & settings
           </p>
         </div>
         <div className="flex items-center gap-1 md:gap-2 flex-wrap">
           {isOwner && (
             <Badge
-              variant="default"
-              className="text-xs md:text-sm px-2 py-0.5 md:px-3 md:py-1"
+              variant="outline"
+              className="text-[10px] md:text-xs px-2 py-0.5 border-amber-500/50 text-amber-200 bg-amber-500/10 font-normal"
             >
               Owner
             </Badge>
           )}
           {isAdmin && !isOwner && (
             <Badge
-              variant="secondary"
-              className="text-xs md:text-sm px-2 py-0.5 md:px-3 md:py-1"
+              variant="outline"
+              className="text-[10px] md:text-xs px-2 py-0.5 border-purple-500/50 text-purple-200 bg-purple-500/10 font-normal"
             >
               Admin
             </Badge>
@@ -314,7 +314,7 @@ export function ModernAdminDashboard() {
           {hasCreatorAccess && !isAdmin && (
             <Badge
               variant="outline"
-              className="text-xs md:text-sm px-2 py-0.5 md:px-3 md:py-1"
+              className="text-[10px] md:text-xs px-2 py-0.5 border-blue-500/50 text-blue-200 bg-blue-500/10 font-normal"
             >
               Creator
             </Badge>
@@ -322,7 +322,7 @@ export function ModernAdminDashboard() {
           {hasResolverAccess && !isAdmin && (
             <Badge
               variant="outline"
-              className="text-xs md:text-sm px-2 py-0.5 md:px-3 md:py-1"
+              className="text-[10px] md:text-xs px-2 py-0.5 border-green-500/50 text-green-200 bg-green-500/10 font-normal"
             >
               Resolver
             </Badge>
@@ -330,134 +330,136 @@ export function ModernAdminDashboard() {
         </div>
       </div>
 
-      {/* Platform Stats - LMSR Focused */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-6">
-        <Card>
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">
+      {/* Platform Stats - Pristine Glass Theme */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] md:text-xs font-medium text-white/60">
                   Total Markets
                 </p>
-                <p className="text-lg md:text-2xl font-bold">
-                  {marketCount ? Number(marketCount) : "0"}
-                </p>
+                <BarChart3 className="h-3 w-3 md:h-4 md:w-4 text-white/40" />
               </div>
-              <BarChart3 className="h-6 w-6 md:h-8 md:w-8 text-blue-600" />
+              <p className="text-lg md:text-2xl font-light text-white">
+                {marketCount ? Number(marketCount) : "0"}
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">
-                  Platform Fee Rate
+        <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] md:text-xs font-medium text-white/60">
+                  Fee Rate
                 </p>
-                <p className="text-lg md:text-2xl font-bold">
-                  {formatFeeRate(platformFeeRate)}
-                </p>
+                <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-white/40" />
               </div>
-              <TrendingUp className="h-6 w-6 md:h-8 md:w-8 text-green-600" />
+              <p className="text-lg md:text-2xl font-light text-white">
+                {formatFeeRate(platformFeeRate)}
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">
-                  Total Fees Collected
+        <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] md:text-xs font-medium text-white/60">
+                  Fees Collected
                 </p>
-                <p className="text-lg md:text-2xl font-bold">
-                  {formatTokenAmount(totalPlatformFeesCollected)} $Politics
-                </p>
+                <Award className="h-3 w-3 md:h-4 md:w-4 text-white/40" />
               </div>
-              <Award className="h-6 w-6 md:h-8 md:w-8 text-purple-600" />
+              <p className="text-lg md:text-2xl font-light text-white">
+                {formatTokenAmount(totalPlatformFeesCollected)}
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">
-                  Market System
+        <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] md:text-xs font-medium text-white/60">
+                  System
                 </p>
-                <p className="text-lg md:text-2xl font-bold">Policast</p>
+                <Activity className="h-3 w-3 md:h-4 md:w-4 text-white/40" />
               </div>
-              <Activity className="h-6 w-6 md:h-8 md:w-8 text-orange-600" />
+              <p className="text-lg md:text-2xl font-light text-white">
+                Policast
+              </p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Admin Tabs */}
+      {/* Admin Tabs - Minimalist */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="flex flex-wrap justify-start gap-1 h-auto p-1 md:grid md:grid-cols-6 bg-muted">
+        <TabsList className="flex flex-wrap justify-start gap-1 h-auto p-1 bg-white/5 border border-white/10 rounded-lg w-full overflow-x-auto">
           {hasCreatorAccess && (
             <TabsTrigger
               value="create"
-              className="flex items-center gap-1 md:gap-2 flex-1 min-w-[100px] md:min-w-0 text-xs md:text-sm px-2 md:px-3 py-1.5 md:py-2"
+              className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none rounded-md transition-all hover:text-white/80"
             >
-              <Plus className="h-3 w-3 md:h-4 md:w-4" />
+              <Plus className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Create</span>
             </TabsTrigger>
           )}
           {hasValidatorAccess && (
             <TabsTrigger
               value="validate"
-              className="flex items-center gap-1 md:gap-2 flex-1 min-w-[100px] md:min-w-0 text-xs md:text-sm px-2 md:px-3 py-1.5 md:py-2"
+              className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none rounded-md transition-all hover:text-white/80"
             >
-              <CheckCircle className="h-3 w-3 md:h-4 md:w-4" />
+              <CheckCircle className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Validate</span>
             </TabsTrigger>
           )}
           {hasValidatorAccess && (
             <TabsTrigger
               value="invalidate"
-              className="flex items-center gap-1 md:gap-2 flex-1 min-w-[100px] md:min-w-0 text-xs md:text-sm px-2 md:px-3 py-1.5 md:py-2"
+              className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none rounded-md transition-all hover:text-white/80"
             >
-              <AlertTriangle className="h-3 w-3 md:h-4 md:w-4" />
+              <AlertTriangle className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Invalidate</span>
             </TabsTrigger>
           )}
           {hasResolverAccess && (
             <TabsTrigger
               value="resolve"
-              className="flex items-center gap-1 md:gap-2 flex-1 min-w-[100px] md:min-w-0 text-xs md:text-sm px-2 md:px-3 py-1.5 md:py-2"
+              className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none rounded-md transition-all hover:text-white/80"
             >
-              <Gavel className="h-3 w-3 md:h-4 md:w-4" />
+              <Gavel className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Resolve</span>
             </TabsTrigger>
           )}
           {(isOwner || isAdmin) && (
             <TabsTrigger
               value="withdrawals"
-              className="flex items-center gap-1 md:gap-2 flex-1 min-w-[100px] md:min-w-0 text-xs md:text-sm px-2 md:px-3 py-1.5 md:py-2"
+              className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none rounded-md transition-all hover:text-white/80"
             >
-              <Wallet className="h-3 w-3 md:h-4 md:w-4" />
+              <Wallet className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Withdrawals</span>
             </TabsTrigger>
           )}
           {isOwner && (
             <TabsTrigger
               value="roles"
-              className="flex items-center gap-1 md:gap-2 flex-1 min-w-[100px] md:min-w-0 text-xs md:text-sm px-2 md:px-3 py-1.5 md:py-2"
+              className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none rounded-md transition-all hover:text-white/80"
             >
-              <Users className="h-3 w-3 md:h-4 md:w-4" />
+              <Users className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Roles</span>
             </TabsTrigger>
           )}
           {isOwner && (
             <TabsTrigger
               value="settings"
-              className="flex items-center gap-1 md:gap-2 flex-1 min-w-[100px] md:min-w-0 text-xs md:text-sm px-2 md:px-3 py-1.5 md:py-2"
+              className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:shadow-none rounded-md transition-all hover:text-white/80"
             >
-              <Settings className="h-3 w-3 md:h-4 md:w-4" />
+              <Settings className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Settings</span>
             </TabsTrigger>
           )}
@@ -510,15 +512,17 @@ export function ModernAdminDashboard() {
             className="space-y-4 md:space-y-6 mt-3 md:mt-6"
           >
             <div className="space-y-6">
-              <Card>
-                <CardContent className="p-6">
+              <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                <CardContent className="p-4 md:p-6">
                   <div className="flex items-center gap-3 mb-4">
-                    <DollarSign className="h-6 w-6 text-blue-600" />
+                    <div className="p-2 bg-blue-500/20 rounded-lg">
+                      <DollarSign className="h-5 w-5 text-blue-300" />
+                    </div>
                     <div>
-                      <h2 className="text-xl font-semibold">
+                      <h2 className="text-lg font-medium text-white">
                         Admin Withdrawals
                       </h2>
-                      <p className="text-gray-600 text-sm">
+                      <p className="text-white/50 text-xs">
                         Manage platform fees and admin liquidity from resolved
                         markets
                       </p>
@@ -547,46 +551,47 @@ export function ModernAdminDashboard() {
             value="settings"
             className="space-y-4 md:space-y-6 mt-3 md:mt-6"
           >
-            <Tabs defaultValue="fees" className="space-y-3 md:space-y-4 w-full">
-              <TabsList className="w-full h-auto p-1 grid grid-cols-1 md:grid-cols-2 gap-1">
+            <Tabs defaultValue="fees" className="space-y-4 w-full">
+              <TabsList className="w-full h-auto p-1 grid grid-cols-2 gap-1 bg-white/5 border border-white/10 rounded-lg">
                 <TabsTrigger
                   value="fees"
-                  className="text-xs md:text-sm px-2 py-2 md:px-3"
+                  className="text-xs font-medium text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-white rounded-md py-2"
                 >
                   Fee Management
                 </TabsTrigger>
                 <TabsTrigger
                   value="platform"
-                  className="text-xs md:text-sm px-2 py-2 md:px-3"
+                  className="text-xs font-medium text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-white rounded-md py-2"
                 >
                   Platform Settings
                 </TabsTrigger>
               </TabsList>
 
               {/* Fee Management Sub-tab */}
-              <TabsContent value="fees" className="space-y-3 md:space-y-4">
-                <Card>
-                  <CardHeader className="pb-3 md:pb-6">
-                    <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                      <DollarSign className="h-4 w-4 md:h-5 md:w-5" />
+              <TabsContent value="fees" className="space-y-4">
+                <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-2 text-base text-white font-medium">
+                      <DollarSign className="h-4 w-4" />
                       Platform Fee Collection
                     </CardTitle>
-                    <CardDescription className="text-sm md:text-base">
+                    <CardDescription className="text-white/50 text-xs">
                       Withdraw accumulated platform fees
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-3 md:space-y-4">
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between p-3 md:p-4 border rounded-lg gap-3 md:gap-4">
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between p-4 bg-white/5 border border-white/10 rounded-lg gap-4">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm md:text-base">
+                        <p className="font-medium text-sm text-white/80">
                           Available for Withdrawal
                         </p>
-                        <p className="text-xl md:text-2xl font-bold text-green-600 truncate">
+                        <p className="text-xl font-light text-green-400 truncate">
                           {formatAmount(globalStats?.totalFeesCollected)}{" "}
                           Politics
                         </p>
-                        <p className="text-xs md:text-sm text-gray-500 truncate">
-                          Fee Collector: {globalStats?.feeCollector}
+                        <p className="text-xs text-white/40 truncate mt-1">
+                          Fee Collector:{" "}
+                          {globalStats?.feeCollector || "Not set"}
                         </p>
                       </div>
                       <Button
@@ -597,15 +602,14 @@ export function ModernAdminDashboard() {
                           !globalStats?.totalFeesCollected ||
                           globalStats.totalFeesCollected === 0n
                         }
-                        className="flex items-center justify-center gap-2 w-full lg:w-auto h-9 md:h-10 text-sm md:text-base"
+                        className="bg-green-500/20 hover:bg-green-500/30 text-green-200 border border-green-500/30 w-full lg:w-auto text-xs h-9"
                       >
                         {isPending || isConfirming ? (
-                          <Loader2 className="h-3 w-3 md:h-4 md:w-4 animate-spin" />
+                          <Loader2 className="h-3 w-3 animate-spin mr-2" />
                         ) : (
-                          <DollarSign className="h-3 w-3 md:h-4 md:w-4" />
+                          <DollarSign className="h-3 w-3 mr-2" />
                         )}
-                        <span className="hidden sm:inline">Withdraw Fees</span>
-                        <span className="sm:hidden">Withdraw</span>
+                        <span>Withdraw Fees</span>
                       </Button>
                     </div>
                   </CardContent>
@@ -613,23 +617,23 @@ export function ModernAdminDashboard() {
               </TabsContent>
 
               {/* Platform Settings Sub-tab */}
-              <TabsContent value="platform" className="space-y-3 md:space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
-                  <Card>
-                    <CardHeader className="pb-3 md:pb-6">
-                      <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                        <Settings className="h-4 w-4 md:h-5 md:w-5" />
+              <TabsContent value="platform" className="space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-2 text-base text-white font-medium">
+                        <Settings className="h-4 w-4" />
                         Platform Fee Rate
                       </CardTitle>
-                      <CardDescription className="text-sm md:text-base">
+                      <CardDescription className="text-white/50 text-xs">
                         Set the platform fee rate (in basis points, 100 = 1%)
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-3 md:space-y-4">
+                    <CardContent className="space-y-4">
                       <div className="space-y-2">
                         <Label
                           htmlFor="feeRate"
-                          className="text-sm md:text-base"
+                          className="text-xs text-white/70"
                         >
                           Fee Rate (basis points)
                         </Label>
@@ -641,43 +645,44 @@ export function ModernAdminDashboard() {
                           value={newFeeRate}
                           onChange={(e) => setNewFeeRate(e.target.value)}
                           placeholder="200 (2%)"
-                          className="h-9 md:h-10"
+                          className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-9 text-sm"
                         />
-                        <p className="text-xs md:text-sm text-gray-500 truncate">
+                        <p className="text-xs text-white/40 truncate">
                           Current: {formatFeeRate(currentFeeRate)}% | New:{" "}
-                          {(parseInt(newFeeRate) / 100).toFixed(2)}%
+                          {(parseInt(newFeeRate || "0") / 100).toFixed(2)}%
                         </p>
                       </div>
                       <Button
                         onClick={handleSetFeeRate}
                         disabled={isPending || isConfirming}
-                        className="w-full h-9 md:h-10 text-sm md:text-base"
+                        className="w-full bg-white/10 hover:bg-white/20 text-white border border-white/10 text-xs h-9"
+                        variant="outline"
                       >
                         {isPending || isConfirming ? (
-                          <Loader2 className="h-3 w-3 md:h-4 md:w-4 animate-spin" />
+                          <Loader2 className="h-3 w-3 animate-spin mr-2" />
                         ) : (
-                          <Settings className="h-3 w-3 md:h-4 md:w-4" />
+                          <Settings className="h-3 w-3 mr-2" />
                         )}
                         Update Fee Rate
                       </Button>
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardHeader className="pb-3 md:pb-6">
-                      <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                        <Users className="h-4 w-4 md:h-5 md:w-5" />
+                  <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-2 text-base text-white font-medium">
+                        <Users className="h-4 w-4" />
                         Fee Collector Address
                       </CardTitle>
-                      <CardDescription className="text-sm md:text-base">
+                      <CardDescription className="text-white/50 text-xs">
                         Set the address that can withdraw platform fees
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-3 md:space-y-4">
+                    <CardContent className="space-y-4">
                       <div className="space-y-2">
                         <Label
                           htmlFor="feeCollector"
-                          className="text-sm md:text-base"
+                          className="text-xs text-white/70"
                         >
                           Fee Collector Address
                         </Label>
@@ -687,21 +692,22 @@ export function ModernAdminDashboard() {
                           value={newFeeCollector}
                           onChange={(e) => setNewFeeCollector(e.target.value)}
                           placeholder="0x..."
-                          className="h-9 md:h-10"
+                          className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-9 text-sm"
                         />
-                        <p className="text-xs md:text-sm text-gray-500 truncate">
-                          Current: {globalStats?.feeCollector}
+                        <p className="text-xs text-white/40 truncate">
+                          Current: {globalStats?.feeCollector || "Not Set"}
                         </p>
                       </div>
                       <Button
                         onClick={handleSetFeeCollector}
                         disabled={isPending || isConfirming || !newFeeCollector}
-                        className="w-full h-9 md:h-10 text-sm md:text-base"
+                        className="w-full bg-white/10 hover:bg-white/20 text-white border border-white/10 text-xs h-9"
+                        variant="outline"
                       >
                         {isPending || isConfirming ? (
-                          <Loader2 className="h-3 w-3 md:h-4 md:w-4 animate-spin" />
+                          <Loader2 className="h-3 w-3 animate-spin mr-2" />
                         ) : (
-                          <Users className="h-3 w-3 md:h-4 md:w-4" />
+                          <Users className="h-3 w-3 mr-2" />
                         )}
                         Update Fee Collector
                       </Button>

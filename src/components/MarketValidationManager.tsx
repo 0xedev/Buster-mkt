@@ -288,11 +288,13 @@ export function MarketValidationManager() {
 
   if (!isConnected) {
     return (
-      <Card>
+      <Card className="border-white/10 bg-white/5 backdrop-blur-md">
         <CardContent className="p-6 text-center">
-          <Shield className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium mb-2">Connect Your Wallet</h3>
-          <p className="text-gray-600">
+          <Shield className="h-12 w-12 md:h-16 md:w-16 mx-auto text-white/20 mb-3 md:mb-4" />
+          <h3 className="text-base md:text-lg font-medium mb-2 text-white/90">
+            Connect Your Wallet
+          </h3>
+          <p className="text-sm md:text-base text-white/50">
             Please connect your wallet to manage market validation.
           </p>
         </CardContent>
@@ -302,11 +304,13 @@ export function MarketValidationManager() {
 
   if (!hasValidationAccess) {
     return (
-      <Card>
+      <Card className="border-white/10 bg-white/5 backdrop-blur-md">
         <CardContent className="p-6 text-center">
-          <AlertTriangle className="h-16 w-16 mx-auto text-red-400 mb-4" />
-          <h3 className="text-lg font-medium mb-2">Access Denied</h3>
-          <p className="text-gray-600">
+          <AlertTriangle className="h-12 w-12 md:h-16 md:w-16 mx-auto text-red-400/50 mb-3 md:mb-4" />
+          <h3 className="text-base md:text-lg font-medium mb-2 text-white/90">
+            Access Denied
+          </h3>
+          <p className="text-sm md:text-base text-white/50">
             You need validator, admin, or owner permissions to manage market
             validation.
           </p>
@@ -320,10 +324,8 @@ export function MarketValidationManager() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Market Validation
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300">
+          <h2 className="text-xl font-bold text-white">Market Validation</h2>
+          <p className="text-sm text-white/50">
             Review and validate pending markets before they go live
           </p>
         </div>
@@ -331,10 +333,11 @@ export function MarketValidationManager() {
           onClick={() => handleRefresh()}
           disabled={isLoadingCount || isLoadingMarkets}
           variant="outline"
-          className="flex items-center gap-2"
+          size="sm"
+          className="flex items-center gap-2 bg-white/5 border-white/10 text-white/70 hover:text-white"
         >
           <RefreshCw
-            className={`h-4 w-4 ${
+            className={`h-3 w-3 ${
               isLoadingCount || isLoadingMarkets ? "animate-spin" : ""
             }`}
           />
@@ -343,90 +346,92 @@ export function MarketValidationManager() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="p-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="border-white/10 bg-white/5 backdrop-blur-md">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-xs font-medium text-white/50">
                   Pending Validation
                 </p>
-                <p className="text-2xl font-bold text-orange-600">
+                <p className="text-xl font-bold text-orange-400">
                   {pendingMarkets.length}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-[10px] text-white/30 mt-1">
                   {isLoadingCount || isLoadingMarkets
                     ? "Loading..."
                     : "Active markets"}
                 </p>
               </div>
-              <Clock className="h-8 w-8 text-orange-600" />
+              <Clock className="h-6 w-6 text-orange-400/50" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
+        <Card className="border-white/10 bg-white/5 backdrop-blur-md">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-xs font-medium text-white/50">
                   Validated Markets
                 </p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-xl font-bold text-green-400">
                   {validatedMarkets.length}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-[10px] text-white/30 mt-1">
                   {isLoadingCount || isLoadingMarkets
                     ? "Loading..."
                     : "Resolved markets"}
                 </p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <CheckCircle className="h-6 w-6 text-green-400/50" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
+        <Card className="border-white/10 bg-white/5 backdrop-blur-md">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-xs font-medium text-white/50">
                   Total Markets
                 </p>
-                <p className="text-2xl font-bold">{marketCount || "0"}</p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xl font-bold text-blue-400">
+                  {marketCount || "0"}
+                </p>
+                <p className="text-[10px] text-white/30 mt-1">
                   {isLoadingCount || isLoadingMarkets
                     ? "Loading..."
                     : "From contract"}
                 </p>
               </div>
-              <FileText className="h-8 w-8 text-blue-600" />
+              <FileText className="h-6 w-6 text-blue-400/50" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex items-center space-x-4 border-b">
+      <div className="flex items-center space-x-4 border-b border-white/5">
         <button
           onClick={() => setActiveTab("pending")}
-          className={`pb-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+          className={`pb-2 px-1 border-b-2 font-medium text-xs md:text-sm transition-colors ${
             activeTab === "pending"
-              ? "border-orange-500 text-orange-600"
-              : "border-transparent text-gray-500 hover:text-gray-700"
+              ? "border-orange-500 text-orange-400"
+              : "border-transparent text-white/50 hover:text-white/70"
           }`}
         >
-          Pending Validation ({pendingMarkets.length})
+          Pending ({pendingMarkets.length})
         </button>
         <button
           onClick={() => setActiveTab("validated")}
-          className={`pb-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+          className={`pb-2 px-1 border-b-2 font-medium text-xs md:text-sm transition-colors ${
             activeTab === "validated"
-              ? "border-green-500 text-green-600"
-              : "border-transparent text-gray-500 hover:text-gray-700"
+              ? "border-green-500 text-green-400"
+              : "border-transparent text-white/50 hover:text-white/70"
           }`}
         >
-          Validated Markets ({validatedMarkets.length})
+          Validated ({validatedMarkets.length})
         </button>
       </div>
 
@@ -435,11 +440,11 @@ export function MarketValidationManager() {
         {isLoadingCount || isLoadingMarkets ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
+              <Card key={i} className="animate-pulse bg-white/5 border-white/5">
                 <CardContent className="p-6">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+                  <div className="h-4 bg-white/10 rounded w-3/4 mb-4"></div>
+                  <div className="h-3 bg-white/10 rounded w-1/2 mb-2"></div>
+                  <div className="h-3 bg-white/10 rounded w-1/3"></div>
                 </CardContent>
               </Card>
             ))}
@@ -449,140 +454,156 @@ export function MarketValidationManager() {
             {activeTab === "pending" && (
               <>
                 {pendingMarkets.length === 0 ? (
-                  <Card>
+                  <Card className="bg-white/5 border-white/10">
                     <CardContent className="p-8 text-center">
-                      <CheckCircle className="h-16 w-16 mx-auto text-green-500 mb-4" />
-                      <h3 className="text-lg font-medium mb-2">
+                      <CheckCircle className="h-12 w-12 mx-auto text-green-400/50 mb-4" />
+                      <h3 className="text-base font-medium mb-2 text-white">
                         All Caught Up!
                       </h3>
-                      <p className="text-gray-600">
+                      <p className="text-sm text-white/50">
                         No markets are currently pending validation.
                       </p>
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="h-[600px] overflow-y-auto">
-                    <div className="space-y-4 pr-4">
+                  <div className="h-[600px] overflow-y-auto pr-1 custom-scrollbar">
+                    <div className="space-y-3">
                       {pendingMarkets.map((market) => (
                         <Card
                           key={market.marketId}
-                          className="border-orange-200"
+                          className="border-orange-500/20 bg-white/5 hover:bg-white/10 transition-colors"
                         >
-                          <CardContent className="p-6">
-                            <div className="flex items-start justify-between mb-4">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-3">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
                                   <Badge
                                     variant="outline"
-                                    className="text-orange-600 border-orange-600"
+                                    className="text-[10px] text-orange-400 border-orange-500/30"
                                   >
                                     <Hash className="h-3 w-3 mr-1" />
                                     {market.marketId}
                                   </Badge>
-                                  <Badge variant="secondary">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] text-white/60 border-white/10 bg-white/5"
+                                  >
                                     {MARKET_CATEGORIES[market.category]}
                                   </Badge>
                                   <Badge
                                     variant="outline"
-                                    className="text-orange-600"
+                                    className="text-[10px] text-orange-400 border-orange-500/30 bg-orange-500/5"
                                   >
                                     <Clock className="h-3 w-3 mr-1" />
                                     Pending
                                   </Badge>
                                 </div>
-                                <h3 className="font-semibold text-lg mb-2">
+                                <h3 className="font-medium text-base text-white/90 mb-1">
                                   {market.question}
                                 </h3>
                                 {market.description && (
-                                  <p className="text-gray-600 mb-3 line-clamp-2">
+                                  <p className="text-xs text-white/50 mb-2 line-clamp-2">
                                     {market.description}
                                   </p>
                                 )}
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3 text-xs">
                               <div>
-                                <span className="text-gray-500 flex items-center gap-1">
+                                <span className="text-white/40 flex items-center gap-1">
                                   <User className="h-3 w-3" />
                                   Creator:
                                 </span>
-                                <p className="font-mono text-xs">
+                                <p className="font-mono text-white/70">
                                   {market.creator.slice(0, 6)}...
                                   {market.creator.slice(-4)}
                                 </p>
                               </div>
                               <div>
-                                <span className="text-gray-500 flex items-center gap-1">
+                                <span className="text-white/40 flex items-center gap-1">
                                   <Hash className="h-3 w-3" />
-                                  Market ID:
+                                  ID:
                                 </span>
-                                <p className="font-medium">
+                                <p className="font-medium text-white/70">
                                   #{market.marketId}
                                 </p>
                               </div>
                               <div>
-                                <span className="text-gray-500">End Date:</span>
-                                <p className="font-medium">
+                                <span className="text-white/40">End Date:</span>
+                                <p className="font-medium text-white/70">
                                   {formatEndTime(market.endTime)}
                                 </p>
                               </div>
                               <div>
-                                <span className="text-gray-500">Options:</span>
-                                <p className="font-medium">
+                                <span className="text-white/40">Options:</span>
+                                <p className="font-medium text-white/70">
                                   {Number(market.optionCount)}
                                 </p>
                               </div>
                             </div>
 
                             {/* Market Info */}
-                            <div className="mb-4">
-                              <p className="text-sm text-gray-500 mb-2">
-                                Market Details:
-                              </p>
+                            <div className="mb-3">
                               <div className="flex flex-wrap gap-2">
-                                <Badge variant="outline">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] border-white/10 text-white/40"
+                                >
                                   {Number(market.optionCount)} options
                                 </Badge>
-                                <Badge variant="outline">
-                                  Volume: {Number(market.totalVolume) / 1e18}{" "}
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] border-white/10 text-white/40"
+                                >
+                                  Vol: {Number(market.totalVolume) / 1e18}{" "}
                                   tokens
                                 </Badge>
                                 {market.disputed && (
-                                  <Badge variant="destructive">Disputed</Badge>
+                                  <Badge
+                                    variant="destructive"
+                                    className="text-[10px]"
+                                  >
+                                    Disputed
+                                  </Badge>
                                 )}
                                 {market.earlyResolutionAllowed && (
-                                  <Badge variant="outline">
-                                    Early Resolution
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] border-blue-500/30 text-blue-400"
+                                  >
+                                    Early Res
                                   </Badge>
                                 )}
                               </div>
                             </div>
 
-                            <Separator className="my-4" />
+                            <Separator className="my-3 bg-white/5" />
 
                             <div className="flex items-center gap-2">
                               <Button
+                                size="sm"
                                 onClick={() =>
                                   handleValidateMarket(market.marketId)
                                 }
                                 disabled={isPending || isConfirming}
-                                className="flex items-center gap-2"
+                                className="h-8 text-xs flex items-center gap-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-200 border border-orange-500/30"
                               >
                                 {isPending || isConfirming ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  <Loader2 className="h-3 w-3 animate-spin" />
                                 ) : (
-                                  <CheckCircle className="h-4 w-4" />
+                                  <CheckCircle className="h-3 w-3" />
                                 )}
-                                Validate Market
+                                Validate
                               </Button>
 
                               <Link href={`/market/${market.marketId}`}>
                                 <Button
-                                  variant="outline"
-                                  className="flex items-center gap-2"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 text-xs flex items-center gap-2 text-white/50 hover:text-white hover:bg-white/5"
                                 >
-                                  <Eye className="h-4 w-4" />
+                                  <Eye className="h-3 w-3" />
                                   Preview
                                 </Button>
                               </Link>
@@ -599,80 +620,84 @@ export function MarketValidationManager() {
             {activeTab === "validated" && (
               <>
                 {validatedMarkets.length === 0 ? (
-                  <Card>
+                  <Card className="bg-white/5 border-white/10">
                     <CardContent className="p-8 text-center">
-                      <Shield className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                      <h3 className="text-lg font-medium mb-2">
+                      <Shield className="h-12 w-12 mx-auto text-white/20 mb-4" />
+                      <h3 className="text-base font-medium mb-2 text-white">
                         No Validated Markets
                       </h3>
-                      <p className="text-gray-600">
+                      <p className="text-sm text-white/50">
                         No markets have been validated yet.
                       </p>
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="h-[600px] overflow-y-auto">
-                    <div className="space-y-4 pr-4">
+                  <div className="h-[600px] overflow-y-auto pr-1 custom-scrollbar">
+                    <div className="space-y-3">
                       {validatedMarkets.map((market) => (
                         <Card
                           key={market.marketId}
-                          className="border-green-200"
+                          className="border-green-500/20 bg-white/5"
                         >
-                          <CardContent className="p-6">
-                            <div className="flex items-start justify-between mb-4">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-3">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
-                                  <Badge variant="outline">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] text-white/40 border-white/10"
+                                  >
                                     <Hash className="h-3 w-3 mr-1" />
                                     {market.marketId}
                                   </Badge>
-                                  <Badge variant="secondary">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] text-white/40 border-white/10 bg-white/5"
+                                  >
                                     {MARKET_CATEGORIES[market.category]}
                                   </Badge>
-                                  <Badge className="bg-green-100 text-green-700">
+                                  <Badge className="text-[10px] bg-green-500/20 text-green-300 pointer-events-none hover:bg-green-500/20">
                                     <CheckCircle className="h-3 w-3 mr-1" />
                                     Validated
                                   </Badge>
                                   {market.resolved && (
                                     <Badge
                                       variant="outline"
-                                      className="text-blue-600"
+                                      className="text-[10px] text-blue-400 border-blue-500/30"
                                     >
                                       Resolved
                                     </Badge>
                                   )}
                                 </div>
-                                <h3 className="font-semibold text-lg mb-2">
+                                <h3 className="font-medium text-base text-white/90 mb-1">
                                   {market.question}
                                 </h3>
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3 text-xs">
                               <div>
-                                <span className="text-gray-500">Creator:</span>
-                                <p className="font-mono text-xs">
+                                <span className="text-white/40">Creator:</span>
+                                <p className="font-mono text-white/70">
                                   {market.creator.slice(0, 6)}...
                                   {market.creator.slice(-4)}
                                 </p>
                               </div>
                               <div>
-                                <span className="text-gray-500">
-                                  Market ID:
-                                </span>
-                                <p className="font-medium">
+                                <span className="text-white/40">ID:</span>
+                                <p className="font-medium text-white/70">
                                   #{market.marketId}
                                 </p>
                               </div>
                               <div>
-                                <span className="text-gray-500">Status:</span>
-                                <p className="font-medium">
+                                <span className="text-white/40">Status:</span>
+                                <p className="font-medium text-white/70">
                                   {market.resolved ? "Resolved" : "Active"}
                                 </p>
                               </div>
                               <div>
-                                <span className="text-gray-500">Options:</span>
-                                <p className="font-medium">
+                                <span className="text-white/40">Options:</span>
+                                <p className="font-medium text-white/70">
                                   {Number(market.optionCount)}
                                 </p>
                               </div>
@@ -681,11 +706,12 @@ export function MarketValidationManager() {
                             <div className="flex items-center gap-2">
                               <Link href={`/market/${market.marketId}`}>
                                 <Button
-                                  variant="outline"
-                                  className="flex items-center gap-2"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 text-xs flex items-center gap-2 text-white/50 hover:text-white hover:bg-white/5"
                                 >
-                                  <Eye className="h-4 w-4" />
-                                  View Market
+                                  <Eye className="h-3 w-3" />
+                                  View
                                 </Button>
                               </Link>
                             </div>
@@ -702,9 +728,9 @@ export function MarketValidationManager() {
       </div>
 
       {error && (
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-red-500/20 bg-red-500/10">
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-red-700">
+            <div className="flex items-center gap-2 text-red-300">
               <AlertTriangle className="h-4 w-4" />
               <p className="text-sm">Error: {error.message}</p>
             </div>

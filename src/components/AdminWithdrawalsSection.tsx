@@ -263,13 +263,13 @@ export function AdminWithdrawalsSection() {
 
   if (!isConnected) {
     return (
-      <Card className="border-orange-200 bg-gradient-to-br from-orange-50 to-yellow-50">
+      <Card className="border-white/10 bg-white/5 backdrop-blur-md">
         <CardContent className="p-6 text-center">
-          <Wallet className="w-12 h-12 mx-auto mb-4 text-orange-600" />
-          <h3 className="font-semibold text-gray-900 mb-2">
+          <Wallet className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-3 md:mb-4 text-white/20" />
+          <h3 className="font-medium text-base md:text-lg text-white mb-2">
             Admin Withdrawals
           </h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm md:text-base text-white/50">
             Connect your wallet to view available withdrawals
           </p>
         </CardContent>
@@ -283,28 +283,28 @@ export function AdminWithdrawalsSection() {
     withdrawals.lpRewards.length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 md:space-y-6">
       {/* Summary Card */}
-      <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-green-800">
-            <Coins className="w-5 h-5" />
+      <Card className="border-white/10 bg-white/5 backdrop-blur-md">
+        <CardHeader className="pb-3 md:pb-6 border-b border-white/5">
+          <CardTitle className="flex items-center gap-2 text-base md:text-lg text-white font-medium">
+            <Coins className="w-4 h-4 md:w-5 md:h-5 text-green-400" />
             Admin Withdrawals Available
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4 md:pt-6">
           {loading ? (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="w-6 h-6 animate-spin text-green-600" />
-              <span className="ml-2 text-sm text-gray-600">
+            <div className="flex items-center justify-center py-4 md:py-8">
+              <Loader2 className="w-5 h-5 md:w-6 md:h-6 animate-spin text-white/40" />
+              <span className="ml-2 text-xs md:text-sm text-white/50">
                 Discovering available withdrawals...
               </span>
             </div>
           ) : error ? (
-            <div className="text-center py-4">
-              <div className="text-red-500 mb-4">
+            <div className="text-center py-4 md:py-8">
+              <div className="text-red-400/50 mb-3 md:mb-4">
                 <svg
-                  className="w-12 h-12 mx-auto mb-2"
+                  className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-2"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -317,10 +317,10 @@ export function AdminWithdrawalsSection() {
                   />
                 </svg>
               </div>
-              <p className="text-gray-600 mb-2">
+              <p className="text-white/70 mb-2 text-sm md:text-base">
                 Failed to load withdrawal data
               </p>
-              <p className="text-sm text-gray-500 mb-4">{error}</p>
+              <p className="text-xs md:text-sm text-white/40 mb-4">{error}</p>
               <Button
                 onClick={() => {
                   setError(null);
@@ -328,48 +328,61 @@ export function AdminWithdrawalsSection() {
                 }}
                 variant="outline"
                 size="sm"
+                className="border-white/10 bg-white/5 text-white hover:bg-white/10"
               >
                 Try Again
               </Button>
             </div>
           ) : totalWithdrawals === 0 ? (
-            <div className="text-center py-6">
-              <Coins className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <div className="text-center py-6 md:py-8">
+              <Coins className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-3 md:mb-4 text-white/10" />
+              <h3 className="text-base md:text-lg font-medium text-white mb-2">
                 No withdrawals available
               </h3>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-xs md:text-sm text-white/50 mb-4 md:mb-6">
                 Admin withdrawals will appear here after market resolution
               </p>
 
               {/* Help guide */}
-              <div className="max-w-md mx-auto bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-                <h4 className="font-medium text-blue-900 mb-2">
+              <div className="max-w-md mx-auto bg-white/5 border border-white/10 rounded-lg p-4 text-left mb-4 md:mb-6">
+                <h4 className="font-medium text-white/80 mb-2 text-xs md:text-sm">
                   💡 How to generate withdrawals:
                 </h4>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>
-                    • <strong>Create markets</strong> with initial liquidity
+                <ul className="text-xs md:text-sm text-white/50 space-y-1.5">
+                  <li className="flex items-start gap-2">
+                    <span className="mt-1 block h-1 w-1 rounded-full bg-white/30" />
+                    <span>
+                      <strong>Create markets</strong> with initial liquidity
+                    </span>
                   </li>
-                  <li>
-                    • <strong>Wait for resolution</strong> - admin liquidity
-                    becomes claimable
+                  <li className="flex items-start gap-2">
+                    <span className="mt-1 block h-1 w-1 rounded-full bg-white/30" />
+                    <span>
+                      <strong>Wait for resolution</strong> - admin liquidity
+                      becomes claimable
+                    </span>
                   </li>
-                  <li>
-                    • <strong>Create free markets</strong> - unused prize pools
-                    become withdrawable
+                  <li className="flex items-start gap-2">
+                    <span className="mt-1 block h-1 w-1 rounded-full bg-white/30" />
+                    <span>
+                      <strong>Create free markets</strong> - unused prize pools
+                      become withdrawable
+                    </span>
                   </li>
-                  <li>
-                    • <strong>Provide liquidity</strong> - earn LP rewards from
-                    market fees
+                  <li className="flex items-start gap-2">
+                    <span className="mt-1 block h-1 w-1 rounded-full bg-white/30" />
+                    <span>
+                      <strong>Provide liquidity</strong> - earn LP rewards from
+                      market fees
+                    </span>
                   </li>
                 </ul>
               </div>
 
-              <div className="flex gap-3 mt-4 justify-center">
+              <div className="flex gap-3 justify-center">
                 <Button
                   onClick={() => (window.location.href = "/admin?tab=create")}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-white/10 hover:bg-white/20 text-white border border-white/10 text-xs md:text-sm"
                   size="sm"
                 >
                   Create Market
@@ -381,6 +394,7 @@ export function AdminWithdrawalsSection() {
                   }}
                   variant="outline"
                   size="sm"
+                  className="bg-transparent border-white/10 text-white/60 hover:text-white hover:bg-white/5 text-xs md:text-sm"
                 >
                   Refresh
                 </Button>
@@ -389,19 +403,19 @@ export function AdminWithdrawalsSection() {
           ) : (
             <div className="space-y-4">
               {/* Total Summary */}
-              <div className="bg-green-100 p-4 rounded-lg">
+              <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-green-800">
+                    <p className="text-xs md:text-sm font-medium text-emerald-300/80">
                       Total Available
                     </p>
-                    <p className="text-2xl font-bold text-green-900">
+                    <p className="text-xl md:text-2xl font-bold text-emerald-400">
                       {formatPrice(totals.total)} $POLITICS
                     </p>
                   </div>
                   <Badge
-                    variant="secondary"
-                    className="bg-green-200 text-green-800"
+                    variant="outline"
+                    className="bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
                   >
                     {totalWithdrawals} Withdrawal
                     {totalWithdrawals !== 1 ? "s" : ""}
@@ -479,16 +493,24 @@ function WithdrawalSection({
   isConfirming: boolean;
 }) {
   return (
-    <div className="border border-gray-200 rounded-lg p-4">
+    <div className="border border-white/10 bg-white/5 rounded-lg p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          {icon}
-          <h3 className="font-semibold text-gray-900">{title}</h3>
-          <Badge variant="outline">{withdrawals.length}</Badge>
+          <span className="text-white/60">{icon}</span>
+          <h3 className="font-medium text-white">{title}</h3>
+          <Badge
+            variant="outline"
+            className="text-white/50 border-white/10 bg-white/5"
+          >
+            {withdrawals.length}
+          </Badge>
         </div>
         <div className="text-right">
-          <p className="text-sm text-gray-600">
-            Total: {formatPrice(total)} $POLITICS
+          <p className="text-xs text-white/50 mb-1">
+            Total:{" "}
+            <span className="text-green-400 font-medium">
+              {formatPrice(total)} $POLITICS
+            </span>
           </p>
           {withdrawals.length > 1 && (
             <Button
@@ -496,7 +518,7 @@ function WithdrawalSection({
               disabled={isPending || isConfirming}
               size="sm"
               variant="outline"
-              className="mt-1"
+              className="h-7 text-xs border-white/10 text-white/70 hover:text-white bg-transparent hover:bg-white/5"
             >
               Withdraw All
             </Button>
@@ -508,14 +530,16 @@ function WithdrawalSection({
         {withdrawals.map((withdrawal) => (
           <div
             key={`${withdrawal.type}-${withdrawal.marketId}`}
-            className="flex items-center justify-between p-3 bg-white rounded-lg border"
+            className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5 hover:border-white/10 transition-colors"
           >
             <div>
-              <p className="font-medium text-gray-900">
+              <p className="text-sm font-medium text-white/90">
                 Market #{withdrawal.marketId}
               </p>
-              <p className="text-sm text-gray-600">{withdrawal.description}</p>
-              <p className="text-sm font-medium text-green-600">
+              <p className="text-xs text-white/50 mb-1">
+                {withdrawal.description}
+              </p>
+              <p className="text-xs font-medium text-green-400">
                 {formatPrice(withdrawal.amount)} $POLITICS
               </p>
             </div>
@@ -523,12 +547,12 @@ function WithdrawalSection({
               onClick={() => onWithdraw(withdrawal.marketId, withdrawal.type)}
               disabled={isPending || isConfirming}
               size="sm"
-              className="bg-green-600 hover:bg-green-700"
+              className="h-8 text-xs bg-green-500/20 hover:bg-green-500/30 text-green-300 border border-green-500/30"
             >
               {isPending || isConfirming ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Processing...
+                  <Loader2 className="w-3 h-3 animate-spin mr-2" />
+                  Wait...
                 </>
               ) : (
                 "Withdraw"

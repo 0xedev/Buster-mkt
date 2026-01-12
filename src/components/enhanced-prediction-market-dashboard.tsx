@@ -110,36 +110,36 @@ export function EnhancedPredictionMarketDashboard() {
           <TabsList
             className={`grid w-full ${
               actualShowVoteHistory ? "grid-cols-5" : "grid-cols-4"
-            } overflow-x-auto whitespace-nowrap hidden md:grid bg-[#433952]/50 border border-[#544863]`}
+            } overflow-x-auto whitespace-nowrap hidden md:grid bg-white/5 border border-white/10`}
           >
             <TabsTrigger
               value="active"
-              className="text-xs px-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+              className="text-xs px-2 text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-white hover:text-white/70 transition-colors"
             >
               Active
             </TabsTrigger>
             <TabsTrigger
               value="ended"
-              className="text-xs px-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+              className="text-xs px-2 text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-white hover:text-white/70 transition-colors"
             >
               Ended
             </TabsTrigger>
             <TabsTrigger
               value="leaderboard"
-              className="text-xs px-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+              className="text-xs px-2 text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-white hover:text-white/70 transition-colors"
             >
               Leaderboard
             </TabsTrigger>
             <TabsTrigger
               value="profile"
-              className="text-xs px-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+              className="text-xs px-2 text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-white hover:text-white/70 transition-colors"
             >
               Profile
             </TabsTrigger>
             {actualShowVoteHistory && (
               <TabsTrigger
                 value="myvotes"
-                className="text-xs px-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+                className="text-xs px-2 text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-white hover:text-white/70 transition-colors"
               >
                 My Shares
               </TabsTrigger>
@@ -147,7 +147,7 @@ export function EnhancedPredictionMarketDashboard() {
             {(hasCreatorAccess || hasResolverAccess || isAdmin) && (
               <TabsTrigger
                 value="admin"
-                className="text-xs px-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+                className="text-xs px-2 text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-white hover:text-white/70 transition-colors"
               >
                 Admin
               </TabsTrigger>
@@ -163,16 +163,16 @@ export function EnhancedPredictionMarketDashboard() {
 
           <TabsContent value="ended" className="mt-6">
             <Tabs defaultValue="pending" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-[#433952]/50 border border-[#544863]">
+              <TabsList className="grid w-full grid-cols-2 bg-white/5 border border-white/10">
                 <TabsTrigger
                   value="pending"
-                  className="text-xs px-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+                  className="text-xs px-2 text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-white hover:text-white/70 transition-colors"
                 >
                   Pending
                 </TabsTrigger>
                 <TabsTrigger
                   value="resolved"
-                  className="text-xs px-2 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+                  className="text-xs px-2 text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-white hover:text-white/70 transition-colors"
                 >
                   Results
                 </TabsTrigger>
@@ -193,8 +193,8 @@ export function EnhancedPredictionMarketDashboard() {
           </TabsContent>
 
           <TabsContent value="leaderboard" className="mt-6">
-            <div className="bg-[#433952]/50 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden border border-[#544863]">
-              <Suspense fallback={<div className="p-8 text-center text-gray-400">Loading leaderboard...</div>}>
+            <div className="bg-white/5 backdrop-blur-md rounded-lg shadow-xl overflow-hidden border border-white/10">
+              <Suspense fallback={<div className="p-8 text-center text-white/40">Loading leaderboard...</div>}>
                 <LeaderboardComponent onTabChange={handleTabChange} />
               </Suspense>
             </div>
@@ -210,22 +210,22 @@ export function EnhancedPredictionMarketDashboard() {
 
                 {/* Vote History Section */}
                 <div className="lg:col-span-2">
-                  <Suspense fallback={<div className="p-8 text-center text-gray-400">Loading vote history...</div>}>
+                  <Suspense fallback={<div className="p-8 text-center text-white/40">Loading vote history...</div>}>
                     <VoteHistory />
                   </Suspense>
                 </div>
               </div>
             ) : (
-              <Card className="bg-[#433952]/50 backdrop-blur-sm border-[#544863]">
+              <Card className="bg-white/5 backdrop-blur-md border-white/10">
                 <CardContent className="p-12 text-center">
                   <div className="flex flex-col items-center gap-4">
-                    <div className="p-4 bg-purple-600/20 rounded-full">
-                      <Wallet className="h-12 w-12 text-purple-400" />
+                    <div className="p-4 bg-white/5 rounded-full border border-white/10">
+                      <Wallet className="h-12 w-12 text-white/40" />
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-100">
+                    <h3 className="text-xl font-medium text-white">
                       Connect Your Wallet
                     </h3>
-                    <p className="text-gray-300 max-w-md">
+                    <p className="text-white/50 max-w-md">
                       Connect your wallet to view your profile, track your
                       predictions, and see your performance statistics.
                     </p>
