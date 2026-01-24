@@ -45,7 +45,7 @@ type BuyingStep =
   | "purchaseSuccess";
 
 const MAX_BET = 50000000000000000000000000000000;
-const MAX_SHARES = 10000;
+const MAX_SHARES = 1000000;
 
 // Convert shares to 1e18 units (shares have 18 decimals regardless of token decimals)
 function sharesToWei(amount: string): bigint {
