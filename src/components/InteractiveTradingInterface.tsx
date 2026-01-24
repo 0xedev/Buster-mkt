@@ -25,7 +25,7 @@ import {
 import { encodeFunctionData } from "viem";
 import { useToast } from "@/components/ui/use-toast";
 
-const MAX_SHARES = 10000;
+const MAX_SHARES = 1000000;
 
 // Helper functions
 function sharesToWei(amount: string): bigint {
