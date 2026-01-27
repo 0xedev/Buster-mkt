@@ -7,9 +7,10 @@ import {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { marketId: string } },
+  props: { params: Promise<{ marketId: string }> },
 ) {
   try {
+    const params = await props.params;
     const { marketId } = params;
 
     if (!marketId || isNaN(Number(marketId))) {

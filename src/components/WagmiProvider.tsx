@@ -72,36 +72,54 @@ function useCoinbaseWalletAutoConnect() {
   return isCoinbaseWallet;
 }
 
-export const config = createConfig({
-  chains: [base],
-  transports: {
-    [base.id]: http(process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL),
-  },
-  connectors: [
-    miniAppConnector(),
-    coinbaseWallet({
-      appName: APP_NAME,
-      appLogoUrl: APP_ICON_URL,
-      preference: "all",
-    }),
-    metaMask({
-      dappMetadata: {
-        name: APP_NAME,
-        // url: window.ethereum,
-      },
-    }),
-    walletConnect({
-      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
-      showQrModal: true,
-      metadata: {
-        name: APP_NAME,
-        description: "Policast - Social podcasting on Farcaster",
-        url: APP_URL,
-        icons: [APP_ICON_URL],
-      },
-    }),
-  ],
-});
+// Singleton pattern for Wagmi config to prevent re-initialization in dev
+const wagmiConfig = (() => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ((global as any)._wagmiConfig) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (global as any)._wagmiConfig;
+  }
+
+  const config = createConfig({
+    chains: [base],
+    transports: {
+      [base.id]: http(process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL),
+    },
+    connectors: [
+      miniAppConnector(),
+      coinbaseWallet({
+        appName: APP_NAME,
+        appLogoUrl: APP_ICON_URL,
+        preference: "all",
+      }),
+      metaMask({
+        dappMetadata: {
+          name: APP_NAME,
+          // url: window.ethereum,
+        },
+      }),
+      walletConnect({
+        projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
+        showQrModal: true,
+        metadata: {
+          name: APP_NAME,
+          description: "Policast - Social podcasting on Farcaster",
+          url: APP_URL,
+          icons: [APP_ICON_URL],
+        },
+      }),
+    ],
+  });
+
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (global as any)._wagmiConfig = config;
+  }
+
+  return config;
+})();
+
+export const config = wagmiConfig;
 
 const queryClient = new QueryClient({
   defaultOptions: {

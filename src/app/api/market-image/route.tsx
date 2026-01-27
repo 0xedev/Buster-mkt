@@ -200,25 +200,25 @@ const boldFontDataPromise = fs.readFile(boldFontPath);
 const mediumFontDataPromise = fs.readFile(mediumFontPath).catch(() => null);
 
 const colors = {
-  background: "#ffffff",
-  cardBg: "#f9fafb",
-  primary: "#2563eb",
-  secondary: "#7c3aed",
-  success: "#059669",
-  danger: "#dc2626",
+  background: "#352c3f", // Main app bg
+  cardBg: "rgba(53, 44, 63, 0.8)", // Semi-transparent card bg
+  primary: "#a855f7", // Purple-500 equivalent
+  secondary: "#544863", // The specific border color you requested
+  success: "#22c55e", // Green-500
+  danger: "#ef4444", // Red-500
   text: {
-    primary: "#111827",
-    secondary: "#4b5563",
-    light: "#9ca3af",
+    primary: "#f3f4f6", // Gray-100
+    secondary: "#d1d5db", // Gray-300
+    light: "#9ca3af", // Gray-400
   },
-  border: "#e5e7eb",
+  border: "#544863", // The specific border color you requested
   gradient: {
-    primary: "linear-gradient(135deg, #2563eb 0%, #1e40af 100%)",
-    header: "linear-gradient(90deg, #1e40af 0%, #7e22ce 100%)",
+    primary: "linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)",
+    header: "linear-gradient(90deg, #433952 0%, #352c3f 100%)", // Matches app header feel
     footer:
-      "linear-gradient(90deg, rgba(37, 99, 235, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%)",
+      "linear-gradient(90deg, rgba(84, 72, 99, 0.3) 0%, rgba(53, 44, 63, 0.3) 100%)",
   },
-  shadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
+  shadow: "0 10px 25px rgba(0, 0, 0, 0.3)",
 };
 
 export async function GET(request: NextRequest) {
@@ -409,18 +409,25 @@ export async function GET(request: NextRequest) {
                 alignItems: "center",
                 padding: "8px 16px",
                 backgroundColor: market.resolved
-                  ? "#dcfce7"
+                  ? "rgba(34, 197, 94, 0.1)" // Green-500 @ 10%
                   : timeStatus.isEnded
-                    ? "#fef3c7"
-                    : "#dbeafe",
+                    ? "rgba(234, 179, 8, 0.1)" // Yellow-500 @ 10%
+                    : "rgba(168, 85, 247, 0.1)", // Purple-500 @ 10%
                 color: market.resolved
-                  ? "#166534"
+                  ? "#22c55e" // Green-500
                   : timeStatus.isEnded
-                    ? "#92400e"
-                    : "#1e40af",
+                    ? "#eab308" // Yellow-500
+                    : "#a855f7", // Purple-500
                 borderRadius: "12px",
                 fontSize: "14px",
                 fontWeight: "600",
+                border: `1px solid ${
+                  market.resolved
+                    ? "rgba(34, 197, 94, 0.3)"
+                    : timeStatus.isEnded
+                      ? "rgba(234, 179, 8, 0.3)"
+                      : "rgba(168, 85, 247, 0.3)"
+                }`,
               }}
             >
               {market.resolved ? "🏆 Resolved" : timeStatus.text}
@@ -473,7 +480,7 @@ export async function GET(request: NextRequest) {
                     display: "flex",
                     width: "100%",
                     height: market.optionCount > 3 ? "8px" : "10px",
-                    backgroundColor: "#e5e7eb",
+                    backgroundColor: "#544863", // Darker border color for unfilled track
                     borderRadius: "6px",
                     overflow: "hidden",
                   }}
