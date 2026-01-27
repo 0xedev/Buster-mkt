@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Gift, Users, Clock, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { useMarketData } from "@/hooks/useSubgraphData";
 
 interface FreeMarketClaimStatusProps {
   marketId: number;
@@ -73,10 +72,12 @@ export function FreeMarketClaimStatus({
   });
 
   // Get market data from subgraph (only if marketType not provided)
-  const { market, isLoading: isLoadingMarket } = useMarketData(marketId);
+  // const { market, isLoading: isLoadingMarket } = useMarketData(marketId);
 
   // Get free market info directly from contract
-  const { data: freeMarketInfoContract } = (useReadContract as any)({
+  const { data: freeMarketInfoContract, isLoading: isLoadingMarket } = (
+    useReadContract as any
+  )({
     address: V2contractAddress,
     abi: V2contractAbi,
     functionName: "getFreeMarketInfo",
@@ -88,14 +89,12 @@ export function FreeMarketClaimStatus({
   });
 
   // Use contract data if marketType is provided, otherwise use subgraph
-  const isFreeMarket =
-    marketType !== undefined ? marketType === 1 : market?.marketType === "FREE";
+  const isFreeMarket = marketType === 1;
 
   debug("render start", {
     marketId,
     addressPresent: !!address,
     providedMarketType: marketType,
-    subgraphMarketType: market?.marketType,
     isFreeMarket,
   });
 
@@ -109,8 +108,8 @@ export function FreeMarketClaimStatus({
   const tokensPerParticipant = contractFreeInfo
     ? contractFreeInfo[1]
     : freeMarketConfig && freeMarketConfig.tokensPerParticipant
-    ? BigInt(freeMarketConfig.tokensPerParticipant)
-    : 0n;
+      ? BigInt(freeMarketConfig.tokensPerParticipant)
+      : 0n;
 
   // Handle claim error
   useEffect(() => {
@@ -142,7 +141,7 @@ export function FreeMarketClaimStatus({
         title: "Tokens Claimed Successfully! 🎉",
         description: `You've claimed ${formatPrice(
           tokensPerParticipant,
-          18
+          18,
         )} tokens for this free market.`,
       });
     }
@@ -194,14 +193,14 @@ export function FreeMarketClaimStatus({
   const maxParticipants = contractFreeInfo
     ? contractFreeInfo[0]
     : freeMarketConfig && freeMarketConfig.maxFreeParticipants
-    ? BigInt(freeMarketConfig.maxFreeParticipants)
-    : 0n;
+      ? BigInt(freeMarketConfig.maxFreeParticipants)
+      : 0n;
 
   const currentParticipants = contractFreeInfo
     ? contractFreeInfo[2]
     : freeMarketConfig && freeMarketConfig.currentFreeParticipants
-    ? BigInt(freeMarketConfig.currentFreeParticipants)
-    : 0n;
+      ? BigInt(freeMarketConfig.currentFreeParticipants)
+      : 0n;
 
   const slotsRemaining = maxParticipants - currentParticipants;
 
