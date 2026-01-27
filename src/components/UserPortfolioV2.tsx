@@ -27,7 +27,6 @@ import {
   BarChart3,
   RefreshCw,
 } from "lucide-react";
-import { useUserPortfolio } from "@/hooks/useSubgraphData";
 
 interface UserPortfolio {
   totalInvested: string;
@@ -99,13 +98,6 @@ export function UserPortfolioV2() {
     query: { enabled: !!tokenAddress },
   });
 
-  // Get user portfolio from subgraph
-  const {
-    portfolio: portfolioData,
-    isLoading: isLoadingPortfolio,
-    refetch: refetchPortfolio,
-  } = useUserPortfolio(accountAddress!);
-
   // Fetch accurate unrealized PnL from PolicastViews
   const { data: calculatedUnrealizedPnL } = (useReadContract as any)({
     address: PolicastViews,
@@ -125,7 +117,7 @@ export function UserPortfolioV2() {
 
   // Fetch detailed portfolio data
   const fetchPortfolioData = async () => {
-    if (!accountAddress || !portfolioData) return;
+    if (!accountAddress) return;
 
     setIsLoading(true);
     try {
@@ -160,13 +152,13 @@ export function UserPortfolioV2() {
       // Set portfolio basic data - convert bigint tradeCount to number
       // Use calculated unrealized PnL from contract instead of stored value
       const portfolioInfo: UserPortfolio = {
-        totalInvested: portfolioData.totalInvested,
-        totalWinnings: portfolioData.totalWinnings,
+        totalInvested: "0", // Historical data not available on-chain without events
+        totalWinnings: "0", // Historical data not available on-chain without events
         unrealizedPnL: calculatedUnrealizedPnL
           ? (calculatedUnrealizedPnL as bigint).toString()
-          : portfolioData.unrealizedPnL,
-        realizedPnL: portfolioData.realizedPnL,
-        tradeCount: Number(portfolioData.tradeCount), // Convert bigint to number
+          : "0",
+        realizedPnL: "0", // Historical data not available on-chain without events
+        tradeCount: 0, // Historical data not available on-chain without events
       };
       setPortfolio(portfolioInfo);
 
@@ -211,7 +203,7 @@ export function UserPortfolioV2() {
             boolean,
             bigint,
             string,
-            boolean
+            boolean,
           ];
 
           const [
@@ -266,7 +258,7 @@ export function UserPortfolioV2() {
         } catch (error) {
           console.error(
             `Error fetching position for market ${marketId}:`,
-            error
+            error,
           );
         }
       }
@@ -296,7 +288,7 @@ export function UserPortfolioV2() {
               string,
               bigint,
               bigint,
-              bigint
+              bigint,
             ];
 
             const [
@@ -315,7 +307,7 @@ export function UserPortfolioV2() {
 
             // Find market and option names
             const position = positions.find(
-              (p) => p.marketId === Number(marketId)
+              (p) => p.marketId === Number(marketId),
             );
 
             trades.push({
@@ -360,7 +352,7 @@ export function UserPortfolioV2() {
       // Custom BigInt serializer
       const serializeWithBigInt = (obj: any): string => {
         return JSON.stringify(obj, (key, value) =>
-          typeof value === "bigint" ? value.toString() + "n" : value
+          typeof value === "bigint" ? value.toString() + "n" : value,
         );
       };
 
@@ -378,10 +370,10 @@ export function UserPortfolioV2() {
   };
 
   useEffect(() => {
-    if (isConnected && accountAddress && portfolioData) {
+    if (isConnected && accountAddress) {
       fetchPortfolioData();
     }
-  }, [isConnected, accountAddress, portfolioData]);
+  }, [isConnected, accountAddress, calculatedUnrealizedPnL]);
 
   const formatAmount = (amount: bigint) => {
     return (Number(amount) / 10 ** tokenDecimals).toLocaleString(undefined, {
@@ -511,13 +503,12 @@ export function UserPortfolioV2() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <PieChart className="h-5 w-5" />
-            V2 Portfolio Overview
+            Portfolio Overview
           </CardTitle>
           <Button
             variant="outline"
             size="sm"
             onClick={() => {
-              refetchPortfolio();
               fetchPortfolioData();
             }}
             className="flex items-center gap-2"
@@ -735,7 +726,7 @@ export function UserPortfolioV2() {
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {new Date(
-                          Number(trade.timestamp) * 1000
+                          Number(trade.timestamp) * 1000,
                         ).toLocaleDateString()}
                       </p>
                     </div>

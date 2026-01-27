@@ -3,12 +3,7 @@
 import { useState, useEffect } from "react";
 import { useReadContract } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
-import {
-  subgraphClient,
-  GET_MARKETS,
-  GET_MARKET_BY_ID,
-  Market as MarketEntity,
-} from "@/lib/subgraph";
+// Subgraph imports removed
 import { useToast } from "@/components/ui/use-toast";
 import {
   publicClient,
@@ -135,23 +130,56 @@ export function MarketAnalyticsV2() {
     if (decimalsData) setTokenDecimals(Number(decimalsData));
   }, [symbolData, decimalsData]);
 
-  // Fetch markets list from subgraph
+  // Fetch markets list from on-chain data
   const {
     data: marketsData,
     isLoading: isLoadingMarkets,
     refetch: refetchMarkets,
   } = useQuery({
-    queryKey: ["marketsList"],
+    queryKey: ["marketsList", Number(marketCount)],
     queryFn: async () => {
-      const resp = (await subgraphClient.request(GET_MARKETS, {
-        first: 50,
-        skip: 0,
-        orderBy: "totalVolume",
-        orderDirection: "desc",
-      })) as any;
-      return resp.markets as MarketEntity[];
+      if (!marketCount) return [];
+      const count = Number(marketCount);
+      const limit = 20; // Fetch last 20 markets
+      const start = Math.max(0, count - limit);
+
+      const marketPromises = [];
+      for (let i = count - 1; i >= start; i--) {
+        marketPromises.push(
+          publicClient
+            .readContract({
+              address: V2contractAddress,
+              abi: V2contractAbi,
+              functionName: "getMarketBasicInfo",
+              args: [BigInt(i)],
+            })
+            .then((basicInfo: any) => {
+              // basicInfo array structure from ABI (based on usage in UserPortfolioV2):
+              // [question, description, endTime, category, optionCount, resolved, disputed, marketType, invalidated, winningOptionId, creator, earlyResolutionAllowed]
+
+              return {
+                id: i.toString(),
+                question: basicInfo[0],
+                description: basicInfo[1],
+                endTime: basicInfo[2],
+                category: basicInfo[3],
+                optionCount: basicInfo[4],
+                resolved: basicInfo[5],
+                creationTimestamp: basicInfo[2] - 86400n, // Approx
+                creator: basicInfo[10],
+                transactions: [],
+                options: [], // populated later if needed
+                totalVolume: 0n,
+                participantCount: 0,
+              };
+            }),
+        );
+      }
+
+      const results = await Promise.all(marketPromises);
+      return results;
     },
-    enabled: true,
+    enabled: !!marketCount,
     refetchInterval: 30000,
   });
 
@@ -172,7 +200,7 @@ export function MarketAnalyticsV2() {
     setIsLoading(isLoadingMarkets);
   }, [marketsData, isLoadingMarkets]);
 
-  // Selected market details (from subgraph)
+  // Selected market details (from on-chain)
   const {
     data: selectedMarketData,
     isLoading: isLoadingSelectedMarket,
@@ -180,13 +208,71 @@ export function MarketAnalyticsV2() {
   } = useQuery({
     queryKey: ["market", selectedMarketId],
     queryFn: async () => {
-      if (!selectedMarketId) return null;
-      const resp = (await subgraphClient.request(GET_MARKET_BY_ID, {
-        id: selectedMarketId.toString(),
+      if (selectedMarketId === null || selectedMarketId === undefined)
+        return null;
+
+      const marketId = BigInt(selectedMarketId);
+
+      const basicInfoData = (await publicClient.readContract({
+        address: V2contractAddress,
+        abi: V2contractAbi,
+        functionName: "getMarketBasicInfo",
+        args: [marketId],
       })) as any;
-      return resp.market as MarketEntity | null;
+
+      const optionCount = Number(basicInfoData[4]);
+
+      const optionsPromises = [];
+      for (let i = 0; i < optionCount; i++) {
+        optionsPromises.push(
+          publicClient
+            .readContract({
+              address: V2contractAddress,
+              abi: V2contractAbi,
+              functionName: "getMarketOption",
+              args: [marketId, BigInt(i)],
+            })
+            .then((opt: any) => ({
+              id: i.toString(),
+              name: opt[0],
+              currentPrice: opt[4],
+              totalShares: opt[2],
+            })),
+        );
+      }
+
+      const options = await Promise.all(optionsPromises);
+
+      // Optional: fetch winning option id (only meaningful if resolved)
+      let winningOptionId: bigint | undefined;
+      try {
+        const marketInfoData = (await (publicClient.readContract as any)({
+          address: V2contractAddress,
+          abi: V2contractAbi,
+          functionName: "getMarketInfo" as any,
+          args: [marketId],
+        })) as any;
+        // getMarketInfo tuple used elsewhere in the app: index 9 = winningOptionId
+        winningOptionId = marketInfoData?.[9] as bigint | undefined;
+      } catch {
+        // ignore; not all deployments expose the same shape
+      }
+
+      return {
+        id: selectedMarketId.toString(),
+        question: basicInfoData[0],
+        description: basicInfoData[1],
+        endTime: basicInfoData[2],
+        category: basicInfoData[3],
+        resolved: basicInfoData[5],
+        disputed: basicInfoData[6],
+        winningOptionId,
+        creator: basicInfoData[10],
+        options: options,
+        transactions: [], // No history
+      };
     },
-    enabled: !!selectedMarketId,
+    enabled: selectedMarketId !== null,
     refetchInterval: 30000,
   });
 
@@ -202,19 +288,20 @@ export function MarketAnalyticsV2() {
       category: Number(selectedMarketData.category || 0),
       optionCount: selectedMarketData.options.length,
       resolved: selectedMarketData.resolved,
-      disputed: false,
-      winningOptionId: selectedMarketData.winningOptionId
-        ? Number(selectedMarketData.winningOptionId)
-        : undefined,
-      endTime: BigInt(Number(selectedMarketData.endTime || 0)),
+      disputed: !!selectedMarketData.disputed,
+      winningOptionId:
+        selectedMarketData.winningOptionId !== undefined
+          ? Number(selectedMarketData.winningOptionId)
+          : undefined,
+      endTime: BigInt(selectedMarketData.endTime || 0n),
       creator: selectedMarketData.creator,
-      options: selectedMarketData.options.map((o, idx) => ({
-        id: idx,
-        name: o,
+      options: selectedMarketData.options.map((opt: any, idx: number) => ({
+        id: Number(opt?.id ?? idx),
+        name: String(opt?.name ?? `Option ${idx + 1}`),
         description: "",
-        totalShares: 0n,
+        totalShares: BigInt(opt?.totalShares ?? 0n),
         totalVolume: 0n,
-        currentPrice: 0n,
+        currentPrice: BigInt(opt?.currentPrice ?? 0n),
         isActive: true,
       })),
       totalVolume: 0n,
@@ -314,8 +401,8 @@ export function MarketAnalyticsV2() {
                 {formatAmount(
                   marketsList.reduce(
                     (sum, market) => sum + market.totalVolume,
-                    0n
-                  )
+                    0n,
+                  ),
                 )}{" "}
                 {tokenSymbol}
               </p>
@@ -409,7 +496,7 @@ export function MarketAnalyticsV2() {
                         {marketAnalytics.resolved
                           ? "Resolved"
                           : new Date(
-                              Number(marketAnalytics.endTime) * 1000
+                              Number(marketAnalytics.endTime) * 1000,
                             ).toLocaleDateString()}
                       </span>
                       <span className="flex items-center gap-1">
@@ -549,7 +636,7 @@ export function MarketAnalyticsV2() {
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {new Date(
-                                Number(marketAnalytics.lastTradeTime) * 1000
+                                Number(marketAnalytics.lastTradeTime) * 1000,
                               ).toLocaleString()}
                             </p>
                           </div>

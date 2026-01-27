@@ -71,8 +71,25 @@ export function FreeMarketClaimStatus({
     },
   });
 
-  // Get market data from subgraph (only if marketType not provided)
-  // const { market, isLoading: isLoadingMarket } = useMarketData(marketId);
+  // If marketType not provided, fetch it on-chain (index 7 in getMarketInfo tuple)
+  const { data: marketInfoContract } = (useReadContract as any)({
+    address: V2contractAddress,
+    abi: V2contractAbi,
+    functionName: "getMarketInfo" as any,
+    args: [BigInt(marketId)],
+    query: {
+      enabled: marketType === undefined,
+      refetchInterval: 30000,
+    },
+  });
+
+  const marketTypeFromContract =
+    marketInfoContract && Array.isArray(marketInfoContract)
+      ? Number(marketInfoContract[7])
+      : undefined;
+
+  const effectiveMarketType = marketType ?? marketTypeFromContract;
+  const isFreeMarket = effectiveMarketType === 1;
 
   // Get free market info directly from contract
   const { data: freeMarketInfoContract, isLoading: isLoadingMarket } = (
@@ -83,18 +100,17 @@ export function FreeMarketClaimStatus({
     functionName: "getFreeMarketInfo",
     args: [BigInt(marketId)],
     query: {
-      enabled: marketType === 1 || (market && market.marketType === "FREE"),
+      enabled: isFreeMarket,
       refetchInterval: 10000,
     },
   });
-
-  // Use contract data if marketType is provided, otherwise use subgraph
-  const isFreeMarket = marketType === 1;
 
   debug("render start", {
     marketId,
     addressPresent: !!address,
     providedMarketType: marketType,
+    marketTypeFromContract,
+    effectiveMarketType,
     isFreeMarket,
   });
 
@@ -103,13 +119,7 @@ export function FreeMarketClaimStatus({
     | [bigint, bigint, bigint, bigint, bigint, boolean]
     | undefined;
 
-  // Compute free market config values
-  const freeMarketConfig = market?.freeMarketConfig;
-  const tokensPerParticipant = contractFreeInfo
-    ? contractFreeInfo[1]
-    : freeMarketConfig && freeMarketConfig.tokensPerParticipant
-      ? BigInt(freeMarketConfig.tokensPerParticipant)
-      : 0n;
+  const tokensPerParticipant = contractFreeInfo ? contractFreeInfo[1] : 0n;
 
   // Handle claim error
   useEffect(() => {
@@ -149,16 +159,7 @@ export function FreeMarketClaimStatus({
 
   // Early returns after all hooks
   // If not a free market at all, exit silently (badge on card already communicates Free Entry)
-  if (!isFreeMarket) {
-    debug("early-return: market not free", {
-      providedMarketType: marketType,
-      subgraphMarketType: market?.marketType,
-    });
-    return null;
-  }
-
-  // Loading placeholder while contract free info is fetching (explicit marketType path)
-  if (marketType === 1 && !contractFreeInfo) {
+  if (effectiveMarketType === undefined) {
     return (
       <div
         className={`flex items-center gap-2 text-xs text-gray-500 ${className}`}
@@ -169,11 +170,16 @@ export function FreeMarketClaimStatus({
     );
   }
 
-  // Loading placeholder for subgraph path
-  if (
-    marketType === undefined &&
-    (isLoadingMarket || !market || !market.freeMarketConfig)
-  ) {
+  if (!isFreeMarket) {
+    debug("early-return: market not free", {
+      providedMarketType: marketType,
+      marketTypeFromContract,
+    });
+    return null;
+  }
+
+  // Loading placeholder while contract free info is fetching
+  if (!contractFreeInfo) {
     return (
       <div
         className={`flex items-center gap-2 text-xs text-gray-500 ${className}`}
@@ -190,17 +196,8 @@ export function FreeMarketClaimStatus({
   const hasUserClaimed = claimStatus ? claimStatus[0] : false;
   const tokensReceived = claimStatus ? claimStatus[1] : 0n;
 
-  const maxParticipants = contractFreeInfo
-    ? contractFreeInfo[0]
-    : freeMarketConfig && freeMarketConfig.maxFreeParticipants
-      ? BigInt(freeMarketConfig.maxFreeParticipants)
-      : 0n;
-
-  const currentParticipants = contractFreeInfo
-    ? contractFreeInfo[2]
-    : freeMarketConfig && freeMarketConfig.currentFreeParticipants
-      ? BigInt(freeMarketConfig.currentFreeParticipants)
-      : 0n;
+  const maxParticipants = contractFreeInfo ? contractFreeInfo[0] : 0n;
+  const currentParticipants = contractFreeInfo ? contractFreeInfo[2] : 0n;
 
   const slotsRemaining = maxParticipants - currentParticipants;
 
