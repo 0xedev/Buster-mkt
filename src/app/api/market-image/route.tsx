@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   contractAddress,
-  contractAbi,
+  PolicastcontractAbi as contractAbi,
   publicClient,
 } from "@/constants/contract";
 import satori from "satori";
@@ -54,7 +54,7 @@ async function fetchMarketData(marketId: string): Promise<MarketImageData> {
       boolean,
       number,
       boolean,
-      bigint
+      bigint,
     ];
 
     const extendedMeta = (await publicClient.readContract({
@@ -96,7 +96,7 @@ async function fetchMarketData(marketId: string): Promise<MarketImageData> {
       } catch (error) {
         console.error(
           `Error fetching option ${i} for market ${marketId}:`,
-          error
+          error,
         );
         options.push({
           name: `Option ${i + 1}`,
@@ -124,7 +124,7 @@ async function fetchMarketData(marketId: string): Promise<MarketImageData> {
   } catch (error) {
     console.error(
       `Market Image API: Failed to fetch or parse market ${marketId}:`,
-      error
+      error,
     );
     throw error;
   }
@@ -149,7 +149,7 @@ function formatTimeStatus(endTimeSeconds: bigint): {
     const diffMs = endTimeMs - now;
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const diffHours = Math.floor(
-      (diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      (diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
     );
 
     if (diffDays > 0) {
@@ -176,7 +176,7 @@ const regularFontPath = path.join(
   "fonts",
   "Inter",
   "static",
-  "Inter_18pt-Regular.ttf"
+  "Inter_18pt-Regular.ttf",
 );
 const boldFontPath = path.join(
   process.cwd(),
@@ -184,7 +184,7 @@ const boldFontPath = path.join(
   "fonts",
   "Inter",
   "static",
-  "Inter_18pt-Bold.ttf"
+  "Inter_18pt-Bold.ttf",
 );
 const mediumFontPath = path.join(
   process.cwd(),
@@ -192,7 +192,7 @@ const mediumFontPath = path.join(
   "fonts",
   "Inter",
   "static",
-  "Inter_18pt-Medium.ttf"
+  "Inter_18pt-Medium.ttf",
 );
 
 const regularFontDataPromise = fs.readFile(regularFontPath);
@@ -241,7 +241,7 @@ export async function GET(request: NextRequest) {
     !Number.isInteger(marketIdNumber)
   ) {
     console.error(
-      `Market Image API: Invalid marketId: "${marketId}" (cleaned: "${cleanMarketId}")`
+      `Market Image API: Invalid marketId: "${marketId}" (cleaned: "${cleanMarketId}")`,
     );
     return new NextResponse("Invalid market ID format", { status: 400 });
   }
@@ -277,7 +277,7 @@ export async function GET(request: NextRequest) {
       // currentPrice is 1e18 probability; convert to percentage
       const probability = Math.max(
         0,
-        Math.min(100, (Number(opt.currentPrice) / 1e18) * 100)
+        Math.min(100, (Number(opt.currentPrice) / 1e18) * 100),
       );
 
       return {
@@ -411,13 +411,13 @@ export async function GET(request: NextRequest) {
                 backgroundColor: market.resolved
                   ? "#dcfce7"
                   : timeStatus.isEnded
-                  ? "#fef3c7"
-                  : "#dbeafe",
+                    ? "#fef3c7"
+                    : "#dbeafe",
                 color: market.resolved
                   ? "#166534"
                   : timeStatus.isEnded
-                  ? "#92400e"
-                  : "#1e40af",
+                    ? "#92400e"
+                    : "#1e40af",
                 borderRadius: "12px",
                 fontSize: "14px",
                 fontWeight: "600",
@@ -534,7 +534,7 @@ export async function GET(request: NextRequest) {
                   {truncateText(
                     optionsData[Number(market.winningOptionId)]?.name ||
                       `Option ${Number(market.winningOptionId) + 1}`,
-                    30
+                    30,
                   )}
                 </div>
               </div>
@@ -584,7 +584,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error(
       `Market Image API: Error generating image for marketId ${cleanMarketId}:`,
-      error
+      error,
     );
     return new NextResponse("Error generating image", { status: 500 });
   }

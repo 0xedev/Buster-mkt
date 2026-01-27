@@ -65,7 +65,7 @@ const TOKEN_DECIMALS = 18;
 
 // Helper function to convert numeric category to MarketCategory enum
 const convertToMarketCategory = (
-  category: number | MarketCategory | undefined
+  category: number | MarketCategory | undefined,
 ): MarketCategory => {
   if (typeof category === "number") {
     // Convert numeric category to enum
@@ -106,7 +106,7 @@ const LinkifiedText = ({ text }: { text: string }) => {
           <span key={index} className="text-gray-100">
             {part}
           </span>
-        )
+        ),
       )}
     </div>
   );
@@ -129,8 +129,8 @@ export function MarketDetailsClient({
     typeof opt === "string"
       ? opt
       : opt && typeof opt === "object"
-      ? String((opt as any).name ?? `Option ${idx + 1}`)
-      : `Option ${idx + 1}`
+        ? String((opt as any).name ?? `Option ${idx + 1}`)
+        : `Option ${idx + 1}`,
   );
 
   const normalizedOptionObjects: MarketOption[] = (market.options || []).map(
@@ -141,7 +141,7 @@ export function MarketDetailsClient({
           name: String(o.name ?? optionLabels[idx] ?? `Option ${idx + 1}`),
           description: String(o.description ?? ""),
           totalShares: BigInt(
-            o.totalShares ?? market.optionShares?.[idx] ?? 0n
+            o.totalShares ?? market.optionShares?.[idx] ?? 0n,
           ),
           totalVolume: BigInt(o.totalVolume ?? 0n),
           currentPrice: BigInt(o.currentPrice ?? 0n),
@@ -161,7 +161,7 @@ export function MarketDetailsClient({
         currentPrice: 0n,
         isActive: !market.resolved,
       } as MarketOption;
-    }
+    },
   );
 
   const { isCreator, isLP, isFeeCollector, checkCreatorStatus, checkLPStatus } =
@@ -189,7 +189,7 @@ export function MarketDetailsClient({
   const probabilities =
     market.version === "v2" && marketOddsRaw
       ? (marketOddsRaw as readonly bigint[]).map(
-          (odd) => Number(odd) / 1e16 // Convert to percentage (0-100)
+          (odd) => Number(odd) / 1e16, // Convert to percentage (0-100)
         )
       : [];
 
@@ -256,7 +256,7 @@ export function MarketDetailsClient({
         ? Math.round(
             (Number(market.totalOptionAShares || 0n) /
               Number(totalSharesInUnits)) *
-              100
+              100,
           )
         : 50;
     optionBPercentage =
@@ -264,7 +264,7 @@ export function MarketDetailsClient({
         ? Math.round(
             (Number(market.totalOptionBShares || 0n) /
               Number(totalSharesInUnits)) *
-              100
+              100,
           )
         : 50;
   }
@@ -361,17 +361,17 @@ export function MarketDetailsClient({
                   </div>
                   <div className="text-xs md:text-sm text-gray-300">
                     {market.version === "v2" && optionLabels.length > 0
-                      ? optionLabels[
+                      ? (optionLabels[
                           Number(market.winningOptionId ?? market.outcome ?? 0)
                         ] ??
                         `Option ${
                           Number(
-                            market.winningOptionId ?? market.outcome ?? 0
+                            market.winningOptionId ?? market.outcome ?? 0,
                           ) + 1
-                        }`
+                        }`)
                       : market.outcome === 1
-                      ? market.optionA
-                      : market.optionB}
+                        ? market.optionA
+                        : market.optionB}
                   </div>
                 </div>
               </div>
@@ -423,7 +423,7 @@ export function MarketDetailsClient({
                     category: convertToMarketCategory(market.category),
                     marketType: market.marketType || 0, // Use actual marketType from contract
                     optionCount: BigInt(
-                      market.optionCount || market.options?.length || 2
+                      market.optionCount || market.options?.length || 2,
                     ),
                     // Use normalized option objects so the PositionManager always
                     // receives a consistent MarketOption[] shape.
@@ -433,7 +433,7 @@ export function MarketDetailsClient({
                     validated: true,
                     invalidated: false,
                     winningOptionId: BigInt(
-                      market.resolved ? market.outcome ?? 0 : 0
+                      market.resolved ? (market.outcome ?? 0) : 0,
                     ),
                     creator:
                       market.creator ||
@@ -504,7 +504,7 @@ export function MarketDetailsClient({
           </div>
 
           {/* Market Analytics Charts - Hidden on mobile */}
-          <div className="hidden md:block mt-8 border-t border-[#544863] pt-6">
+          {/* <div className="hidden md:block mt-8 border-t border-[#544863] pt-6">
             <MarketChart
               marketId={marketId}
               market={{
@@ -514,7 +514,7 @@ export function MarketDetailsClient({
                 version: market.version,
               }}
             />
-          </div>
+          </div> */}
 
           {/* Comment System */}
           <div className="mt-6 md:mt-8 border-t border-[#544863] pt-4 md:pt-6">

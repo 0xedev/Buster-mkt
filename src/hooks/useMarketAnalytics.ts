@@ -159,7 +159,7 @@ export function useRealTimeMarketUpdates(marketId: string) {
       try {
         // This could be a separate lightweight endpoint for current prices
         const response = await fetch(
-          `/api/market/current-price?marketId=${marketId}`
+          `/api/market/current-price?marketId=${marketId}`,
         );
         if (response.ok) {
           const result = await response.json();
